@@ -39,6 +39,12 @@ yarn-error.log*
 # vercel
 .vercel
 
+# cursor — mcp.json contém o SUPABASE_ACCESS_TOKEN (secreto)
+.cursor/mcp.json
+
+# supabase — arquivo concatenado gerado localmente (as migrations 001-036 são a fonte de verdade)
+supabase/_all_migrations.sql
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
