@@ -106,8 +106,27 @@ export interface Contact {
   phone_normalized?: string;
   name?: string;
   email?: string;
-  company?: string;
   avatar_url?: string;
+  /** Dados pessoais / documento (migration 037) */
+  cpf?: string | null;
+  data_nascimento?: string | null;
+  status?: string | null;
+  endereco?: string | null;
+  numero?: string | null;
+  bairro?: string | null;
+  cidade?: string | null;
+  estado?: string | null;
+  complemento?: string | null;
+  cep?: string | null;
+  possui_cha?: boolean | null;
+  numero_cha?: string | null;
+  categoria_cha?: string | null;
+  vencimento_cha?: string | null;
+  doc_numero?: string | null;
+  doc_orgao_emissor?: string | null;
+  doc_data_emissao?: string | null;
+  profissao?: string | null;
+  genero?: string | null;
   created_at: string;
   updated_at: string;
   /** Hydrated by queries that embed `contact_tags(tags(*))` (e.g. the
@@ -127,24 +146,6 @@ export interface ContactTag {
   id: string;
   contact_id: string;
   tag_id: string;
-}
-
-export interface CustomField {
-  id: string;
-  user_id: string;
-  /** Tenancy key — NOT NULL since migration 017. */
-  account_id: string;
-  field_name: string;
-  field_type: string;
-  field_options?: Record<string, unknown>;
-  created_at: string;
-}
-
-export interface ContactCustomValue {
-  id: string;
-  contact_id: string;
-  custom_field_id: string;
-  value?: string;
 }
 
 export interface ContactNote {
@@ -515,13 +516,7 @@ export interface AssignConversationStepConfig {
 }
 
 export interface UpdateContactFieldStepConfig {
-  /**
-   * Either a built-in contact column (`name` | `email` | `company`) or a
-   * custom field encoded as `custom:<custom_field_id>`. The `custom:` prefix
-   * is how the engine distinguishes a `contact_custom_values` write from a
-   * direct `contacts` column update. Older configs store the bare column name,
-   * so this stays backward compatible.
-   */
+  /** Built-in contact column: `name` | `email`. Legacy `company` is skipped at runtime. */
   field: string;
   /** Supports `{{ vars.* }}` / `{{ message.text }}` interpolation at runtime. */
   value: string;

@@ -25,7 +25,6 @@ export interface ApiConversation {
     phone: string;
     name: string | null;
     email: string | null;
-    company: string | null;
     tags: { id: string; name: string; color: string }[];
   } | null;
 }
@@ -68,7 +67,6 @@ export function serializeConversation(conv: Conversation): ApiConversation {
           phone: c.phone,
           name: c.name ?? null,
           email: c.email ?? null,
-          company: c.company ?? null,
           tags: (c.tags ?? []).map((t) => ({
             id: t.id,
             name: t.name,

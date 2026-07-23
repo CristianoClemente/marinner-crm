@@ -277,7 +277,7 @@ export default function BroadcastsPage() {
                       </span>
                     </TableCell>
                     <TableCell className="hidden text-muted-foreground sm:table-cell">
-                      {new Date(broadcast.created_at).toLocaleDateString()}
+                      {new Date(broadcast.created_at).toLocaleDateString('pt-BR')}
                     </TableCell>
                   </TableRow>
                 );

@@ -30,18 +30,13 @@ export default function NewBroadcastPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [template, setTemplate] = useState<MessageTemplate | null>(null);
   const [audience, setAudience] = useState<{
-    type: 'all' | 'tags' | 'custom_field' | 'csv';
+    type: 'all' | 'tags' | 'csv';
     tagIds?: string[];
-    customField?: {
-      fieldId: string;
-      operator: 'is' | 'is_not' | 'contains';
-      value: string;
-    };
     csvContacts?: { phone: string; name?: string }[];
     excludeTagIds?: string[];
   }>({ type: 'all' });
   const [variables, setVariables] = useState<
-    Record<string, { type: 'static' | 'field' | 'custom_field'; value: string }>
+    Record<string, { type: 'static' | 'field'; value: string }>
   >({});
   const [headerMediaUrl, setHeaderMediaUrl] = useState('');
   const [name, setName] = useState('');
@@ -56,7 +51,6 @@ export default function NewBroadcastPage() {
         audience: {
           type: audience.type,
           tagIds: audience.tagIds,
-          customField: audience.customField,
           csvContacts: audience.csvContacts,
           excludeTagIds: audience.excludeTagIds,
         },

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import {
   Eye,
@@ -38,6 +38,11 @@ type ResetReason = 'token_corrupted' | 'meta_api_error' | null;
 
 export function WhatsAppConfig() {
   const t = useTranslations('Settings.whatsapp');
+  const richStrong = {
+    strong: (chunks: ReactNode) => (
+      <strong className="text-foreground">{chunks}</strong>
+    ),
+  };
   const supabase = createClient();
   // After multi-user, whatsapp_config is one-row-per-account, not
   // one-row-per-user. We pull `accountId` straight off the auth
@@ -159,7 +164,7 @@ export function WhatsAppConfig() {
       }
     } catch (err) {
       console.error('fetchConfig error:', err);
-      toast.error('Failed to load WhatsApp configuration');
+      toast.error('Falha ao carregar a configuração do WhatsApp');
     } finally {
       setLoading(false);
     }
@@ -184,11 +189,11 @@ export function WhatsAppConfig() {
 
   async function handleSave() {
     if (!phoneNumberId.trim()) {
-      toast.error('Phone Number ID is required');
+      toast.error('O ID do número de telefone é obrigatório');
       return;
     }
     if (!config && (!accessToken.trim() || !tokenEdited)) {
-      toast.error('Access Token is required for initial setup');
+      toast.error('O token de acesso é obrigatório na configuração inicial');
       return;
     }
 
@@ -216,7 +221,7 @@ export function WhatsAppConfig() {
         // server. But our POST handler requires an access_token to verify
         // with Meta. If the user didn't change the token, we need to signal
         // that. Simplest: require token re-entry if they're updating.
-        toast.error('Please re-enter the Access Token to save changes');
+        toast.error('Digite novamente o token de acesso para salvar as alterações');
         setSaving(false);
         return;
       }
@@ -271,7 +276,7 @@ export function WhatsAppConfig() {
       if (accountId) await fetchConfig(accountId);
     } catch (err) {
       console.error('Save error:', err);
-      toast.error('Failed to save configuration');
+      toast.error('Falha ao salvar a configuração');
     } finally {
       setSaving(false);
     }
@@ -301,7 +306,7 @@ export function WhatsAppConfig() {
     } catch (err) {
       console.error('Test connection error:', err);
       setConnectionStatus('disconnected');
-      toast.error('Connection test failed. Check network and try again.');
+      toast.error('Falha no teste de conexão. Verifique a rede e tente novamente.');
     } finally {
       setTesting(false);
     }
@@ -317,7 +322,7 @@ export function WhatsAppConfig() {
       const data = (await res.json()) as RegistrationProbe;
       setRegistrationProbe(data);
       if (data.live) {
-        toast.success('Number is fully wired — Meta is delivering events.');
+        toast.success('Número totalmente conectado — a Meta está entregando eventos.');
       } else {
         toast.error(
           'Number is not fully registered. See the checks below for which step failed.',
@@ -327,7 +332,7 @@ export function WhatsAppConfig() {
       if (accountId) await fetchConfig(accountId);
     } catch (err) {
       console.error('verify-registration failed:', err);
-      toast.error('Could not reach the verification endpoint.');
+      toast.error('Não foi possível acessar o endpoint de verificação.');
     } finally {
       setVerifyingRegistration(false);
     }
@@ -348,7 +353,7 @@ export function WhatsAppConfig() {
         return;
       }
 
-      toast.success('Configuration cleared. You can now re-enter your credentials.');
+      toast.success('Configuração limpa. Agora você pode inserir suas credenciais novamente.');
       setConfig(null);
       setPhoneNumberId('');
       setWabaId('');
@@ -360,7 +365,7 @@ export function WhatsAppConfig() {
       setStatusMessage('');
     } catch (err) {
       console.error('Reset error:', err);
-      toast.error('Failed to reset configuration');
+      toast.error('Falha ao redefinir a configuração');
     } finally {
       setResetting(false);
     }
@@ -368,7 +373,7 @@ export function WhatsAppConfig() {
 
   function handleCopyWebhookUrl() {
     navigator.clipboard.writeText(webhookUrl);
-    toast.success('Webhook URL copied to clipboard');
+    toast.success('URL do webhook copiada para a área de transferência');
   }
 
   if (loading) {
@@ -498,15 +503,13 @@ export function WhatsAppConfig() {
             </div>
             <AlertDescription className="text-muted-foreground mt-2 text-xs leading-relaxed">
               {isRegistered ? (
-                <span
-                  dangerouslySetInnerHTML={{
-                    __html: t('subscribedSince', {
-                      date: config.registered_at
-                        ? new Date(config.registered_at).toLocaleString()
-                        : t('unknownDate'),
-                    }),
-                  }}
-                />
+                <span>
+                  {t('subscribedSince', {
+                    date: config.registered_at
+                      ? new Date(config.registered_at).toLocaleString('pt-BR')
+                      : t('unknownDate'),
+                  })}
+                </span>
               ) : lastRegistrationError ? (
                 <>
                   {t('lastAttemptFailed')}
@@ -647,7 +650,7 @@ export function WhatsAppConfig() {
                 className="bg-muted border-border text-foreground placeholder:text-muted-foreground tracking-widest"
               />
               <p className="text-xs text-muted-foreground leading-relaxed">
-                <span dangerouslySetInnerHTML={{ __html: t('pinHint') }} />
+                {t('pinHint')}
               </p>
             </div>
           </CardContent>
@@ -760,7 +763,7 @@ export function WhatsAppConfig() {
                 </AccordionTrigger>
                 <AccordionContent className="text-muted-foreground">
                   <ol className="list-decimal list-inside space-y-1 text-sm">
-                    <li dangerouslySetInnerHTML={{ __html: t('step1_1') }} />
+                    <li>{t('step1_1')}</li>
                     <li>{t('step1_2')}</li>
                     <li>{t('step1_3')}</li>
                     <li>{t('step1_4')}</li>
@@ -794,9 +797,9 @@ export function WhatsAppConfig() {
                 <AccordionContent className="text-muted-foreground">
                   <ol className="list-decimal list-inside space-y-1 text-sm">
                     <li>{t('step3_1')}</li>
-                    <li dangerouslySetInnerHTML={{ __html: t('step3_2') }} />
-                    <li dangerouslySetInnerHTML={{ __html: t('step3_3') }} />
-                    <li dangerouslySetInnerHTML={{ __html: t('step3_4') }} />
+                    <li>{t.rich('step3_2', richStrong)}</li>
+                    <li>{t.rich('step3_3', richStrong)}</li>
+                    <li>{t.rich('step3_4', richStrong)}</li>
                   </ol>
                 </AccordionContent>
               </AccordionItem>
@@ -812,8 +815,8 @@ export function WhatsAppConfig() {
                   <ol className="list-decimal list-inside space-y-1 text-sm">
                     <li>{t('step4_1')}</li>
                     <li>{t('step4_2')}</li>
-                    <li dangerouslySetInnerHTML={{ __html: t('step4_3') }} />
-                    <li dangerouslySetInnerHTML={{ __html: t('step4_4') }} />
+                    <li>{t.rich('step4_3', richStrong)}</li>
+                    <li>{t.rich('step4_4', richStrong)}</li>
                     <li>{t('step4_5')}</li>
                   </ol>
                 </AccordionContent>

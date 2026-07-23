@@ -46,14 +46,12 @@ import {
   Users,
   ChevronLeft,
   ChevronRight,
-  SlidersHorizontal,
   Filter,
   X,
 } from 'lucide-react';
 import { ContactForm } from '@/components/contacts/contact-form';
 import { ContactDetailView } from '@/components/contacts/contact-detail-view';
 import { ImportModal } from '@/components/contacts/import-modal';
-import { CustomFieldsManager } from '@/components/contacts/custom-fields-manager';
 import { useCan } from '@/hooks/use-can';
 import { GatedButton } from '@/components/ui/gated-button';
 import { useTranslations } from 'next-intl';
@@ -68,7 +66,6 @@ export default function ContactsPage() {
   const t = useTranslations('Contacts.page');
   const supabase = createClient();
   const canEdit = useCan('send-messages');
-  const canEditSettings = useCan('edit-settings');
 
   const [contacts, setContacts] = useState<ContactWithTags[]>([]);
   const [loading, setLoading] = useState(true);
@@ -85,7 +82,6 @@ export default function ContactsPage() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailContactId, setDetailContactId] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
-  const [customFieldsOpen, setCustomFieldsOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Contact | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -350,16 +346,6 @@ export default function ContactsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {canEditSettings && (
-            <Button
-              variant="outline"
-              onClick={() => setCustomFieldsOpen(true)}
-              className="border-border text-muted-foreground hover:bg-muted"
-            >
-              <SlidersHorizontal className="size-4" />
-              {t('customFieldsBtn')}
-            </Button>
-          )}
           <GatedButton
             variant="outline"
             canAct={canEdit}
@@ -544,7 +530,6 @@ export default function ContactsPage() {
               <TableHead className="text-muted-foreground">{t('tableColumns.name')}</TableHead>
               <TableHead className="text-muted-foreground">{t('tableColumns.phone')}</TableHead>
               <TableHead className="text-muted-foreground hidden md:table-cell">{t('tableColumns.email')}</TableHead>
-              <TableHead className="text-muted-foreground hidden lg:table-cell">{t('tableColumns.company')}</TableHead>
               <TableHead className="text-muted-foreground hidden md:table-cell">{t('tableColumns.tags')}</TableHead>
               <TableHead className="text-muted-foreground hidden lg:table-cell">{t('tableColumns.createdAt')}</TableHead>
               <TableHead className="text-muted-foreground w-12" />
@@ -553,7 +538,7 @@ export default function ContactsPage() {
           <TableBody>
             {loading ? (
               <TableRow className="border-border">
-                <TableCell colSpan={8} className="text-center py-12">
+                <TableCell colSpan={7} className="text-center py-12">
                   <div className="flex flex-col items-center gap-2">
                     <Loader2 className="size-6 animate-spin text-primary" />
                     <p className="text-sm text-muted-foreground">{t('loading')}</p>
@@ -562,7 +547,7 @@ export default function ContactsPage() {
               </TableRow>
             ) : contacts.length === 0 ? (
               <TableRow className="border-border">
-                <TableCell colSpan={8} className="text-center py-12">
+                <TableCell colSpan={7} className="text-center py-12">
                   <div className="flex flex-col items-center gap-2">
                     <Users className="size-8 text-muted-foreground" />
                     <p className="text-sm text-muted-foreground">
@@ -609,9 +594,6 @@ export default function ContactsPage() {
                   <TableCell className="text-muted-foreground hidden md:table-cell text-sm">
                     {contact.email || <span className="text-muted-foreground">-</span>}
                   </TableCell>
-                  <TableCell className="text-muted-foreground hidden lg:table-cell text-sm">
-                    {contact.company || <span className="text-muted-foreground">-</span>}
-                  </TableCell>
                   <TableCell className="hidden md:table-cell">
                     <div className="flex flex-wrap gap-1">
                       {contact.tags && contact.tags.length > 0 ? (
@@ -638,9 +620,9 @@ export default function ContactsPage() {
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-xs hidden lg:table-cell">
-                    {new Date(contact.created_at).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
+                    {new Date(contact.created_at).toLocaleDateString('pt-BR', {
+                      day: '2-digit',
+                      month: '2-digit',
                       year: 'numeric',
                     })}
                   </TableCell>
@@ -759,14 +741,6 @@ export default function ContactsPage() {
         onOpenChange={setImportOpen}
         onImported={fetchContacts}
       />
-
-      {/* Custom Fields Manager (admin+) */}
-      {canEditSettings && (
-        <CustomFieldsManager
-          open={customFieldsOpen}
-          onOpenChange={setCustomFieldsOpen}
-        />
-      )}
 
       {/* Delete Confirmation */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>

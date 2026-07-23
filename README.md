@@ -26,7 +26,7 @@ clone or fork it to run your own CRM.
 - **Shared inbox** on the official WhatsApp Business API — multiple
   agents working one number, per-conversation assignment, status, and
   notes.
-- **Contacts + tags + custom fields**, CSV import, deduplication.
+- **Contacts + tags**, CSV import, deduplication.
 - **Sales pipelines** (Kanban) with deals linked to conversations.
 - **Broadcasts** with Meta-approved templates, delivery + read
   tracking, per-recipient variable substitution.
@@ -151,6 +151,11 @@ Key pages:
 - [Deploy on Hostinger](https://wacrm.tech/docs/deployment-hostinger)
 - [Architecture](https://wacrm.tech/docs/architecture)
 - [Troubleshooting](https://wacrm.tech/docs/troubleshooting)
+
+### Marinner SaaS (este fork)
+
+- [Domínio e URLs](./docs/dominio-e-urls.md) — apex (`app.`) vs tenant (`slug.`), env e checklist DNS
+- [Plano SaaS B2B](./docs/plano-saas-b2b.md) · [Sprints](./docs/sprints-saas-b2b.md)
 
 ## Stack
 

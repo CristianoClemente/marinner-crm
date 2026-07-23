@@ -679,7 +679,6 @@ function ConditionForm({
                 <SelectItem value="name">name</SelectItem>
                 <SelectItem value="email">email</SelectItem>
                 <SelectItem value="phone">phone</SelectItem>
-                <SelectItem value="company">company</SelectItem>
               </SelectContent>
             </Select>
           ) : (
@@ -928,7 +927,7 @@ function SendMediaForm({
           media_url: publicUrl,
           filename: file.name,
         });
-        toast.success("File uploaded.");
+        toast.success("Arquivo enviado.");
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Upload failed.";
         toast.error(msg);

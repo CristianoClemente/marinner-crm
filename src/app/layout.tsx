@@ -1,11 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { NextIntlClientProvider } from 'next-intl';
-import { getLocale, getMessages } from 'next-intl/server';
+import { getLocale, getMessages } from "next-intl/server";
 import { Inter } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { ThemedToaster } from "@/components/themed-toaster";
+import { IntlProvider } from "@/components/intl-provider";
 import {
   DEFAULT_MODE,
   DEFAULT_THEME,
@@ -14,6 +14,7 @@ import {
   STORAGE_KEY,
   THEME_IDS,
 } from "@/lib/themes";
+import { APP_NAME } from "@/lib/brand";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -22,10 +23,10 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "wacrm",
-    template: "%s — wacrm",
+    default: APP_NAME,
+    template: `%s — ${APP_NAME}`,
   },
-  description: "Self-hostable CRM template for WhatsApp.",
+  description: "CRM Marinner para WhatsApp.",
   robots: {
     index: false,
     follow: false,
@@ -107,13 +108,18 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }}
         />
       </head>
-      <body className="min-h-full bg-background text-foreground font-sans">
-        <NextIntlClientProvider messages={messages} locale={locale}>
+      {/* suppressHydrationWarning: extensões do navegador (ex.: ColorZilla)
+          injetam atributos no <body> antes da hidratação. */}
+      <body
+        className="min-h-full bg-background text-foreground font-sans"
+        suppressHydrationWarning
+      >
+        <IntlProvider locale={locale} messages={messages}>
           <ThemeProvider>
             {children}
             <ThemedToaster />
           </ThemeProvider>
-        </NextIntlClientProvider>
+        </IntlProvider>
       </body>
     </html>
   );

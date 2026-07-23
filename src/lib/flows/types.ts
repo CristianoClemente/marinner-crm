@@ -154,7 +154,7 @@ export interface ConditionNodeConfig {
   /**
    * For `var`: the key in flow_runs.vars.
    * For `tag`: the tag UUID (matched against contact_tags).
-   * For `contact_field`: one of 'name' | 'email' | 'phone' | 'company'.
+   * For `contact_field`: one of 'name' | 'email' | 'phone'.
    */
   subject_key: string;
   operator: ConditionOperator;

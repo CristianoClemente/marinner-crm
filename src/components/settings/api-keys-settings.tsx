@@ -55,10 +55,10 @@ interface ApiKey {
 }
 
 function fmtDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
-    year: 'numeric',
+  return new Date(iso).toLocaleDateString('pt-BR', {
+    day: '2-digit',
     month: 'short',
-    day: 'numeric',
+    year: 'numeric',
   });
 }
 

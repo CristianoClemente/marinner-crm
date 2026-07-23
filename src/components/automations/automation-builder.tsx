@@ -49,7 +49,6 @@ import type {
   AccountMember,
   AutomationStepType,
   AutomationTriggerType,
-  CustomField,
   InteractiveMessagePayload,
   KeywordMatchTriggerConfig,
   MessageTemplate,
@@ -207,7 +206,6 @@ interface AutomationResources {
   tags: TagRecord[]
   members: AccountMember[]
   templates: MessageTemplate[]
-  customFields: CustomField[]
   pipelines: PipelineOption[]
   stages: PipelineStageOption[]
 }
@@ -228,7 +226,6 @@ const ResourcesContext = createContext<AutomationResources>({
   tags: [],
   members: [],
   templates: [],
-  customFields: [],
   pipelines: [],
   stages: [],
 })
@@ -241,7 +238,6 @@ function ResourcesProvider({ children }: { children: ReactNode }) {
   const [tags, setTags] = useState<TagRecord[]>([])
   const [members, setMembers] = useState<AccountMember[]>([])
   const [templates, setTemplates] = useState<MessageTemplate[]>([])
-  const [customFields, setCustomFields] = useState<CustomField[]>([])
   const [pipelines, setPipelines] = useState<PipelineOption[]>([])
   const [stages, setStages] = useState<PipelineStageOption[]>([])
 
@@ -249,30 +245,26 @@ function ResourcesProvider({ children }: { children: ReactNode }) {
     let cancelled = false
     const supabase = createClient()
 
-    // Tags, templates and custom fields come straight from the DB — RLS
-    // scopes them to the caller's account. Only APPROVED templates can
-    // actually be sent (anything else 400s at send time), matching the
-    // broadcast picker.
+    // Tags and templates come straight from the DB — RLS scopes them to
+    // the caller's account. Only APPROVED templates can actually be sent
+    // (anything else 400s at send time), matching the broadcast picker.
     void (async () => {
-      const [tagsRes, templatesRes, customFieldsRes, pipelinesRes, stagesRes] =
-        await Promise.all([
-          supabase.from("tags").select("*").order("name"),
-          supabase
-            .from("message_templates")
-            .select("*")
-            .eq("status", "APPROVED")
-            .order("name"),
-          supabase.from("custom_fields").select("*").order("field_name"),
-          supabase.from("pipelines").select("id, name").order("name"),
-          supabase
-            .from("pipeline_stages")
-            .select("id, name, pipeline_id, position")
-            .order("position"),
-        ])
+      const [tagsRes, templatesRes, pipelinesRes, stagesRes] = await Promise.all([
+        supabase.from("tags").select("*").order("name"),
+        supabase
+          .from("message_templates")
+          .select("*")
+          .eq("status", "APPROVED")
+          .order("name"),
+        supabase.from("pipelines").select("id, name").order("name"),
+        supabase
+          .from("pipeline_stages")
+          .select("id, name, pipeline_id, position")
+          .order("position"),
+      ])
       if (cancelled) return
       setTags((tagsRes.data as TagRecord[] | null) ?? [])
       setTemplates((templatesRes.data as MessageTemplate[] | null) ?? [])
-      setCustomFields((customFieldsRes.data as CustomField[] | null) ?? [])
       setPipelines((pipelinesRes.data as PipelineOption[] | null) ?? [])
       setStages((stagesRes.data as PipelineStageOption[] | null) ?? [])
     })()
@@ -298,7 +290,7 @@ function ResourcesProvider({ children }: { children: ReactNode }) {
 
   return (
     <ResourcesContext.Provider
-      value={{ tags, members, templates, customFields, pipelines, stages }}
+      value={{ tags, members, templates, pipelines, stages }}
     >
       {children}
     </ResourcesContext.Provider>
@@ -359,10 +351,7 @@ function TagSelect({
   )
 }
 
-/** Contact-field dropdown for "Update Contact Field": built-in columns plus
- *  any account custom fields (stored as `custom:<id>`). A saved custom field
- *  that's since been deleted is preserved as a labelled option so editing an
- *  existing automation doesn't silently drop it. */
+/** Contact-field dropdown for "Update Contact Field": built-in columns. */
 function ContactFieldSelect({
   value,
   onChange,
@@ -372,31 +361,15 @@ function ContactFieldSelect({
   onChange: (v: string) => void
   t: ReturnType<typeof useTranslations>
 }) {
-  const { customFields } = useResources()
-  const customValue = value.startsWith("custom:") ? value : ""
-  const knownCustom =
-    customValue && customFields.some((f) => `custom:${f.id}` === customValue)
+  const builtin = value === "name" || value === "email"
   return (
     <select
-      value={value || "name"}
+      value={builtin ? value : "name"}
       onChange={(e) => onChange(e.target.value)}
       className={SELECT_CLASS}
     >
       <option value="name">{t("fields.name")}</option>
       <option value="email">{t("fields.email")}</option>
-      <option value="company">{t("fields.company")}</option>
-      {customFields.length > 0 && (
-        <optgroup label={t("fields.customFields")}>
-          {customFields.map((f) => (
-            <option key={f.id} value={`custom:${f.id}`}>
-              {f.field_name}
-            </option>
-          ))}
-        </optgroup>
-      )}
-      {customValue && !knownCustom && (
-        <option value={customValue}>{t("fields.unknown", { id: customValue })}</option>
-      )}
     </select>
   )
 }
@@ -664,7 +637,7 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
     setSaving(true)
     try {
       const payload = {
-        name: state.name || "Untitled automation",
+        name: state.name || "Automação sem título",
         description: state.description || null,
         trigger_type: state.trigger_type,
         trigger_config: state.trigger_config,

@@ -466,7 +466,7 @@ async function executeHandoff(
  *     or http_fetch in v2).
  *   - `tag` → present iff `contact_tags(contact_id, tag_id)` exists.
  *     `subject_key` IS the tag UUID; the SELECT returns 1 row or 0.
- *   - `contact_field` → one of name/email/phone/company on `contacts`.
+ *   - `contact_field` → one of name/email/phone on `contacts`.
  */
 async function evaluateConditionNode(
   db: AdminClient,
@@ -489,7 +489,7 @@ async function evaluateConditionNode(
     // existence to the value).
     subjectValue = (count ?? 0) > 0 ? cfg.subject_key : undefined;
   } else {
-    const ALLOWED = ["name", "email", "phone", "company"] as const;
+    const ALLOWED = ["name", "email", "phone"] as const;
     type AllowedField = (typeof ALLOWED)[number];
     if (!ALLOWED.includes(cfg.subject_key as AllowedField)) {
       throw new Error(`unsupported contact_field: ${cfg.subject_key}`);

@@ -120,7 +120,6 @@ export async function POST(request: Request) {
         phone,
         name: typeof body.name === 'string' ? body.name : undefined,
         email: typeof body.email === 'string' ? body.email : undefined,
-        company: typeof body.company === 'string' ? body.company : undefined,
       }
     );
 

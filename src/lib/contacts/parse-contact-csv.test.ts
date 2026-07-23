@@ -1,5 +1,56 @@
 import { describe, expect, it } from 'vitest';
-import { parseContactCsv, parseTagCell } from './parse-contact-csv';
+import {
+  buildContactCsvTemplate,
+  CONTACT_CSV_HEADERS,
+  parseContactCsv,
+  parseTagCell,
+  toContactInsertFields,
+} from './parse-contact-csv';
+
+describe('buildContactCsvTemplate', () => {
+  it('mirrors contacts table headers and is parseable', () => {
+    const csv = buildContactCsvTemplate();
+    expect(csv.startsWith('\uFEFF')).toBe(true);
+    expect(csv).toContain(CONTACT_CSV_HEADERS.join(','));
+
+    const parsed = parseContactCsv(csv.replace(/^\uFEFF/, ''));
+    expect(parsed.hasTagsColumn).toBe(true);
+    expect(parsed.rows).toHaveLength(1);
+    expect(parsed.rows[0]).toMatchObject({
+      phone: '5511999999999',
+      name: 'Maria Silva',
+      email: 'maria@email.com',
+      tagNames: ['vip', 'lead'],
+      cpf: '12345678901',
+      status: 'lead',
+      cidade: 'São Paulo',
+      estado: 'SP',
+      possui_cha: true,
+      categoria_cha: 'arrais_amador',
+      genero: 'feminino',
+    });
+  });
+});
+
+describe('toContactInsertFields', () => {
+  it('maps parsed row to contacts insert payload', () => {
+    expect(
+      toContactInsertFields({
+        phone: '5511999999999',
+        name: 'Maria',
+        tagNames: ['vip'],
+        cpf: '12345678901',
+        possui_cha: true,
+      })
+    ).toMatchObject({
+      phone: '5511999999999',
+      name: 'Maria',
+      email: null,
+      cpf: '12345678901',
+      possui_cha: true,
+    });
+  });
+});
 
 describe('parseTagCell', () => {
   it('splits comma-separated tags and trims whitespace', () => {
@@ -32,23 +83,35 @@ describe('parseContactCsv', () => {
 
     expect(parseContactCsv(csv)).toEqual({
       hasTagsColumn: true,
-      hasCompanyColumn: false,
       rows: [
         {
           phone: '+15551234567',
           name: 'Alice',
-          email: undefined,
-          company: undefined,
           tagNames: ['VIP', 'Lead'],
         },
         {
           phone: '+15559876543',
           name: 'Bob',
-          email: undefined,
-          company: undefined,
           tagNames: ['Customer'],
         },
       ],
+    });
+  });
+
+  it('parses extended contacts columns', () => {
+    const csv = `phone,name,cpf,status,cidade,estado,possui_cha,genero
+5511888777666,João,98765432100,aluno,Santos,SP,sim,masculino`;
+
+    expect(parseContactCsv(csv).rows[0]).toMatchObject({
+      phone: '5511888777666',
+      name: 'João',
+      cpf: '98765432100',
+      status: 'aluno',
+      cidade: 'Santos',
+      estado: 'SP',
+      possui_cha: true,
+      genero: 'masculino',
+      tagNames: [],
     });
   });
 
@@ -58,13 +121,26 @@ describe('parseContactCsv', () => {
 
     expect(parseContactCsv(csv)).toEqual({
       hasTagsColumn: false,
-      hasCompanyColumn: false,
       rows: [
         {
           phone: '+15551234567',
           name: 'Alice',
-          email: undefined,
-          company: undefined,
+          tagNames: [],
+        },
+      ],
+    });
+  });
+
+  it('ignores a company column if present in the CSV', () => {
+    const csv = `phone,name,company
++15551234567,Alice,Acme`;
+
+    expect(parseContactCsv(csv)).toEqual({
+      hasTagsColumn: false,
+      rows: [
+        {
+          phone: '+15551234567',
+          name: 'Alice',
           tagNames: [],
         },
       ],

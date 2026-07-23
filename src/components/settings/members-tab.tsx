@@ -108,10 +108,10 @@ const EDITABLE_ROLES: { value: AccountRole }[] = [
 function fmtDate(iso: string): string {
   // Match the rest of the dashboard's locale-light formatting.
   const d = new Date(iso);
-  return d.toLocaleDateString(undefined, {
-    year: 'numeric',
+  return d.toLocaleDateString('pt-BR', {
+    day: '2-digit',
     month: 'short',
-    day: 'numeric',
+    year: 'numeric',
   });
 }
 
@@ -170,7 +170,7 @@ export function MembersTab() {
       }
     } catch (err) {
       console.error('[MembersTab] load error:', err);
-      toast.error('Could not reach the server');
+      toast.error('Não foi possível conectar ao servidor');
     } finally {
       setLoading(false);
     }
@@ -222,7 +222,7 @@ export function MembersTab() {
         ),
       );
       console.error('[MembersTab] role change error:', err);
-      toast.error('Could not reach the server');
+      toast.error('Não foi possível conectar ao servidor');
     } finally {
       setPendingMemberAction(null);
     }
@@ -248,7 +248,7 @@ export function MembersTab() {
       setRemovingMember(null);
     } catch (err) {
       console.error('[MembersTab] remove error:', err);
-      toast.error('Could not reach the server');
+      toast.error('Não foi possível conectar ao servidor');
     } finally {
       setPendingMemberAction(null);
     }
@@ -268,7 +268,7 @@ export function MembersTab() {
       setInvitations((prev) => prev.filter((i) => i.id !== invite.id));
     } catch (err) {
       console.error('[MembersTab] revoke error:', err);
-      toast.error('Could not reach the server');
+      toast.error('Não foi possível conectar ao servidor');
     }
   }
 

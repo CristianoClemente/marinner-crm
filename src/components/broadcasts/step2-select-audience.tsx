@@ -2,12 +2,11 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { CustomField, Tag } from '@/types';
+import { Tag } from '@/types';
 import { Button } from '@/components/ui/button';
 import {
   Users,
   Tags,
-  Filter,
   Upload,
   Loader2,
   ArrowRight,
@@ -16,19 +15,11 @@ import {
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-type AudienceType = 'all' | 'tags' | 'custom_field' | 'csv';
-type CustomFieldOperator = 'is' | 'is_not' | 'contains';
-
-interface CustomFieldFilter {
-  fieldId: string;
-  operator: CustomFieldOperator;
-  value: string;
-}
+type AudienceType = 'all' | 'tags' | 'csv';
 
 interface AudienceConfig {
   type: AudienceType;
   tagIds?: string[];
-  customField?: CustomFieldFilter;
   csvContacts?: { phone: string; name?: string }[];
   excludeTagIds?: string[];
 }
@@ -47,12 +38,6 @@ export function Step2SelectAudience({
   onBack,
 }: Step2Props) {
   const t = useTranslations('Broadcasts.wizard');
-
-  const OPERATOR_OPTIONS = useMemo<{ value: CustomFieldOperator; label: string }[]>(() => [
-    { value: 'is', label: t('selectAudience.operatorIs') },
-    { value: 'is_not', label: t('selectAudience.operatorIsNot') },
-    { value: 'contains', label: t('selectAudience.operatorContains') },
-  ], [t]);
 
   const audienceOptions = useMemo<{
     type: AudienceType;
@@ -73,12 +58,6 @@ export function Step2SelectAudience({
       icon: Tags,
     },
     {
-      type: 'custom_field',
-      label: t('selectAudience.method.customField'),
-      description: t('selectAudience.customFieldDesc'),
-      icon: Filter,
-    },
-    {
       type: 'csv',
       label: t('selectAudience.method.csv'),
       description: t('selectAudience.csvDesc'),
@@ -86,9 +65,7 @@ export function Step2SelectAudience({
     },
   ], [t]);
   const [tags, setTags] = useState<Tag[]>([]);
-  const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [loadingTags, setLoadingTags] = useState(false);
-  const [loadingFields, setLoadingFields] = useState(false);
   const [estimatedCount, setEstimatedCount] = useState<number | null>(null);
   const [loadingCount, setLoadingCount] = useState(false);
 
@@ -107,25 +84,6 @@ export function Step2SelectAudience({
     }
     fetchTags();
   }, []);
-
-  // Lazy-load custom fields only when that audience type is active.
-  useEffect(() => {
-    if (audience.type !== 'custom_field') return;
-    async function fetchFields() {
-      setLoadingFields(true);
-      try {
-        const supabase = createClient();
-        const { data } = await supabase
-          .from('custom_fields')
-          .select('*')
-          .order('field_name');
-        setCustomFields(data ?? []);
-      } finally {
-        setLoadingFields(false);
-      }
-    }
-    fetchFields();
-  }, [audience.type]);
 
   const fetchEstimatedCount = useCallback(async () => {
     setLoadingCount(true);
@@ -146,21 +104,6 @@ export function Step2SelectAudience({
           .from('contact_tags')
           .select('contact_id')
           .in('tag_id', audience.tagIds);
-        baseIds = new Set((data ?? []).map((r) => r.contact_id));
-      } else if (
-        audience.type === 'custom_field' &&
-        audience.customField?.fieldId &&
-        audience.customField.value
-      ) {
-        const { fieldId, operator, value } = audience.customField;
-        let q = supabase
-          .from('contact_custom_values')
-          .select('contact_id')
-          .eq('custom_field_id', fieldId);
-        if (operator === 'is') q = q.eq('value', value);
-        else if (operator === 'is_not') q = q.neq('value', value);
-        else q = q.ilike('value', `%${value}%`);
-        const { data } = await q;
         baseIds = new Set((data ?? []).map((r) => r.contact_id));
       } else if (
         audience.type === 'csv' &&
@@ -204,7 +147,6 @@ export function Step2SelectAudience({
   }, [
     audience.type,
     audience.tagIds,
-    audience.customField,
     audience.csvContacts,
     audience.excludeTagIds,
   ]);
@@ -229,21 +171,9 @@ export function Step2SelectAudience({
     onUpdate({ ...audience, excludeTagIds: updated });
   }
 
-  function updateCustomField(patch: Partial<CustomFieldFilter>) {
-    const prev = audience.customField ?? {
-      fieldId: '',
-      operator: 'is' as CustomFieldOperator,
-      value: '',
-    };
-    onUpdate({ ...audience, customField: { ...prev, ...patch } });
-  }
-
   const isValid =
     audience.type === 'all' ||
     (audience.type === 'tags' && audience.tagIds && audience.tagIds.length > 0) ||
-    (audience.type === 'custom_field' &&
-      !!audience.customField?.fieldId &&
-      audience.customField.value.length > 0) ||
     (audience.type === 'csv' &&
       audience.csvContacts &&
       audience.csvContacts.length > 0);
@@ -271,10 +201,6 @@ export function Step2SelectAudience({
                   // Wipe shape fields from other types to avoid stale
                   // config leaking across selections.
                   tagIds: option.type === 'tags' ? audience.tagIds : undefined,
-                  customField:
-                    option.type === 'custom_field'
-                      ? audience.customField
-                      : undefined,
                   csvContacts:
                     option.type === 'csv' ? audience.csvContacts : undefined,
                 })
@@ -341,56 +267,6 @@ export function Step2SelectAudience({
         </div>
       )}
 
-      {audience.type === 'custom_field' && (
-        <div className="space-y-3 rounded-xl border border-border bg-card/50 p-4">
-          <p className="text-sm font-medium text-foreground">{t('selectAudience.method.customField')}</p>
-          {loadingFields ? (
-            <Loader2 className="h-5 w-5 animate-spin text-primary" />
-          ) : customFields.length === 0 ? (
-            <p className="text-xs text-muted-foreground">
-              {t('selectAudience.errorLoadFields')}
-            </p>
-          ) : (
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_140px_minmax(0,1fr)]">
-              <select
-                value={audience.customField?.fieldId ?? ''}
-                onChange={(e) => updateCustomField({ fieldId: e.target.value })}
-                className="h-9 rounded-lg border border-border bg-muted px-2.5 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-              >
-                <option value="">{t('selectAudience.selectField')}</option>
-                {customFields.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.field_name}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={audience.customField?.operator ?? 'is'}
-                onChange={(e) =>
-                  updateCustomField({
-                    operator: e.target.value as CustomFieldOperator,
-                  })
-                }
-                className="h-9 rounded-lg border border-border bg-muted px-2.5 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-              >
-                {OPERATOR_OPTIONS.map((op: { value: CustomFieldOperator; label: string }) => (
-                  <option key={op.value} value={op.value}>
-                    {op.label}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="text"
-                value={audience.customField?.value ?? ''}
-                onChange={(e) => updateCustomField({ value: e.target.value })}
-                placeholder={t('selectAudience.valuePlaceholder')}
-                className="h-9 rounded-lg border border-border bg-muted px-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary"
-              />
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Exclude list — applies regardless of audience type */}
       <div className="rounded-xl border border-border bg-card/50 p-4">
         <div className="mb-3 flex items-center gap-2">
@@ -439,7 +315,7 @@ export function Step2SelectAudience({
           <div className="flex items-center gap-2">
             <Users className="h-4 w-4 text-primary" />
             <span className="text-sm text-foreground">
-              {estimatedCount.toLocaleString()}
+              {estimatedCount.toLocaleString('pt-BR')}
             </span>
             <span className="text-xs text-muted-foreground">estimated recipients</span>
           </div>

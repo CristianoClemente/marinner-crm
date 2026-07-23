@@ -139,7 +139,7 @@ export default function DashboardPage() {
           <>
             <MetricCard
               title={t('activeConversations')}
-              value={metrics.activeConversations.current.toLocaleString()}
+              value={metrics.activeConversations.current.toLocaleString('pt-BR')}
               icon={MessageSquare}
               delta={{
                 sign: metrics.activeConversations.previous,
@@ -152,7 +152,7 @@ export default function DashboardPage() {
             />
             <MetricCard
               title={t('newContactsToday')}
-              value={metrics.newContactsToday.current.toLocaleString()}
+              value={metrics.newContactsToday.current.toLocaleString('pt-BR')}
               icon={UserPlus}
               delta={{
                 sign:
@@ -172,7 +172,7 @@ export default function DashboardPage() {
             />
             <MetricCard
               title={t('messagesSentToday')}
-              value={metrics.messagesSentToday.current.toLocaleString()}
+              value={metrics.messagesSentToday.current.toLocaleString('pt-BR')}
               icon={Send}
               delta={{
                 sign:
@@ -230,5 +230,5 @@ export default function DashboardPage() {
 function deltaLabel(delta: number, suffix: string, noChangeLabel: string): string {
   if (delta === 0) return noChangeLabel
   const sign = delta > 0 ? '+' : ''
-  return `${sign}${delta.toLocaleString()} ${suffix}`
+  return `${sign}${delta.toLocaleString('pt-BR')} ${suffix}`
 }

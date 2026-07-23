@@ -26,6 +26,13 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { ContactExtendedFields } from '@/components/contacts/contact-extended-fields';
+import {
+  emptyExtendedFields,
+  extendedFieldsFromContact,
+  serializeExtendedFields,
+  type ContactExtendedFieldsState,
+} from '@/lib/contacts/extended-fields';
 
 interface ContactFormProps {
   open: boolean;
@@ -54,7 +61,9 @@ export function ContactForm({
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
-  const [company, setCompany] = useState('');
+  const [extended, setExtended] = useState<ContactExtendedFieldsState>(
+    emptyExtendedFields,
+  );
   const [saving, setSaving] = useState(false);
 
   // Duplicate-phone detection for NEW contacts. `exact` (same digits)
@@ -75,7 +84,7 @@ export function ContactForm({
       setName(contact?.name ?? '');
       setPhone(contact?.phone ?? '');
       setEmail(contact?.email ?? '');
-      setCompany(contact?.company ?? '');
+      setExtended(extendedFieldsFromContact(contact));
       setSelectedTagIds(contactTags.map((ct) => ct.tag_id));
       setDupMatch(null);
       fetchTags();
@@ -149,6 +158,8 @@ export function ContactForm({
 
       let contactId = contact?.id;
 
+      const extendedPayload = serializeExtendedFields(extended);
+
       if (isEdit && contactId) {
         const { error } = await supabase
           .from('contacts')
@@ -156,7 +167,7 @@ export function ContactForm({
             name: name.trim() || null,
             phone: phone.trim(),
             email: email.trim() || null,
-            company: company.trim() || null,
+            ...extendedPayload,
             updated_at: new Date().toISOString(),
           })
           .eq('id', contactId);
@@ -170,7 +181,7 @@ export function ContactForm({
             name: name.trim() || null,
             phone: phone.trim(),
             email: email.trim() || null,
-            company: company.trim() || null,
+            ...extendedPayload,
           })
           .select('id')
           .single();
@@ -222,147 +233,156 @@ export function ContactForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-popover border-border text-popover-foreground sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-popover-foreground">
-            {isEdit ? t('editTitle') : t('addTitle')}
-          </DialogTitle>
-          <DialogDescription className="text-muted-foreground">
-            {isEdit
-              ? t('editDesc')
-              : t('addDesc')}
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="flex max-h-[90vh] flex-col gap-0 overflow-hidden bg-popover border-border p-0 text-popover-foreground sm:max-w-2xl">
+        <form
+          onSubmit={handleSubmit}
+          className="flex min-h-0 flex-1 flex-col"
+        >
+          <DialogHeader className="shrink-0 space-y-1 border-b border-border/50 px-4 py-4 pr-12">
+            <DialogTitle className="text-popover-foreground">
+              {isEdit ? t('editTitle') : t('addTitle')}
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              {isEdit ? t('editDesc') : t('addDesc')}
+            </DialogDescription>
+          </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="cf-name" className="text-muted-foreground">
-              {t('nameLabel')}
-            </Label>
-            <Input
-              id="cf-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={t('namePlaceholder')}
-              className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
-            />
-          </div>
+          <div
+            className={
+              'min-h-0 flex-1 space-y-6 overflow-y-auto px-4 py-4 ' +
+              '[scrollbar-width:thin] [scrollbar-color:var(--border)_transparent] ' +
+              '[&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent ' +
+              '[&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border/50 ' +
+              'hover:[&::-webkit-scrollbar-thumb]:bg-border/80'
+            }
+          >
+            {/* Contato principal */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-3">
+              <div className="min-w-0 space-y-1.5">
+                <Label htmlFor="cf-name" className="text-muted-foreground">
+                  {t('nameLabel')}
+                </Label>
+                <Input
+                  id="cf-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder={t('namePlaceholder')}
+                  className="w-full bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                />
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="cf-phone" className="text-muted-foreground">
-              {t('phoneLabel')} <span className="text-red-400">*</span>
-            </Label>
-            <Input
-              id="cf-phone"
-              value={phone}
-              onChange={(e) => {
-                setPhone(e.target.value);
-                if (dupMatch) setDupMatch(null);
-              }}
-              onBlur={checkDuplicate}
-              placeholder={t('phonePlaceholder')}
-              className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
-            />
-            {dupMatch ? (
-              <div
-                className={`flex items-start gap-2 rounded-md border px-2.5 py-2 text-xs ${
-                  dupMatch.exact
-                    ? 'border-red-500/40 bg-red-500/10 text-red-300'
-                    : 'border-amber-500/40 bg-amber-500/10 text-amber-300'
-                }`}
-              >
-                <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-                <div className="space-y-1">
-                  <p>
-                    {dupMatch.exact
-                      ? t('dupExact')
-                      : t('dupSimilar')}
+              <div className="min-w-0 space-y-1.5">
+                <Label htmlFor="cf-phone" className="text-muted-foreground">
+                  {t('phoneLabel')} <span className="text-red-400">*</span>
+                </Label>
+                <Input
+                  id="cf-phone"
+                  value={phone}
+                  onChange={(e) => {
+                    setPhone(e.target.value);
+                    if (dupMatch) setDupMatch(null);
+                  }}
+                  onBlur={checkDuplicate}
+                  placeholder={t('phonePlaceholder')}
+                  className="w-full bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                />
+                {dupMatch ? (
+                  <div
+                    className={`flex items-start gap-2 rounded-md border px-2.5 py-2 text-xs ${
+                      dupMatch.exact
+                        ? 'border-red-500/40 bg-red-500/10 text-red-300'
+                        : 'border-amber-500/40 bg-amber-500/10 text-amber-300'
+                    }`}
+                  >
+                    <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                    <div className="space-y-1">
+                      <p>
+                        {dupMatch.exact
+                          ? t('dupExact')
+                          : t('dupSimilar')}
+                      </p>
+                      {onViewExisting && (
+                        <button
+                          type="button"
+                          onClick={() => onViewExisting(dupMatch.contact.id)}
+                          className="font-medium underline underline-offset-2 hover:no-underline"
+                        >
+                          {t('viewExisting', { name: dupMatch.contact.name || dupMatch.contact.phone })}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    {t('phoneHint')}
                   </p>
-                  {onViewExisting && (
-                    <button
-                      type="button"
-                      onClick={() => onViewExisting(dupMatch.contact.id)}
-                      className="font-medium underline underline-offset-2 hover:no-underline"
-                    >
-                      {t('viewExisting', { name: dupMatch.contact.name || dupMatch.contact.phone })}
-                    </button>
-                  )}
+                )}
+              </div>
+
+              <div className="min-w-0 space-y-1.5 sm:col-span-2">
+                <Label htmlFor="cf-email" className="text-muted-foreground">
+                  {t('emailLabel')}
+                </Label>
+                <Input
+                  id="cf-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder={t('emailPlaceholder')}
+                  className="w-full bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                />
+              </div>
+            </div>
+
+            <ContactExtendedFields
+              idPrefix="cf"
+              value={extended}
+              onChange={(patch) =>
+                setExtended((prev) => ({ ...prev, ...patch }))
+              }
+            />
+
+            <div className="space-y-1.5">
+              <Label className="text-muted-foreground">{t('tagsLabel')}</Label>
+              {loadingTags ? (
+                <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                  <Loader2 className="size-3 animate-spin" />
+                  {t('loadingTags')}
                 </div>
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                {t('phoneHint')}
-              </p>
-            )}
+              ) : tags.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  {t('noTagsAvailable')}
+                </p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {tags.map((tag) => {
+                    const selected = selectedTagIds.includes(tag.id);
+                    return (
+                      <button
+                        key={tag.id}
+                        type="button"
+                        onClick={() => toggleTag(tag.id)}
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors cursor-pointer ${
+                          selected
+                            ? 'ring-2 ring-primary ring-offset-1 ring-offset-border'
+                            : 'opacity-60 hover:opacity-100'
+                        }`}
+                        style={{
+                          backgroundColor: tag.color + '20',
+                          color: tag.color,
+                          borderColor: tag.color,
+                        }}
+                      >
+                        {tag.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="cf-email" className="text-muted-foreground">
-              {t('emailLabel')}
-            </Label>
-            <Input
-              id="cf-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder={t('emailPlaceholder')}
-              className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="cf-company" className="text-muted-foreground">
-              {t('companyLabel')}
-            </Label>
-            <Input
-              id="cf-company"
-              value={company}
-              onChange={(e) => setCompany(e.target.value)}
-              placeholder={t('companyPlaceholder')}
-              className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-muted-foreground">{t('tagsLabel')}</Label>
-            {loadingTags ? (
-              <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                <Loader2 className="size-3 animate-spin" />
-                {t('loadingTags')}
-              </div>
-            ) : tags.length === 0 ? (
-              <p className="text-xs text-muted-foreground">
-                {t('noTagsAvailable')}
-              </p>
-            ) : (
-              <div className="flex flex-wrap gap-1.5">
-                {tags.map((tag) => {
-                  const selected = selectedTagIds.includes(tag.id);
-                  return (
-                    <button
-                      key={tag.id}
-                      type="button"
-                      onClick={() => toggleTag(tag.id)}
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors cursor-pointer ${
-                        selected
-                          ? 'ring-2 ring-primary ring-offset-1 ring-offset-border'
-                          : 'opacity-60 hover:opacity-100'
-                      }`}
-                      style={{
-                        backgroundColor: tag.color + '20',
-                        color: tag.color,
-                        borderColor: tag.color,
-                      }}
-                    >
-                      {tag.name}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <DialogFooter className="bg-popover border-border">
+          <DialogFooter className="mx-0 mb-0 shrink-0 rounded-none border-border bg-popover sm:rounded-b-xl">
             <Button
               type="button"
               variant="outline"

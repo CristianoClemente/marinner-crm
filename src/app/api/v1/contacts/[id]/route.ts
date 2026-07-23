@@ -57,7 +57,7 @@ export async function PATCH(
     // untouched); `null` clears it, a string sets it, and any other
     // type is a 400 rather than a silently-ignored no-op.
     const updates: Record<string, unknown> = {};
-    for (const field of ['name', 'email', 'company'] as const) {
+    for (const field of ['name', 'email'] as const) {
       if (!(field in body)) continue;
       const value = body[field];
       if (value === null || typeof value === 'string') {

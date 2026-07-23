@@ -55,7 +55,7 @@ export const SECTION_META: Record<SettingsSection, SectionMeta> = {
   whatsapp: { id: 'whatsapp', label: 'WhatsApp', icon: PlugZap, group: 'workspace' },
   templates: { id: 'templates', label: 'Templates', icon: FileText, group: 'workspace' },
   'quick-replies': { id: 'quick-replies', label: 'Quick replies', icon: Zap, group: 'workspace' },
-  fields: { id: 'fields', label: 'Fields & tags', icon: Tags, group: 'workspace' },
+  fields: { id: 'fields', label: 'Tags', icon: Tags, group: 'workspace' },
   deals: { id: 'deals', label: 'Deals & currency', icon: Coins, group: 'workspace' },
   members: { id: 'members', label: 'Team members', icon: UsersRound, group: 'workspace' },
   api: { id: 'api', label: 'API keys', icon: KeyRound, group: 'workspace' },
@@ -73,9 +73,8 @@ function isSection(value: string | null): value is SettingsSection {
 
 /**
  * Resolve a raw `?tab=` value to a section. Legacy tabs from the old
- * flat layout collapse onto their new home (Tags + Custom fields → the
- * merged "Fields & tags" section). Anything unknown falls back to the
- * Overview landing.
+ * flat layout collapse onto their new home (Tags / Custom fields → the
+ * "Tags" section). Anything unknown falls back to the Overview landing.
  */
 export function resolveSection(raw: string | null): SettingsSection {
   if (raw === 'tags' || raw === 'custom-fields') return 'fields';

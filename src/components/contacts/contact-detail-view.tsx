@@ -6,7 +6,7 @@ import { addContactTag, deleteContactTag } from '@/lib/contacts/tag-api';
 import { useAuth } from '@/hooks/use-auth';
 import { formatCurrency } from '@/lib/currency';
 import { toast } from 'sonner';
-import type { Contact, Tag, ContactTag, ContactNote, CustomField, ContactCustomValue, Deal, MessageTemplate } from '@/types';
+import type { Contact, Tag, ContactNote, Deal, MessageTemplate } from '@/types';
 import {
   TemplatePicker,
   type TemplateSendValues,
@@ -29,7 +29,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Phone,
   Mail,
-  Building2,
   Copy,
   Check,
   Loader2,
@@ -41,6 +40,13 @@ import {
   LayoutTemplate,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { ContactExtendedFields } from '@/components/contacts/contact-extended-fields';
+import {
+  emptyExtendedFields,
+  extendedFieldsFromContact,
+  serializeExtendedFields,
+  type ContactExtendedFieldsState,
+} from '@/lib/contacts/extended-fields';
 
 interface ContactDetailViewProps {
   open: boolean;
@@ -73,7 +79,9 @@ export function ContactDetailView({
   const [editName, setEditName] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [editEmail, setEditEmail] = useState('');
-  const [editCompany, setEditCompany] = useState('');
+  const [editExtended, setEditExtended] = useState<ContactExtendedFieldsState>(
+    emptyExtendedFields,
+  );
   const [savingDetails, setSavingDetails] = useState(false);
 
   // Tags tab
@@ -86,12 +94,6 @@ export function ContactDetailView({
   const [newNote, setNewNote] = useState('');
   const [savingNote, setSavingNote] = useState(false);
   const [loadingNotes, setLoadingNotes] = useState(false);
-
-  // Custom fields tab
-  const [customFields, setCustomFields] = useState<CustomField[]>([]);
-  const [customValues, setCustomValues] = useState<Record<string, string>>({});
-  const [savingCustom, setSavingCustom] = useState(false);
-  const [loadingCustom, setLoadingCustom] = useState(false);
 
   // Deals tab
   const [deals, setDeals] = useState<Deal[]>([]);
@@ -112,7 +114,7 @@ export function ContactDetailView({
       setEditName(data.name ?? '');
       setEditPhone(data.phone);
       setEditEmail(data.email ?? '');
-      setEditCompany(data.company ?? '');
+      setEditExtended(extendedFieldsFromContact(data));
     }
     setLoading(false);
   }, [contactId, supabase]);
@@ -145,29 +147,6 @@ export function ContactDetailView({
     setLoadingNotes(false);
   }, [contactId, supabase]);
 
-  const fetchCustomFields = useCallback(async () => {
-    if (!contactId) return;
-    setLoadingCustom(true);
-
-    const [fieldsRes, valuesRes] = await Promise.all([
-      supabase.from('custom_fields').select('*').order('field_name'),
-      supabase
-        .from('contact_custom_values')
-        .select('*')
-        .eq('contact_id', contactId),
-    ]);
-
-    if (fieldsRes.data) setCustomFields(fieldsRes.data);
-    if (valuesRes.data) {
-      const map: Record<string, string> = {};
-      valuesRes.data.forEach((v) => {
-        map[v.custom_field_id] = v.value ?? '';
-      });
-      setCustomValues(map);
-    }
-    setLoadingCustom(false);
-  }, [contactId, supabase]);
-
   const fetchDeals = useCallback(async () => {
     if (!contactId) return;
     setLoadingDeals(true);
@@ -185,10 +164,9 @@ export function ContactDetailView({
       fetchContact();
       fetchTags();
       fetchNotes();
-      fetchCustomFields();
       fetchDeals();
     }
-  }, [open, contactId, fetchContact, fetchTags, fetchNotes, fetchCustomFields, fetchDeals]);
+  }, [open, contactId, fetchContact, fetchTags, fetchNotes, fetchDeals]);
 
   async function copyPhone() {
     if (!contact) return;
@@ -210,7 +188,7 @@ export function ContactDetailView({
         name: editName.trim() || null,
         phone: editPhone.trim(),
         email: editEmail.trim() || null,
-        company: editCompany.trim() || null,
+        ...serializeExtendedFields(editExtended),
         updated_at: new Date().toISOString(),
       })
       .eq('id', contactId);
@@ -291,39 +269,6 @@ export function ContactDetailView({
     }
   }
 
-  async function saveCustomFields() {
-    if (!contactId) return;
-    setSavingCustom(true);
-
-    try {
-      // Delete existing values and re-insert
-      await supabase
-        .from('contact_custom_values')
-        .delete()
-        .eq('contact_id', contactId);
-
-      const rows = Object.entries(customValues)
-        .filter(([, val]) => val.trim())
-        .map(([fieldId, val]) => ({
-          contact_id: contactId,
-          custom_field_id: fieldId,
-          value: val.trim(),
-        }));
-
-      if (rows.length > 0) {
-        const { error } = await supabase
-          .from('contact_custom_values')
-          .insert(rows);
-        if (error) throw error;
-      }
-
-      toast.success(t('toastCustomFieldsSaved'));
-    } catch {
-      toast.error(t('toastCustomFieldsFailed'));
-    }
-    setSavingCustom(false);
-  }
-
   async function handleSendTemplate(
     template: MessageTemplate,
     values: TemplateSendValues,
@@ -359,8 +304,8 @@ export function ContactDetailView({
 
       toast.success(t('toastTemplateSent', { name: template.name }));
     } catch (err) {
-      const reason = err instanceof Error ? err.message : 'network error';
-      toast.error(`Failed to send template: ${reason}`);
+      const reason = err instanceof Error ? err.message : 'erro de rede';
+      toast.error(t('toastTemplateFailed', { reason }));
     } finally {
       setSendingTemplate(false);
     }
@@ -381,7 +326,7 @@ export function ContactDetailView({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="bg-popover border-border text-popover-foreground sm:max-w-lg w-full p-0"
+        className="bg-popover border-border text-popover-foreground sm:max-w-xl w-full p-0"
       >
         {loading || !contact ? (
           <div className="flex items-center justify-center h-full">
@@ -423,12 +368,6 @@ export function ContactDetailView({
                         {contact.email}
                       </span>
                     )}
-                    {contact.company && (
-                      <span className="flex items-center gap-1">
-                        <Building2 className="size-3" />
-                        {contact.company}
-                      </span>
-                    )}
                   </div>
                 </div>
               </div>
@@ -450,77 +389,82 @@ export function ContactDetailView({
             </SheetHeader>
 
             {/* Tabs */}
-            <Tabs defaultValue="details" className="flex-1 flex flex-col min-h-0">
-              <TabsList className="bg-muted/50 border-b border-border mx-4 mt-3">
+            <Tabs defaultValue="details" className="flex min-h-0 flex-1 flex-col gap-0">
+              <TabsList
+                variant="line"
+                className="h-auto w-full shrink-0 justify-stretch gap-0 rounded-none border-b border-border bg-transparent px-2"
+              >
                 <TabsTrigger
                   value="details"
-                  className="data-active:bg-muted data-active:text-primary text-muted-foreground"
+                  className="flex-1 rounded-none px-2 py-2.5 text-xs font-medium text-muted-foreground data-active:bg-transparent data-active:text-foreground data-active:shadow-none"
                 >
                   {t('tabs.details')}
                 </TabsTrigger>
                 <TabsTrigger
                   value="tags"
-                  className="data-active:bg-muted data-active:text-primary text-muted-foreground"
+                  className="flex-1 rounded-none px-2 py-2.5 text-xs font-medium text-muted-foreground data-active:bg-transparent data-active:text-foreground data-active:shadow-none"
                 >
-                  {t('tabs.tags', { fallback: 'Tags' })}
+                  {t('tabs.tags')}
                 </TabsTrigger>
                 <TabsTrigger
                   value="notes"
-                  className="data-active:bg-muted data-active:text-primary text-muted-foreground"
+                  className="flex-1 rounded-none px-2 py-2.5 text-xs font-medium text-muted-foreground data-active:bg-transparent data-active:text-foreground data-active:shadow-none"
                 >
                   {t('tabs.notes')}
                 </TabsTrigger>
                 <TabsTrigger
-                  value="custom"
-                  className="data-active:bg-muted data-active:text-primary text-muted-foreground"
-                >
-                  {t('tabs.custom')}
-                </TabsTrigger>
-                <TabsTrigger
                   value="deals"
-                  className="data-active:bg-muted data-active:text-primary text-muted-foreground"
+                  className="flex-1 rounded-none px-2 py-2.5 text-xs font-medium text-muted-foreground data-active:bg-transparent data-active:text-foreground data-active:shadow-none"
                 >
                   {t('tabs.deals')}
                 </TabsTrigger>
               </TabsList>
 
               {/* Details Tab */}
-              <TabsContent value="details" className="flex-1 overflow-y-auto px-4 py-3">
-                <div className="space-y-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-muted-foreground text-xs">{t('company', { fallback: 'Name' })}</Label>
-                    <Input
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      className="bg-muted border-border text-foreground h-8 text-sm"
-                    />
+              <TabsContent value="details" className="mt-0 flex-1 overflow-y-auto px-4 py-3">
+                <div className="space-y-5">
+                  <div className="grid grid-cols-1 gap-x-3 gap-y-3 sm:grid-cols-2">
+                    <div className="flex min-w-0 flex-col gap-1.5 sm:col-span-2">
+                      <Label className="block text-[11px] font-medium leading-snug text-muted-foreground">
+                        {t('name')}
+                      </Label>
+                      <Input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="h-8 w-full border-border bg-muted text-sm text-foreground"
+                      />
+                    </div>
+                    <div className="flex min-w-0 flex-col gap-1.5">
+                      <Label className="block text-[11px] font-medium leading-snug text-muted-foreground">
+                        {t('phone')} <span className="text-red-400">*</span>
+                      </Label>
+                      <Input
+                        value={editPhone}
+                        onChange={(e) => setEditPhone(e.target.value)}
+                        className="h-8 w-full border-border bg-muted text-sm text-foreground"
+                      />
+                    </div>
+                    <div className="flex min-w-0 flex-col gap-1.5">
+                      <Label className="block text-[11px] font-medium leading-snug text-muted-foreground">
+                        {t('email')}
+                      </Label>
+                      <Input
+                        value={editEmail}
+                        onChange={(e) => setEditEmail(e.target.value)}
+                        className="h-8 w-full border-border bg-muted text-sm text-foreground"
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-muted-foreground text-xs">
-                      {t('phone')} <span className="text-red-400">*</span>
-                    </Label>
-                    <Input
-                      value={editPhone}
-                      onChange={(e) => setEditPhone(e.target.value)}
-                      className="bg-muted border-border text-foreground h-8 text-sm"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-muted-foreground text-xs">{t('email')}</Label>
-                    <Input
-                      value={editEmail}
-                      onChange={(e) => setEditEmail(e.target.value)}
-                      className="bg-muted border-border text-foreground h-8 text-sm"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-muted-foreground text-xs">{t('company')}</Label>
-                    <Input
-                      value={editCompany}
-                      onChange={(e) => setEditCompany(e.target.value)}
-                      className="bg-muted border-border text-foreground h-8 text-sm"
-                    />
-                  </div>
+
+                  <ContactExtendedFields
+                    idPrefix="cd"
+                    compact
+                    value={editExtended}
+                    onChange={(patch) =>
+                      setEditExtended((prev) => ({ ...prev, ...patch }))
+                    }
+                  />
+
                   <Button
                     onClick={saveDetails}
                     disabled={savingDetails}
@@ -538,7 +482,7 @@ export function ContactDetailView({
               </TabsContent>
 
               {/* Tags Tab */}
-              <TabsContent value="tags" className="flex-1 overflow-y-auto px-4 py-3">
+              <TabsContent value="tags" className="mt-0 flex-1 overflow-y-auto px-4 py-3">
                 <div className="space-y-3">
                   <p className="text-xs text-muted-foreground">
                     {t('tagsTab.clickTagDesc')}
@@ -577,7 +521,7 @@ export function ContactDetailView({
               </TabsContent>
 
               {/* Notes Tab */}
-              <TabsContent value="notes" className="flex-1 flex flex-col min-h-0 px-4 py-3">
+              <TabsContent value="notes" className="mt-0 flex min-h-0 flex-1 flex-col px-4 py-3">
                 <div className="space-y-2 mb-3">
                   <Textarea
                     value={newNote}
@@ -627,9 +571,9 @@ export function ContactDetailView({
                           </button>
                         </div>
                         <p className="text-xs text-muted-foreground mt-1.5">
-                          {new Date(note.created_at).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
+                          {new Date(note.created_at).toLocaleDateString('pt-BR', {
+                            day: '2-digit',
+                            month: '2-digit',
                             year: 'numeric',
                             hour: '2-digit',
                             minute: '2-digit',
@@ -641,55 +585,8 @@ export function ContactDetailView({
                 </div>
               </TabsContent>
 
-              {/* Custom Fields Tab */}
-              <TabsContent value="custom" className="flex-1 overflow-y-auto px-4 py-3">
-                {loadingCustom ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="size-5 animate-spin text-muted-foreground" />
-                  </div>
-                ) : customFields.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">
-                    {t('noCustomFields')}
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {customFields.map((field) => (
-                      <div key={field.id} className="space-y-1.5">
-                        <Label className="text-muted-foreground text-xs capitalize">
-                          {field.field_name}
-                        </Label>
-                        <Input
-                          value={customValues[field.id] ?? ''}
-                          onChange={(e) =>
-                            setCustomValues((prev) => ({
-                              ...prev,
-                              [field.id]: e.target.value,
-                            }))
-                          }
-                          placeholder={t('enterCustomField', { name: field.field_name })}
-                          className="bg-muted border-border text-foreground h-8 text-sm placeholder:text-muted-foreground"
-                        />
-                      </div>
-                    ))}
-                    <Button
-                      onClick={saveCustomFields}
-                      disabled={savingCustom}
-                      className="bg-primary hover:bg-primary/90 text-primary-foreground w-full"
-                      size="sm"
-                    >
-                      {savingCustom ? (
-                        <Loader2 className="size-3.5 animate-spin" />
-                      ) : (
-                        <Save className="size-3.5" />
-                      )}
-                      {t('saveCustomFieldsBtn')}
-                    </Button>
-                  </div>
-                )}
-              </TabsContent>
-
               {/* Deals Tab */}
-              <TabsContent value="deals" className="flex-1 overflow-y-auto px-4 py-3">
+              <TabsContent value="deals" className="mt-0 flex-1 overflow-y-auto px-4 py-3">
                 {loadingDeals ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="size-5 animate-spin text-primary" />

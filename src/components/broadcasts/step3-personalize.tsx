@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { Contact, CustomField, MessageTemplate } from '@/types';
+import { Contact, MessageTemplate } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -15,7 +15,7 @@ import {
 import { ArrowLeft, ArrowRight, Eye, ImageIcon, Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-type VariableType = 'static' | 'field' | 'custom_field';
+type VariableType = 'static' | 'field';
 
 interface VariableMapping {
   type: VariableType;
@@ -62,7 +62,6 @@ const SAMPLE_CONTACT: Contact = {
   name: 'John Doe',
   phone: '+1234567890',
   email: 'john@example.com',
-  company: 'Acme Corp',
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 };
@@ -77,50 +76,24 @@ export function Step3Personalize({
   onBack,
 }: Step3Props) {
   const t = useTranslations('Broadcasts.wizard');
-  const [customFields, setCustomFields] = useState<CustomField[]>([]);
-  const [loadingFields, setLoadingFields] = useState(true);
   const [firstContact, setFirstContact] = useState<Contact | null>(null);
-  const [firstContactCustomValues, setFirstContactCustomValues] = useState<
-    Map<string, string>
-  >(new Map());
   const [loadingPreview, setLoadingPreview] = useState(true);
 
-  // Load user's custom fields + a representative contact for the
-  // live preview. Fall back to sample data if no contacts exist yet.
+  // Load a representative contact for the live preview. Fall back to
+  // sample data if no contacts exist yet.
   useEffect(() => {
     let cancelled = false;
     (async () => {
       const supabase = createClient();
-      const [fieldsRes, contactRes] = await Promise.all([
-        supabase.from('custom_fields').select('*').order('field_name'),
-        supabase
-          .from('contacts')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-      ]);
+      const { data: contact } = await supabase
+        .from('contacts')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
       if (cancelled) return;
 
-      setCustomFields(fieldsRes.data ?? []);
-      setLoadingFields(false);
-
-      const contact = contactRes.data ?? null;
-      setFirstContact(contact);
-
-      if (contact) {
-        const { data: customVals } = await supabase
-          .from('contact_custom_values')
-          .select('custom_field_id, value')
-          .eq('contact_id', contact.id);
-        if (!cancelled) {
-          const map = new Map<string, string>();
-          for (const row of customVals ?? []) {
-            map.set(row.custom_field_id, row.value ?? '');
-          }
-          setFirstContactCustomValues(map);
-        }
-      }
+      setFirstContact(contact ?? null);
       setLoadingPreview(false);
     })();
     return () => {
@@ -163,9 +136,9 @@ export function Step3Personalize({
 
   /**
    * A placeholder is "unmapped" if the user hasn't picked either a
-   * static value or a field/custom-field source. Blocks Next until
-   * every placeholder has something — otherwise the broadcast would
-   * ship with empty strings and confuse recipients.
+   * static value or a contact field source. Blocks Next until every
+   * placeholder has something — otherwise the broadcast would ship
+   * with empty strings and confuse recipients.
    */
   const unmappedKeys = useMemo(() => {
     const missing: string[] = [];
@@ -193,9 +166,6 @@ export function Step3Personalize({
    */
   const previewText = useMemo(() => {
     const contact = firstContact ?? SAMPLE_CONTACT;
-    const customValues = firstContact
-      ? firstContactCustomValues
-      : new Map<string, string>();
 
     let text = template.body_text;
     for (const placeholder of placeholders) {
@@ -211,23 +181,14 @@ export function Step3Personalize({
             name: contact.name,
             phone: contact.phone,
             email: contact.email,
-            company: contact.company,
           };
           replacement = fieldMap[mapping.value] ?? placeholder;
-        } else if (mapping.type === 'custom_field' && mapping.value) {
-          replacement = customValues.get(mapping.value) || placeholder;
         }
       }
       text = text.replaceAll(placeholder, replacement);
     }
     return text;
-  }, [
-    template.body_text,
-    variables,
-    placeholders,
-    firstContact,
-    firstContactCustomValues,
-  ]);
+  }, [template.body_text, variables, placeholders, firstContact]);
 
   const previewLabel = firstContact
     ? firstContact.name || firstContact.phone
@@ -327,9 +288,6 @@ export function Step3Personalize({
                       <SelectContent className="border-border bg-popover">
                         <SelectItem value="static">{t('personalize.typeStatic')}</SelectItem>
                         <SelectItem value="field">{t('personalize.typeContact')}</SelectItem>
-                        <SelectItem value="custom_field">
-                          {t('personalize.typeCustom')}
-                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -347,7 +305,7 @@ export function Step3Personalize({
                         placeholder="Enter value..."
                         className="border-border bg-muted text-foreground placeholder:text-muted-foreground"
                       />
-                    ) : mapping.type === 'field' ? (
+                    ) : (
                       <Select
                         value={mapping.value || undefined}
                         onValueChange={(val) =>
@@ -361,32 +319,6 @@ export function Step3Personalize({
                           {contactFields.map((field) => (
                             <SelectItem key={field.value} value={field.value}>
                               {t(`personalize.fieldMap.${field.labelKey}`)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <Select
-                        value={mapping.value || undefined}
-                        onValueChange={(val) =>
-                          updateVariable(key, { value: val || '' })
-                        }
-                      >
-                        <SelectTrigger className="w-full border-border bg-muted text-foreground">
-                          <SelectValue
-                            placeholder={
-                              loadingFields
-                                ? 'Loading…'
-                                : customFields.length === 0
-                                  ? 'No custom fields'
-                                  : 'Select custom field…'
-                            }
-                          />
-                        </SelectTrigger>
-                        <SelectContent className="border-border bg-popover">
-                          {customFields.map((f) => (
-                            <SelectItem key={f.id} value={f.id}>
-                              {f.field_name}
                             </SelectItem>
                           ))}
                         </SelectContent>

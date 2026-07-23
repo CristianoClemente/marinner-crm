@@ -119,7 +119,7 @@ export function validateSendMessageParams(params: {
     params;
 
   if (!messageType) {
-    throw new SendMessageError('bad_request', 'message_type is required', 400);
+    throw new SendMessageError('bad_request', 'o tipo de mensagem é obrigatório', 400);
   }
 
   const isMediaKind = (MEDIA_KINDS as readonly string[]).includes(messageType);
@@ -127,7 +127,7 @@ export function validateSendMessageParams(params: {
   if (!(VALID_MESSAGE_TYPES as readonly string[]).includes(messageType)) {
     throw new SendMessageError(
       'bad_request',
-      `Unsupported message_type "${messageType}"`,
+      `Tipo de mensagem não suportado "${messageType}"`,
       400
     );
   }
@@ -135,7 +135,7 @@ export function validateSendMessageParams(params: {
   if (messageType === 'text' && !contentText) {
     throw new SendMessageError(
       'bad_request',
-      'content_text is required for text messages',
+      'o texto é obrigatório para mensagens de texto',
       400
     );
   }
@@ -143,7 +143,7 @@ export function validateSendMessageParams(params: {
   if (messageType === 'template' && !templateName) {
     throw new SendMessageError(
       'bad_request',
-      'template_name is required for template messages',
+      'o nome do modelo é obrigatório para mensagens de modelo',
       400
     );
   }
@@ -160,7 +160,7 @@ export function validateSendMessageParams(params: {
   if (isMediaKind && !mediaUrl) {
     throw new SendMessageError(
       'bad_request',
-      `media_url is required for ${messageType} messages`,
+      `a URL da mídia é obrigatória para mensagens de ${messageType}`,
       400
     );
   }
@@ -174,7 +174,7 @@ export function validateSendMessageParams(params: {
   ) {
     throw new SendMessageError(
       'bad_request',
-      'Caption exceeds the 1024-character limit',
+      'A legenda excede o limite de 1024 caracteres',
       400
     );
   }

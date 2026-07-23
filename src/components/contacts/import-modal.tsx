@@ -10,6 +10,8 @@ import {
 } from '@/lib/contacts/dedupe';
 import {
   parseContactCsv,
+  downloadContactCsvTemplate,
+  toContactInsertFields,
   type ParsedContactRow,
 } from '@/lib/contacts/parse-contact-csv';
 import {
@@ -25,7 +27,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import {
@@ -36,6 +37,7 @@ import {
   XCircle,
   AlertTriangle,
   Tag,
+  Download,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
@@ -134,7 +136,6 @@ export function ImportModal({
   const [file, setFile] = useState<File | null>(null);
   const [parsedRows, setParsedRows] = useState<ParsedContactRow[]>([]);
   const [hasTagsColumn, setHasTagsColumn] = useState(false);
-  const [hasCompanyColumn, setHasCompanyColumn] = useState(false);
   const [tagColorByKey, setTagColorByKey] = useState<Map<string, string>>(
     new Map()
   );
@@ -150,7 +151,6 @@ export function ImportModal({
     setFile(null);
     setParsedRows([]);
     setHasTagsColumn(false);
-    setHasCompanyColumn(false);
     setTagColorByKey(new Map());
     setResult(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -172,21 +172,18 @@ export function ImportModal({
     const {
       rows,
       hasTagsColumn: csvHasTags,
-      hasCompanyColumn: csvHasCompany,
     } = parseContactCsv(text);
 
     if (rows.length === 0) {
       toast.error(t('toastNoValidRows'));
       setParsedRows([]);
       setHasTagsColumn(false);
-      setHasCompanyColumn(false);
       setTagColorByKey(new Map());
       return;
     }
 
     setParsedRows(rows);
     setHasTagsColumn(csvHasTags);
-    setHasCompanyColumn(csvHasCompany);
 
     if (csvHasTags && accountId) {
       const { data: tags } = await supabase
@@ -274,10 +271,7 @@ export function ImportModal({
         const rows = chunk.map((row) => ({
           user_id: user.id,
           account_id: accountId,
-          phone: row.phone,
-          name: row.name || null,
-          email: row.email || null,
-          company: row.company || null,
+          ...toContactInsertFields(row),
         }));
 
         const { data, error } = await supabase
@@ -374,10 +368,6 @@ export function ImportModal({
   // values, so an all-empty tags column still renders for validation.
   const previewHasTags =
     hasTagsColumn || preview.some((row) => row.tagNames.length > 0);
-  // Company: AND — hide unless the CSV declares it and preview has data,
-  // avoiding an all-dash column that wastes horizontal space.
-  const previewHasCompany =
-    hasCompanyColumn && preview.some((row) => row.company?.trim());
 
   const tagStats = useMemo(() => {
     const names = new Set<string>();
@@ -393,7 +383,7 @@ export function ImportModal({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="flex max-h-[min(90vh,720px)] flex-col gap-0 overflow-hidden border-border/80 bg-popover p-0 text-popover-foreground sm:max-w-2xl">
-        <div className="shrink-0 space-y-4 border-b border-border/80 px-6 pt-6 pb-5">
+        <div className="shrink-0 space-y-4 px-6 pt-6 pb-5">
           <DialogHeader className="gap-1.5">
             <DialogTitle className="text-lg text-popover-foreground">
               {t('title')}
@@ -404,12 +394,24 @@ export function ImportModal({
                   phoneCode: (chunks) => `<code class="rounded bg-muted px-1 py-0.5 text-[11px] text-muted-foreground">${chunks}</code>`,
                   nameCode: (chunks) => `<code class="rounded bg-muted px-1 py-0.5 text-[11px] text-muted-foreground">${chunks}</code>`,
                   emailCode: (chunks) => `<code class="rounded bg-muted px-1 py-0.5 text-[11px] text-muted-foreground">${chunks}</code>`,
-                  companyCode: (chunks) => `<code class="rounded bg-muted px-1 py-0.5 text-[11px] text-muted-foreground">${chunks}</code>`,
                   tagsCode: (chunks) => `<code class="rounded bg-muted px-1 py-0.5 text-[11px] text-muted-foreground">${chunks}</code>`,
                 })
               }}
             />
           </DialogHeader>
+
+          <div className="flex justify-start">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => downloadContactCsvTemplate(t('templateFilename'))}
+              className="border-border text-muted-foreground hover:bg-muted"
+            >
+              <Download className="size-3.5" />
+              {t('downloadTemplate')}
+            </Button>
+          </div>
 
           <div
             role="button"
@@ -465,7 +467,12 @@ export function ImportModal({
           />
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+        <div
+          className={cn(
+            'min-h-0 flex-1 overflow-y-auto px-6',
+            (preview.length > 0 && !result) || result ? 'py-4' : 'py-0'
+          )}
+        >
           {preview.length > 0 && !result && (
             <div className="space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -496,11 +503,6 @@ export function ImportModal({
                         <th className="px-3 py-2 text-left font-medium whitespace-nowrap text-muted-foreground">
                           {t('columns.email')}
                         </th>
-                        {previewHasCompany && (
-                          <th className="px-3 py-2 text-left font-medium whitespace-nowrap text-muted-foreground">
-                            {t('columns.company')}
-                          </th>
-                        )}
                         {previewHasTags && (
                           <th className="px-3 py-2 text-left font-medium whitespace-nowrap text-muted-foreground">
                             {t('columns.tags')}
@@ -533,14 +535,6 @@ export function ImportModal({
                               maxWidth="max-w-[10rem]"
                             />
                           </td>
-                          {previewHasCompany && (
-                            <td className="px-3 py-2 text-muted-foreground">
-                              <PreviewCell
-                                value={row.company || '—'}
-                                maxWidth="max-w-[7rem]"
-                              />
-                            </td>
-                          )}
                           {previewHasTags && (
                             <td className="px-3 py-2 align-top">
                               <ImportPreviewTags
@@ -597,7 +591,7 @@ export function ImportModal({
           )}
         </div>
 
-        <DialogFooter className="mt-0 shrink-0 gap-2 border-t border-border/80 bg-background/50 px-6 py-4 sm:justify-end">
+        <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border px-6 py-4">
           <Button
             type="button"
             variant="outline"
@@ -614,10 +608,12 @@ export function ImportModal({
               className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               {importing && <Loader2 className="size-4 animate-spin" />}
-              {parsedRows.length > 0 ? t('importBtn', { count: parsedRows.length }) : t('importBtn', { count: 0 })}
+              {parsedRows.length > 0
+                ? t('importBtn', { count: parsedRows.length })
+                : t('importBtn', { count: 0 })}
             </Button>
           )}
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );

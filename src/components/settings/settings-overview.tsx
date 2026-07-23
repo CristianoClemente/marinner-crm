@@ -23,7 +23,6 @@ interface OverviewCounts {
   templates: number | null;
   templatesPending: number | null;
   tags: number | null;
-  customFields: number | null;
 }
 
 interface WhatsAppStatus {
@@ -40,7 +39,9 @@ export function SettingsOverview({
     useAuth();
   const { mode, theme } = useTheme();
   const t = useTranslations('Settings.overview');
-  const tRoles = useTranslations('roles');
+  // Roles vivem em Settings.roles (mesmo namespace de members-tab / invite-dialog).
+  // useTranslations('roles') procura a chave na raiz e dispara MISSING_MESSAGE.
+  const tRoles = useTranslations('Settings.roles');
   const tSections = useTranslations('Settings.sections');
 
   const [counts, setCounts] = useState<OverviewCounts | null>(null);
@@ -62,7 +63,7 @@ export function SettingsOverview({
     // Cheap counts — resolve fast, render immediately.
     (async () => {
       setCountsLoading(true);
-      const [membersRes, invitesRes, templatesTotal, templatesPending, tagsRes, fieldsRes] =
+      const [membersRes, invitesRes, templatesTotal, templatesPending, tagsRes] =
         await Promise.allSettled([
           fetch('/api/account/members', { cache: 'no-store' }).then((r) => r.json()),
           canManageMembers
@@ -83,7 +84,6 @@ export function SettingsOverview({
             .from('tags')
             .select('id', { count: 'exact', head: true })
             .eq('user_id', userId),
-          supabase.from('custom_fields').select('id', { count: 'exact', head: true }),
         ]);
 
       if (cancelled) return;
@@ -111,8 +111,6 @@ export function SettingsOverview({
             ? templatesPending.value.count ?? null
             : null,
         tags: tagsRes.status === 'fulfilled' ? tagsRes.value.count ?? null : null,
-        customFields:
-          fieldsRes.status === 'fulfilled' ? fieldsRes.value.count ?? null : null,
       });
       setCountsLoading(false);
     })();
@@ -206,11 +204,9 @@ export function SettingsOverview({
       section: 'fields',
       loading: countsLoading,
       subtitle:
-        counts?.tags == null && counts?.customFields == null
+        counts?.tags == null
           ? t('tagsAndFields')
-          : `${t('tagsCount', { count: counts?.tags ?? 0 })} · ${t('fieldsCount', {
-              count: counts?.customFields ?? 0,
-            })}`,
+          : t('tagsCount', { count: counts.tags }),
     },
     {
       section: 'appearance',

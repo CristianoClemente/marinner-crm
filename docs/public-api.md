@@ -175,7 +175,7 @@ or phone) and `?tag=<tagId>`.
   "data": [
     {
       "id": "…", "phone": "+14155550123", "name": "Jane Doe",
-      "email": null, "company": "Acme", "avatar_url": null,
+      "email": null, "avatar_url": null,
       "tags": [{ "id": "…", "name": "vip", "color": "#3b82f6" }],
       "created_at": "…", "updated_at": "…"
     }
@@ -187,7 +187,7 @@ or phone) and `?tag=<tagId>`.
 ### `POST /api/v1/contacts`
 
 Create a contact. Scope: `contacts:write`. `phone` (E.164) is required;
-`name`, `email`, `company`, and `tags` (an array of tag names, created
+`name`, `email`, and `tags` (an array of tag names, created
 if missing) are optional. **Find-or-create by phone:** an existing
 match returns `200` with the existing contact; a new contact returns
 `201`. The response body is the serialized contact (same shape as the
@@ -196,7 +196,7 @@ list rows above).
 ### `GET` / `PATCH /api/v1/contacts/{id}`
 
 Read or update one contact. Scopes: `contacts:read` / `contacts:write`.
-`PATCH` updates only the fields you send (`name`, `email`, `company`);
+`PATCH` updates only the fields you send (`name`, `email`);
 pass `tags` (an array of tag names) to replace the contact's tags. A
 contact in another account returns `404`.
 
