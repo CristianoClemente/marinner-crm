@@ -1,4 +1,4 @@
-import { NextResponse, after } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { processZapiWebhookEvent } from '@/lib/whatsapp/zapi-webhook-process'
 import type { ZapiWebhookPayload } from '@/lib/whatsapp/zapi-webhook'
@@ -65,25 +65,41 @@ export async function POST(request: Request) {
     )
   }
 
-  // Ack quickly; process in after() so Z-API does not retry on slow work.
-  after(async () => {
-    const db = supabaseAdmin()
-    const { data: config, error } = await db
-      .from('whatsapp_config')
-      .select('id, account_id, user_id, provider, status')
-      .eq('zapi_instance_id', instanceId)
-      .eq('provider', 'zapi')
-      .maybeSingle()
+  const db = supabaseAdmin()
+  const { data: config, error } = await db
+    .from('whatsapp_config')
+    .select('id, account_id, user_id, provider, status')
+    .eq('zapi_instance_id', instanceId)
+    .eq('provider', 'zapi')
+    .maybeSingle()
 
-    if (error || !config) {
-      return
-    }
+  if (error) {
+    return NextResponse.json(
+      { error: 'config_lookup_failed' },
+      { status: 500 },
+    )
+  }
 
-    await processZapiWebhookEvent(db, config, {
+  if (!config) {
+    return NextResponse.json(
+      { error: 'unknown_instance' },
+      { status: 404 },
+    )
+  }
+
+  try {
+    const result = await processZapiWebhookEvent(db, config, {
       ...payload,
       instanceId,
     })
-  })
-
-  return NextResponse.json({ status: 'received' }, { status: 200 })
+    return NextResponse.json(
+      { status: 'received', handled: result.handled },
+      { status: 200 },
+    )
+  } catch {
+    return NextResponse.json(
+      { error: 'processing_failed' },
+      { status: 500 },
+    )
+  }
 }

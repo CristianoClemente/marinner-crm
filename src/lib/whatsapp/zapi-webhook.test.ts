@@ -66,6 +66,17 @@ describe('normalizeZapiWebhook', () => {
     ).toBe('ignore')
   })
 
+  it('ignora waitingMessage sem conteúdo', () => {
+    const result = normalizeZapiWebhook({
+      type: 'ReceivedCallback',
+      messageId: 'W',
+      phone: '5511999999999',
+      fromMe: false,
+      waitingMessage: true,
+    })
+    expect(result).toEqual({ kind: 'ignore', reason: 'waiting_message' })
+  })
+
   it('mapeia MessageStatusCallback', () => {
     const result = normalizeZapiWebhook({
       type: 'MessageStatusCallback',

@@ -10,6 +10,7 @@ import { encrypt, decrypt } from '@/lib/whatsapp/encryption'
 import { createZapiProvider } from '@/lib/whatsapp/providers'
 import { isWhatsAppProvider } from '@/lib/whatsapp/provider-guards'
 import { registerZapiWebhookUrl } from '@/lib/whatsapp/zapi-webhook-process'
+import { getApexUrl } from '@/lib/domain'
 import type { WhatsAppProvider } from '@/types'
 
 async function resolveAccountId(
@@ -38,9 +39,20 @@ function supabaseAdmin() {
 }
 
 function publicAppOrigin(request: Request): string {
-  if (process.env.NEXT_PUBLIC_APP_URL) {
-    return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '')
+  // Prefer the canonical site URL (NEXT_PUBLIC_SITE_URL via getApexUrl).
+  // NEXT_PUBLIC_APP_URL is kept as a legacy override for older deploys.
+  const legacyAppUrl = process.env.NEXT_PUBLIC_APP_URL?.trim()
+  if (legacyAppUrl) {
+    return legacyAppUrl.replace(/\/$/, '')
   }
+
+  const apex = getApexUrl()
+  const isLocalDefault =
+    apex.includes('localhost') || apex.includes('127.0.0.1')
+  if (!isLocalDefault) {
+    return apex
+  }
+
   if (process.env.VERCEL_URL) {
     return `https://${process.env.VERCEL_URL.replace(/\/$/, '')}`
   }

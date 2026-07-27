@@ -15,6 +15,8 @@ export interface ZapiWebhookPayload {
   connected?: boolean
   disconnected?: boolean
   error?: string
+  /** Z-API stub before media/content is ready — ignore when true without content. */
+  waitingMessage?: boolean
   senderName?: string
   chatName?: string
   text?: { message?: string }
@@ -161,6 +163,10 @@ export function normalizeZapiWebhook(
     }
 
     const media = pickMedia(payload)
+    // Z-API sends waitingMessage stubs (often view-once) with no body yet.
+    if (payload.waitingMessage === true && !media) {
+      return { kind: 'ignore', reason: 'waiting_message' }
+    }
     if (!media) {
       return { kind: 'ignore', reason: 'unsupported_content' }
     }
