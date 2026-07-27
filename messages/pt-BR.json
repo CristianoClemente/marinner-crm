@@ -27,6 +27,8 @@
     "aiAgents": "Agentes de IA",
     "settings": "Configurações",
     "beta": "Beta",
+    "broadcastsMetaOnly": "Meta",
+    "broadcastsMetaOnlyHint": "Transmissões em massa exigem a API oficial da Meta",
     "unreadConversations": "{count} {count, plural, =1 {conversa não lida} other {conversas não lidas}}",
     "unreadNotifications": "{count} {count, plural, =1 {notificação não lida} other {notificações não lidas}}",
     "roleOwner": "Proprietário",
@@ -131,6 +133,16 @@
     "page": {
       "whatsappNotConnected": "O WhatsApp® não está conectado. Vá em Configurações para conectar sua conta."
     },
+    "newMessage": {
+      "button": "Nova mensagem",
+      "title": "Nova mensagem",
+      "searchPlaceholder": "Buscar por nome ou telefone…",
+      "empty": "Nenhum contato com telefone encontrado",
+      "unnamed": "Sem nome",
+      "openFailed": "Não foi possível abrir a conversa",
+      "templateFailed": "Falha ao enviar o modelo",
+      "templateSent": "Modelo \"{name}\" enviado"
+    },
     "conversationList": {
       "searchPlaceholder": "Buscar conversas...",
       "filterAll": "Todas",
@@ -163,6 +175,9 @@
       "unassign": "Remover atribuição",
       "noTeammates": "Nenhum colega disponível",
       "me": " (eu)",
+      "aiSender": "IA",
+      "botSender": "Bot",
+      "agentSender": "Agente",
       "noMessagesYet": "Nenhuma mensagem ainda",
       "sendTemplateHint": "Envie um modelo para iniciar a conversa",
       "selectConversation": "Selecione uma conversa",
@@ -177,12 +192,11 @@
       "noCustomerMessages": "Nenhuma mensagem do cliente"
     },
     "composer": {
-      "draftHint": "Toque no ✨ para redigir uma resposta com IA — você pode editá-la antes de enviar",
       "sessionExpiredHint": "Sessão de 24 horas expirada. Use um modelo para reengajar.",
       "templates": "Modelos",
       "readOnlyPlaceholder": "Somente leitura — visualizadores podem navegar, mas não responder",
       "sessionExpiredPlaceholder": "Sessão expirada - use um modelo",
-      "typeMessagePlaceholder": "Digite uma mensagem... (Shift+Enter para nova linha)",
+      "typeMessagePlaceholder": "Digite uma mensagem… / para respostas rápidas",
       "readOnlyTitle": "Somente leitura — seu perfil não pode enviar mensagens",
       "recording": "Gravando… {current} / {max}",
       "cancel": "Cancelar",
@@ -204,7 +218,8 @@
       "send": "Enviar",
       "quickReplyNamePrompt": "Dê um nome a esta resposta rápida:",
       "quickReplySaved": "Salva como resposta rápida.",
-      "quickReplySaveError": "Não foi possível salvar a resposta rápida."
+      "quickReplySaveError": "Não foi possível salvar a resposta rápida.",
+      "metaOnlyInteractive": "Mensagens interativas exigem a API oficial da Meta. Esta conta usa Z-API."
     },
     "bubble": {
       "photo": "Foto",
@@ -541,10 +556,21 @@
     }
   },
   "Pipelines": {
+    "defaultPipelineName": "Funil de vendas",
+    "defaultStages": {
+      "newLead": "Novo lead",
+      "qualified": "Qualificado",
+      "proposalSent": "Proposta enviada",
+      "negotiation": "Negociação",
+      "won": "Ganho"
+    },
     "page": {
+      "title": "Funis",
+      "subtitle": "Funil atual: {name}",
+      "subtitleEmpty": "Crie um funil para começar a acompanhar negócios",
       "selectPipeline": "Selecionar funil",
       "noPipelinesYet": "Nenhum funil ainda",
-      "managePipelines": "Gerenciar funis",
+      "managePipelines": "Gerenciar",
       "addPipeline": "Adicionar funil",
       "addDeal": "Adicionar negócio",
       "createToStartTracking": "Crie um funil para começar a acompanhar negócios",
@@ -578,7 +604,7 @@
       "titlePlaceholder": "Título do negócio",
       "contact": "Contato",
       "selectContact": "Selecione um contato",
-      "linkToConversation": "Vincular à conversa",
+      "linkToConversation": "Abrir conversa",
       "value": "Valor",
       "currency": "Moeda",
       "expectedCloseDate": "Data prevista de fechamento",
@@ -588,6 +614,9 @@
       "notes": "Notas",
       "notesPlaceholder": "Adicionar notas...",
       "status": "Status",
+      "statusOpen": "Aberto",
+      "statusWon": "Ganho",
+      "statusLost": "Perdido",
       "markAsWon": "Marcar como ganho",
       "markAsLost": "Marcar como perdido",
       "reopenDeal": "Reabrir negócio",
@@ -670,7 +699,9 @@
         "date": "Data"
       },
       "errorLoad": "Falha ao carregar transmissões",
-      "retry": "Tentar novamente"
+      "retry": "Tentar novamente",
+      "zapiBlocked": "Transmissões exigem a API oficial da Meta. Esta conta está conectada via Z-API.",
+      "backToList": "Voltar às transmissões"
     },
     "status": {
       "draft": "Rascunho",
@@ -1074,7 +1105,21 @@
       "triggerKeywordNone": "Aciona por palavra-chave (nenhuma definida)",
       "triggerKeyword": "Aciona em: {keywords}",
       "triggerFirstInbound": "Aciona na primeira mensagem recebida de um contato",
-      "triggerManual": "Gatilho manual"
+      "triggerManual": "Gatilho manual",
+      "templates": {
+        "welcome_menu": {
+          "name": "Menu de boas-vindas",
+          "description": "Cumprimente clientes que digitam uma palavra-chave e direcione ao agente certo conforme sejam novos ou existentes."
+        },
+        "faq_bot": {
+          "name": "Bot de FAQ",
+          "description": "Responda perguntas comuns automaticamente. O cliente escolhe um tópico na lista; o bot responde e encerra."
+        },
+        "lead_capture": {
+          "name": "Captura de leads",
+          "description": "Cumprimente o primeiro contato, capture nome, e-mail e empresa, e transfira para vendas com as respostas na nota."
+        }
+      }
     },
     "edit": {
       "notFound": "Fluxo não encontrado.",
@@ -1270,11 +1315,14 @@
     "overview": {
       "notSetup": "Ainda não configurado",
       "connected": "Conectado",
+      "connectedZapi": "Conectado (Z-API)",
       "needsReconnecting": "Precisa reconectar",
+      "needsQrZapi": "Aguardando QR (Z-API)",
       "viewTeamMembers": "Ver membros da equipe",
       "membersCount": "{count} {count, plural, =1 {membro} other {membros}}",
       "pendingInvites": "{count} {count, plural, =1 {convite pendente} other {convites pendentes}}",
       "manageTemplates": "Gerenciar modelos de mensagem",
+      "templatesMetaOnly": "Disponível apenas com a API oficial da Meta",
       "templatesCount": "{count} {count, plural, =1 {modelo} other {modelos}}",
       "pendingReview": "{count} aguardando revisão",
       "tagsAndFields": "Etiquetas",
@@ -1498,6 +1546,42 @@
     "whatsapp": {
       "title": "Conexão do WhatsApp",
       "description": "Conecte sua API do Meta WhatsApp Business. Credenciais, webhook e etapas de configuração ficam todos aqui.",
+      "descriptionZapi": "Conecte uma instância Z-API. Credenciais, QR Code e webhook ficam todos aqui.",
+      "providerMeta": "API oficial (Meta)",
+      "providerZapi": "Z-API",
+      "providerHint": "Uma conta usa um provedor por vez. Salvar com o outro provedor substitui a configuração atual.",
+      "providerSwitchConfirm": "Trocar de provedor? Ao salvar, a configuração atual será substituída.",
+      "saveFailed": "Falha ao salvar a configuração",
+      "webhookCopied": "URL do webhook copiada para a área de transferência",
+      "zapiCredentialsTitle": "Credenciais Z-API",
+      "zapiCredentialsDesc": "Informe Instance ID, Token da instância e Client-Token da conta (painel Z-API → Segurança).",
+      "zapiInstanceId": "Instance ID",
+      "zapiInstanceToken": "Token da instância",
+      "zapiClientToken": "Client-Token",
+      "zapiClientTokenHint": "Token de segurança da conta Z-API, enviado no header Client-Token.",
+      "zapiInstanceIdRequired": "O Instance ID é obrigatório",
+      "zapiTokensRequired": "Token da instância e Client-Token são obrigatórios na configuração inicial",
+      "zapiConnected": "Z-API conectada ao WhatsApp",
+      "zapiSavedScanQr": "Credenciais salvas. Escaneie o QR Code com o WhatsApp para conectar.",
+      "zapiWebhookWarn": "Credenciais salvas, mas o registro automático de webhooks falhou",
+      "zapiStatusConnected": "Instância conectada",
+      "zapiStatusDisconnected": "Aguardando conexão",
+      "zapiStatusConnectedDesc": "O WhatsApp está vinculado à instância Z-API. Mensagens entram e saem pelo inbox.",
+      "zapiStatusDisconnectedDesc": "Salve as credenciais e escaneie o QR Code no celular para conectar a sessão.",
+      "zapiMetaOnlyTitle": "Recursos só na Meta",
+      "zapiMetaOnlyDesc": "Com Z-API, templates oficiais da Meta, broadcast e mensagens interativas ficam indisponíveis. Texto e mídia no inbox funcionam normalmente.",
+      "zapiQrTitle": "QR Code",
+      "zapiQrDesc": "Abra o WhatsApp no celular → Aparelhos conectados → Conectar um aparelho e escaneie o código.",
+      "zapiQrEmpty": "Não foi possível carregar o QR. Clique em atualizar.",
+      "zapiQrRefresh": "Atualizar QR",
+      "zapiQrFailed": "Falha ao obter QR Code da Z-API",
+      "zapiChallengeRequired": "A instância pediu autenticação por chave de acesso. Conclua no painel Z-API.",
+      "zapiDisconnect": "Desconectar sessão",
+      "zapiDisconnectConfirm": "Desconectar o WhatsApp desta instância Z-API?",
+      "zapiDisconnectFailed": "Falha ao desconectar",
+      "zapiDisconnected": "Sessão desconectada",
+      "zapiWebhookDesc": "URL que a Z-API chama para eventos. Registrada automaticamente ao salvar.",
+      "zapiWebhookAuto": "Ao salvar, o Marinner tenta apontar todos os webhooks da instância para esta URL.",
       "tokenCorrupted": "O token armazenado não pode ser descriptografado",
       "resetting": "Redefinindo...",
       "resetConfig": "Redefinir configuração",
@@ -1694,6 +1778,29 @@
       "saveFailed": "Falha ao salvar a moeda padrão",
       "saveSuccess": "Moeda padrão atualizada"
     },
+    "quickReplies": {
+      "title": "Respostas rápidas",
+      "description": "Trechos reutilizáveis — texto simples ou uma mensagem interativa salva — que os agentes podem inserir no compositor da caixa de entrada.",
+      "descriptionZapi": "Trechos de texto reutilizáveis que os agentes inserem no compositor. Nesta conta (Z-API) só respostas de texto são suportadas.",
+      "zapiInteractiveHint": "Respostas interativas salvas antes só enviam o texto do corpo na Z-API (sem botões).",
+      "new": "Nova resposta rápida",
+      "empty": "Nenhuma resposta rápida ainda. Crie uma para reutilizá-la entre conversas.",
+      "edit": "Editar resposta rápida",
+      "create": "Nova resposta rápida",
+      "name": "Nome",
+      "namePlaceholder": "ex.: Horário de atendimento",
+      "kindText": "Texto",
+      "kindInteractive": "Interativa",
+      "textPlaceholder": "O texto da mensagem a inserir",
+      "cancel": "Cancelar",
+      "save": "Salvar",
+      "titleRequired": "Dê um nome à resposta rápida.",
+      "saveFailed": "Não foi possível salvar a resposta rápida.",
+      "created": "Resposta rápida criada.",
+      "updated": "Resposta rápida atualizada.",
+      "deleteConfirm": "Excluir esta resposta rápida?",
+      "deleteFailed": "Não foi possível excluir a resposta rápida."
+    },
     "aiConfig": {
       "title": "Configuração do agente",
       "description": "Use sua própria chave da OpenAI ou Anthropic. O Marinner chama o provedor diretamente com sua chave — sem taxas de IA por usuário, e seus dados continuam seus. Isso alimenta as respostas redigidas por IA na caixa de entrada, o bot de resposta automática e o Playground.",
@@ -1760,6 +1867,15 @@
       "reindex": "Reindexar",
       "reindexTooltip": "Regerar embeddings de todos os documentos (ex.: após adicionar uma chave de embeddings)",
       "loading": "Carregando…"
+    }
+  },
+  "WhatsApp": {
+    "metaOnly": {
+      "title": "Recurso exclusivo da Meta",
+      "templates": "Modelos e sincronização com a Meta exigem a API oficial. Esta conta usa Z-API — o inbox de texto e mídia continua funcionando.",
+      "broadcast": "Transmissões em massa usam modelos aprovados da Meta e não estão disponíveis com Z-API.",
+      "interactive": "Mensagens interativas (botões e listas) exigem a API oficial da Meta.",
+      "reactions": "Reações a mensagens exigem a API oficial da Meta."
     }
   }
 }

@@ -1,8 +1,6 @@
 import {
   sendInteractiveButtons,
   sendInteractiveList,
-  sendMediaMessage,
-  sendTextMessage,
   type InteractiveButton,
   type InteractiveListSection,
   type MediaKind,
@@ -15,6 +13,11 @@ import {
   phoneVariants,
   isRecipientNotAllowedError,
 } from '@/lib/whatsapp/phone-utils'
+import {
+  assertProviderSupports,
+  createWhatsAppProviderFromConfig,
+  resolveConfigProvider,
+} from '@/lib/whatsapp/providers'
 import { supabaseAdmin } from './admin-client'
 
 // ------------------------------------------------------------
@@ -91,16 +94,14 @@ export async function engineSendText(
     throw new Error('WhatsApp not configured for this account')
   }
 
-  const accessToken = decrypt(config.access_token)
+  const messaging = createWhatsAppProviderFromConfig(config)
 
   const attempt = async (phone: string): Promise<string> => {
-    const r = await sendTextMessage({
-      phoneNumberId: config.phone_number_id,
-      accessToken,
+    const r = await messaging.sendText({
       to: phone,
       text: args.text,
     })
-    return r.messageId
+    return r.providerMessageId
   }
 
   const variants = phoneVariants(sanitized)
@@ -135,7 +136,7 @@ export async function engineSendText(
     ai_generated: args.aiGenerated ?? false,
   })
   if (msgErr) {
-    throw new Error(`sent to Meta but DB insert failed: ${msgErr.message}`)
+    throw new Error(`sent but DB insert failed: ${msgErr.message}`)
   }
 
   await db
@@ -201,19 +202,17 @@ export async function engineSendMedia(
     throw new Error('WhatsApp not configured for this account')
   }
 
-  const accessToken = decrypt(config.access_token)
+  const messaging = createWhatsAppProviderFromConfig(config)
 
   const attempt = async (phone: string): Promise<string> => {
-    const r = await sendMediaMessage({
-      phoneNumberId: config.phone_number_id,
-      accessToken,
+    const r = await messaging.sendMedia({
       to: phone,
       kind: args.kind,
       link: args.link,
       caption: args.caption,
       filename: args.filename,
     })
-    return r.messageId
+    return r.providerMessageId
   }
 
   const variants = phoneVariants(sanitized)
@@ -252,7 +251,7 @@ export async function engineSendMedia(
     status: 'sent',
   })
   if (msgErr) {
-    throw new Error(`sent to Meta but DB insert failed: ${msgErr.message}`)
+    throw new Error(`sent but DB insert failed: ${msgErr.message}`)
   }
 
   await db
@@ -353,13 +352,24 @@ async function sendInteractiveViaMeta(
     throw new Error('WhatsApp not configured for this account')
   }
 
-  const accessToken = decrypt(config.access_token)
+  const messaging = createWhatsAppProviderFromConfig(config)
+  assertProviderSupports(messaging, 'interactive')
+
+  const providerKind = resolveConfigProvider(config)
+  const metaAccessToken =
+    providerKind === 'meta' && typeof config.access_token === 'string'
+      ? decrypt(config.access_token)
+      : null
+  const metaPhoneNumberId =
+    providerKind === 'meta' && typeof config.phone_number_id === 'string'
+      ? config.phone_number_id
+      : null
 
   const attempt = async (phone: string): Promise<string> => {
     if (input.kind === 'buttons') {
       const r = await sendInteractiveButtons({
-        phoneNumberId: config.phone_number_id,
-        accessToken,
+        phoneNumberId: metaPhoneNumberId!,
+        accessToken: metaAccessToken!,
         to: phone,
         bodyText: input.bodyText,
         buttons: input.buttons,
@@ -369,8 +379,8 @@ async function sendInteractiveViaMeta(
       return r.messageId
     }
     const r = await sendInteractiveList({
-      phoneNumberId: config.phone_number_id,
-      accessToken,
+      phoneNumberId: metaPhoneNumberId!,
+      accessToken: metaAccessToken!,
       to: phone,
       bodyText: input.bodyText,
       buttonLabel: input.buttonLabel,

@@ -27,6 +27,8 @@ import {
   isRecipientNotAllowedError,
 } from '@/lib/whatsapp/phone-utils';
 import { isMessageTemplate } from '@/lib/whatsapp/template-row-guard';
+import { assertMetaFeature } from '@/lib/whatsapp/require-meta-feature';
+import { ProviderUnsupportedError } from '@/lib/whatsapp/providers';
 import type { MessageTemplate } from '@/types';
 import { findOrCreateContact } from '@/lib/api/v1/contacts';
 
@@ -122,6 +124,14 @@ export async function createBroadcast(
       'WhatsApp not configured. Please set up your WhatsApp integration first.',
       400
     );
+  }
+  try {
+    assertMetaFeature(config, 'broadcast');
+  } catch (err) {
+    if (err instanceof ProviderUnsupportedError) {
+      throw new BroadcastError(err.code, err.message, 400);
+    }
+    throw err;
   }
   const accessToken = decrypt(config.access_token);
 

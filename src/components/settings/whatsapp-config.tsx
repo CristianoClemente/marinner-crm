@@ -3,8 +3,6 @@
 import { useEffect, useRef, useState, useCallback, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import {
-  Eye,
-  EyeOff,
   Copy,
   CheckCircle2,
   XCircle,
@@ -19,6 +17,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -29,7 +28,14 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from '@/components/ui/accordion';
-import type { WhatsAppConfig as WhatsAppConfigType } from '@/types';
+import {
+  ProviderToggle,
+  WhatsAppZapiPanel,
+} from './whatsapp-zapi-panel';
+import type {
+  WhatsAppConfig as WhatsAppConfigType,
+  WhatsAppProvider,
+} from '@/types';
 
 const MASKED_TOKEN = '••••••••••••••••';
 
@@ -55,7 +61,6 @@ export function WhatsAppConfig() {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [resetting, setResetting] = useState(false);
-  const [showToken, setShowToken] = useState(false);
   const [config, setConfig] = useState<WhatsAppConfigType | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('unknown');
   const [resetReason, setResetReason] = useState<ResetReason>(null);
@@ -68,6 +73,7 @@ export function WhatsAppConfig() {
   // again and overwrites whatever the user typed but hadn't saved yet.
   const loadedAccountIdRef = useRef<string | null>(null);
 
+  const [provider, setProvider] = useState<WhatsAppProvider>('meta');
   const [phoneNumberId, setPhoneNumberId] = useState('');
   const [wabaId, setWabaId] = useState('');
   const [accessToken, setAccessToken] = useState('');
@@ -98,6 +104,10 @@ export function WhatsAppConfig() {
     typeof window !== 'undefined'
       ? `${window.location.origin}/api/whatsapp/webhook`
       : '';
+  const zapiWebhookUrl =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/api/whatsapp/webhook/z-api`
+      : '';
 
   const fetchConfig = useCallback(async (acctId: string) => {
     setLoading(true);
@@ -120,6 +130,11 @@ export function WhatsAppConfig() {
 
       if (data) {
         setConfig(data);
+        setProvider(
+          data.provider === 'zapi' || data.provider === 'meta'
+            ? data.provider
+            : 'meta',
+        );
         setPhoneNumberId(data.phone_number_id || '');
         setWabaId(data.waba_id || '');
         setAccessToken(MASKED_TOKEN);
@@ -205,6 +220,7 @@ export function WhatsAppConfig() {
       // and writing direct to Supabase stores the token in plaintext,
       // which then fails decryption on every subsequent health check.
       const payload: Record<string, unknown> = {
+        provider: 'meta',
         phone_number_id: phoneNumberId.trim(),
         waba_id: wabaId.trim() || null,
         verify_token: verifyToken.trim() || null,
@@ -363,6 +379,7 @@ export function WhatsAppConfig() {
       setConnectionStatus('disconnected');
       setResetReason(null);
       setStatusMessage('');
+      // Keep current provider selection so the user can re-enter the same form.
     } catch (err) {
       console.error('Reset error:', err);
       toast.error('Falha ao redefinir a configuração');
@@ -375,6 +392,12 @@ export function WhatsAppConfig() {
     navigator.clipboard.writeText(webhookUrl);
     toast.success('URL do webhook copiada para a área de transferência');
   }
+
+  const reloadConfig = useCallback(async () => {
+    if (accountId) await fetchConfig(accountId);
+  }, [accountId, fetchConfig]);
+
+  const showResetBanner = resetReason === 'token_corrupted';
 
   if (loading) {
     return (
@@ -390,14 +413,44 @@ export function WhatsAppConfig() {
     );
   }
 
-  const showResetBanner = resetReason === 'token_corrupted';
-
   return (
     <section className="animate-in fade-in-50 duration-200">
       <SettingsPanelHead
         title={t("title")}
-        description={t("description")}
+        description={
+          provider === 'zapi' ? t('descriptionZapi') : t('description')
+        }
       />
+
+      <div className="mb-6 max-w-md">
+        <ProviderToggle
+          value={provider}
+          onChange={(next) => {
+            if (
+              config &&
+              config.provider &&
+              config.provider !== next &&
+              !confirm(t('providerSwitchConfirm'))
+            ) {
+              return;
+            }
+            setProvider(next);
+          }}
+        />
+        <p className="mt-2 text-xs text-muted-foreground">{t('providerHint')}</p>
+      </div>
+
+      {provider === 'zapi' ? (
+        <WhatsAppZapiPanel
+          hasConfig={Boolean(config && config.provider === 'zapi')}
+          instanceIdInitial={config?.zapi_instance_id || ''}
+          connected={
+            connectionStatus === 'connected' && config?.provider === 'zapi'
+          }
+          webhookUrl={zapiWebhookUrl}
+          onSaved={reloadConfig}
+        />
+      ) : (
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
       {/* Main config form */}
       <div className="space-y-6">
@@ -588,31 +641,21 @@ export function WhatsAppConfig() {
 
             <div className="space-y-2">
               <Label className="text-muted-foreground">{t('accessToken')}</Label>
-              <div className="relative">
-                <Input
-                  type={showToken ? 'text' : 'password'}
-                  placeholder={t('accessTokenPlaceholder')}
-                  value={accessToken}
-                  onChange={(e) => {
-                    setAccessToken(e.target.value);
+              <PasswordInput
+                placeholder={t('accessTokenPlaceholder')}
+                value={accessToken}
+                onChange={(e) => {
+                  setAccessToken(e.target.value);
+                  setTokenEdited(true);
+                }}
+                onFocus={() => {
+                  if (accessToken === MASKED_TOKEN) {
+                    setAccessToken('');
                     setTokenEdited(true);
-                  }}
-                  onFocus={() => {
-                    if (accessToken === MASKED_TOKEN) {
-                      setAccessToken('');
-                      setTokenEdited(true);
-                    }
-                  }}
-                  className="bg-muted border-border text-foreground placeholder:text-muted-foreground pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowToken(!showToken)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {showToken ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                </button>
-              </div>
+                  }
+                }}
+                className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
+              />
               {config && !tokenEdited && (
                 <p className="text-xs text-muted-foreground">
                   {t('tokenHidden')}
@@ -838,6 +881,7 @@ export function WhatsAppConfig() {
         </Card>
       </div>
     </div>
+      )}
     </section>
   );
 }

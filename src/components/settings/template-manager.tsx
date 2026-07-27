@@ -19,6 +19,8 @@ import {
   MEDIA_MAX_BYTES_BY_KIND,
 } from '@/lib/storage/upload-media';
 import { useAuth } from '@/hooks/use-auth';
+import { useWhatsAppProvider } from '@/hooks/use-whatsapp-provider';
+import { MetaOnlyBanner } from '@/components/whatsapp/meta-only-banner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -128,6 +130,7 @@ export function TemplateManager() {
   const t = useTranslations('Settings.templates');
   const supabase = createClient();
   const { user, loading: authLoading } = useAuth();
+  const { isZapi } = useWhatsAppProvider();
 
   const [loading, setLoading] = useState(true);
   const [templates, setTemplates] = useState<MessageTemplate[]>([]);
@@ -487,6 +490,7 @@ export function TemplateManager() {
         title={t('title')}
         description={t('description')}
         action={
+          isZapi ? undefined : (
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -502,8 +506,11 @@ export function TemplateManager() {
               {t('newTemplate')}
             </Button>
           </div>
+          )
         }
       />
+
+      {isZapi && <MetaOnlyBanner feature="templates" />}
 
       {templates.length === 0 ? (
         <Card>
@@ -570,6 +577,7 @@ export function TemplateManager() {
                       </div>
                     )}
                   </div>
+                  {!isZapi && (
                   <div className="flex items-center gap-1 shrink-0 ml-2">
                     {statusKey === 'APPROVED' && (
                       <Button
@@ -621,6 +629,7 @@ export function TemplateManager() {
                       )}
                     </Button>
                   </div>
+                  )}
                 </CardContent>
               </Card>
             );

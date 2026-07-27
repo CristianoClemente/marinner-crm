@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { memo, useMemo, useState, useCallback } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -21,6 +21,8 @@ import { Plus } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { formatCurrency } from "@/lib/currency";
 import { useTranslations } from "next-intl";
+import { usePipelineLabels } from "@/hooks/use-pipeline-labels";
+import { cn } from "@/lib/utils";
 
 interface PipelineBoardProps {
   stages: PipelineStage[];
@@ -29,6 +31,20 @@ interface PipelineBoardProps {
   onAddDeal: (stageId: string) => void;
   onEditDeal: (deal: Deal) => void;
 }
+
+interface StageBucket {
+  deals: Deal[];
+  totalValue: number;
+}
+
+const EMPTY_BUCKET: StageBucket = { deals: [], totalValue: 0 };
+
+const columnScrollClass =
+  "[scrollbar-width:thin] [scrollbar-color:var(--border)_transparent] " +
+  "[&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent " +
+  "[&::-webkit-scrollbar-thumb]:rounded-full " +
+  "[&::-webkit-scrollbar-thumb]:bg-border/50 " +
+  "hover:[&::-webkit-scrollbar-thumb]:bg-border/80";
 
 export function PipelineBoard({
   stages,
@@ -46,48 +62,57 @@ export function PipelineBoard({
   );
 
   const dealsByStage = useMemo(() => {
-    const map = new Map<string, Deal[]>();
-    for (const stage of sortedStages) map.set(stage.id, []);
+    const map = new Map<string, StageBucket>();
+    for (const stage of sortedStages) {
+      map.set(stage.id, { deals: [], totalValue: 0 });
+    }
     for (const deal of deals) {
       const bucket = map.get(deal.stage_id);
-      if (bucket) bucket.push(deal);
+      if (!bucket) continue;
+      bucket.deals.push(deal);
+      bucket.totalValue += Number(deal.value || 0);
     }
     return map;
   }, [sortedStages, deals]);
 
   const sensors = useSensors(
-    // 5px activation distance avoids clicks being interpreted as drags.
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    // Keyboard drag support: focus a card, Space to pick up, arrows to move,
-    // Space to drop, Escape to cancel.
     useSensor(KeyboardSensor),
   );
 
   const activeDeal = activeDealId
-    ? deals.find((d) => d.id === activeDealId) ?? null
+    ? (deals.find((d) => d.id === activeDealId) ?? null)
     : null;
 
-  function handleDragStart(event: DragStartEvent) {
+  const activeStage = useMemo(() => {
+    if (!activeDeal) return null;
+    return sortedStages.find((s) => s.id === activeDeal.stage_id) ?? null;
+  }, [activeDeal, sortedStages]);
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
     setActiveDealId(String(event.active.id));
-  }
+  }, []);
 
-  function handleDragEnd(event: DragEndEvent) {
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      setActiveDealId(null);
+      const { active, over } = event;
+      if (!over) return;
+      const dealId = String(active.id);
+      const targetStageId = String(over.id);
+
+      const deal = deals.find((d) => d.id === dealId);
+      if (!deal || deal.stage_id === targetStageId) return;
+      if (!sortedStages.some((s) => s.id === targetStageId)) return;
+
+      onDealMoved(dealId, targetStageId);
+    },
+    [deals, sortedStages, onDealMoved],
+  );
+
+  const handleDragCancel = useCallback(() => {
     setActiveDealId(null);
-    const { active, over } = event;
-    if (!over) return;
-    const dealId = String(active.id);
-    const targetStageId = String(over.id);
-
-    const deal = deals.find((d) => d.id === dealId);
-    if (!deal || deal.stage_id === targetStageId) return;
-    if (!sortedStages.some((s) => s.id === targetStageId)) return;
-
-    onDealMoved(dealId, targetStageId);
-  }
-
-  function handleDragCancel() {
-    setActiveDealId(null);
-  }
+  }, []);
 
   return (
     <DndContext
@@ -97,25 +122,15 @@ export function PipelineBoard({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      {/* snap-x + snap-mandatory on mobile so swipes land the next
-          stage cleanly at the viewport edge instead of mid-column.
-          Disabled on lg+ where snapping would interfere with the
-          natural layout. The board can still overflow horizontally on
-          lg+ once a pipeline has many stages (columns keep a 260px
-          min-width), so a thin scrollbar stays visible on desktop. */}
-      <div className="pipeline-scroll flex snap-x snap-mandatory gap-3 overflow-x-auto pb-4 lg:snap-none">
+      <div className="pipeline-scroll flex h-full min-h-0 snap-x snap-mandatory gap-3 overflow-x-auto lg:snap-none">
         {sortedStages.map((stage) => {
-          const stageDeals = dealsByStage.get(stage.id) ?? [];
-          const totalValue = stageDeals.reduce(
-            (s, d) => s + Number(d.value || 0),
-            0,
-          );
+          const bucket = dealsByStage.get(stage.id) ?? EMPTY_BUCKET;
           return (
             <StageColumn
               key={stage.id}
               stage={stage}
-              deals={stageDeals}
-              totalValue={totalValue}
+              deals={bucket.deals}
+              totalValue={bucket.totalValue}
               currency={defaultCurrency}
               onAddDeal={onAddDeal}
               onEditDeal={onEditDeal}
@@ -134,9 +149,7 @@ export function PipelineBoard({
           <div className="opacity-90">
             <DealCard
               deal={activeDeal}
-              stage={
-                sortedStages.find((s) => s.id === activeDeal.stage_id) ?? null
-              }
+              stage={activeStage}
               onEdit={() => {}}
               isOverlay
             />
@@ -148,11 +161,6 @@ export function PipelineBoard({
         .pipeline-scroll {
           scroll-behavior: smooth;
         }
-        /* On touch devices the peek/snap layout already signals there's
-           more to swipe, so the scrollbar is hidden for a clean look.
-           On desktop (mouse) the board can overflow with many stages
-           and there is no peek hint, so keep a thin, themed scrollbar
-           visible to make the overflow discoverable and usable. */
         @media (hover: none), (pointer: coarse) {
           .pipeline-scroll::-webkit-scrollbar {
             height: 0;
@@ -165,20 +173,25 @@ export function PipelineBoard({
         @media (hover: hover) and (pointer: fine) {
           .pipeline-scroll {
             scrollbar-width: thin;
-            scrollbar-color: var(--border) transparent;
+            scrollbar-color: color-mix(in oklab, var(--border) 70%, transparent)
+              transparent;
           }
           .pipeline-scroll::-webkit-scrollbar {
-            height: 8px;
+            height: 4px;
           }
           .pipeline-scroll::-webkit-scrollbar-track {
             background: transparent;
           }
           .pipeline-scroll::-webkit-scrollbar-thumb {
-            background-color: var(--border);
+            background-color: color-mix(
+              in oklab,
+              var(--border) 70%,
+              transparent
+            );
             border-radius: 9999px;
           }
           .pipeline-scroll::-webkit-scrollbar-thumb:hover {
-            background-color: var(--muted-foreground);
+            background-color: var(--border);
           }
         }
       `}</style>
@@ -186,7 +199,7 @@ export function PipelineBoard({
   );
 }
 
-function StageColumn({
+const StageColumn = memo(function StageColumn({
   stage,
   deals,
   totalValue,
@@ -202,43 +215,39 @@ function StageColumn({
   onEditDeal: (deal: Deal) => void;
 }) {
   const t = useTranslations("Pipelines.board");
+  const { stageLabel } = usePipelineLabels();
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
 
   return (
-    // On mobile each column is `w-[85vw]` (with a reasonable min/max)
-    // so the next column's edge peeks in — a "there's more here" hint.
-    // snap-start lands each column cleanly when swiping. On lg+ we
-    // restore the flex-1 share-the-row behavior. The droppable ref is
-    // on the inner messages region below — intentionally NOT here, so
-    // a drag over the column header doesn't highlight the whole column.
-    <div className="flex w-[85vw] min-w-[260px] max-w-[320px] shrink-0 snap-start flex-col rounded-xl border border-border bg-card/60 p-4 lg:w-auto lg:max-w-none lg:flex-1 lg:basis-[260px] lg:shrink lg:snap-none">
-      {/* 3px colored top border — sits above the column's padding */}
+    <div className="flex h-full w-[85vw] min-w-65 max-w-80 shrink-0 snap-start flex-col rounded-lg border border-border bg-muted/40 p-3 lg:w-auto lg:max-w-none lg:min-w-65 lg:flex-1 lg:basis-65 lg:shrink lg:snap-none">
       <div
-        className="-mx-4 -mt-4 h-[3px] rounded-t-xl"
+        className="-mx-3 -mt-3 mb-3 h-0.75 shrink-0 rounded-t-lg"
         style={{ backgroundColor: stage.color }}
       />
-      <div className="flex items-center justify-between pt-3">
-        <h3 className="truncate text-sm font-semibold text-foreground">
-          {stage.name}
-        </h3>
-        <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+      <div className="flex shrink-0 items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-sm font-medium text-foreground">
+            {stageLabel(stage.name)}
+          </h3>
+          <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">
+            {formatCurrency(totalValue, currency)}
+          </p>
+        </div>
+        <span className="shrink-0 rounded-md bg-background px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-muted-foreground">
           {deals.length}
         </span>
       </div>
-      <p className="text-xs text-muted-foreground">
-        {formatCurrency(totalValue, currency)}
-      </p>
 
       <div
         ref={setNodeRef}
-        className={`mt-3 flex flex-1 flex-col gap-2 rounded-lg transition-all ${
-          isOver
-            ? "bg-primary/5 outline outline-2 outline-dashed outline-primary outline-offset-2"
-            : ""
-        }`}
+        className={cn(
+          "mt-3 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto rounded-md transition-colors",
+          columnScrollClass,
+          isOver ? "bg-primary/5 ring-1 ring-dashed ring-primary/40" : "",
+        )}
       >
         {deals.length === 0 ? (
-          <div className="flex flex-1 items-center justify-center rounded-lg border-2 border-dashed border-border py-10 text-xs text-muted-foreground">
+          <div className="flex min-h-32 flex-1 items-center justify-center rounded-md border border-dashed border-border/80 px-2 py-8 text-center text-xs text-muted-foreground">
             {t("dropDealHere")}
           </div>
         ) : (
@@ -257,16 +266,16 @@ function StageColumn({
         variant="ghost"
         size="sm"
         onClick={() => onAddDeal(stage.id)}
-        className="mt-3 w-full justify-start border border-dashed border-border bg-transparent text-muted-foreground hover:border-border hover:bg-muted hover:text-foreground"
+        className="mt-2 h-8 w-full shrink-0 justify-start border border-dashed border-border bg-transparent text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
       >
-        <Plus className="mr-1 h-3 w-3" />
+        <Plus className="size-3.5" />
         {t("addDeal")}
       </Button>
     </div>
   );
-}
+});
 
-function DraggableDealCard({
+const DraggableDealCard = memo(function DraggableDealCard({
   deal,
   stage,
   onEdit,
@@ -284,9 +293,10 @@ function DraggableDealCard({
       ref={setNodeRef}
       {...listeners}
       {...attributes}
+      className="shrink-0 [content-visibility:auto] [contain-intrinsic-size:auto_7rem]"
       style={{ opacity: isDragging ? 0.3 : 1, touchAction: "none" }}
     >
       <DealCard deal={deal} stage={stage} onEdit={onEdit} />
     </div>
   );
-}
+});

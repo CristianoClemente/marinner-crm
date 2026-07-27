@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
+import { useWhatsAppProvider } from '@/hooks/use-whatsapp-provider';
 import { toast } from 'sonner';
 import { MessageTemplate } from '@/types';
 import { Step1ChooseTemplate } from '@/components/broadcasts/step1-choose-template';
@@ -11,6 +12,8 @@ import { Step2SelectAudience } from '@/components/broadcasts/step2-select-audien
 import { Step3Personalize } from '@/components/broadcasts/step3-personalize';
 import { Step4ScheduleSend } from '@/components/broadcasts/step4-schedule-send';
 import { useBroadcastSending } from '@/hooks/use-broadcast-sending';
+import { MetaOnlyBanner } from '@/components/whatsapp/meta-only-banner';
+import { Button } from '@/components/ui/button';
 import { Check } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
@@ -24,7 +27,9 @@ const steps = [
 export default function NewBroadcastPage() {
   const router = useRouter();
   const t = useTranslations('Broadcasts.new');
+  const tPage = useTranslations('Broadcasts.page');
   const { accountId } = useAuth();
+  const { isZapi, loading: providerLoading } = useWhatsAppProvider();
   const { createAndSendBroadcast, isProcessing, progress } = useBroadcastSending();
 
   const [currentStep, setCurrentStep] = useState(0);
@@ -121,6 +126,21 @@ export default function NewBroadcastPage() {
     }
     toast.success(t('toastDraftSaved'));
     router.push('/broadcasts');
+  }
+
+  if (!providerLoading && isZapi) {
+    return (
+      <div className="mx-auto max-w-3xl space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t('subtitle')}</p>
+        </div>
+        <MetaOnlyBanner feature="broadcast" />
+        <Button variant="outline" onClick={() => router.push('/broadcasts')}>
+          {tPage('backToList')}
+        </Button>
+      </div>
+    );
   }
 
   return (

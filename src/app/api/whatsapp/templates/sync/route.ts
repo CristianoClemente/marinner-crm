@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { decrypt } from '@/lib/whatsapp/encryption'
 import { normalizeStatus } from '@/lib/whatsapp/template-status-normalize'
+import { rejectUnlessMetaFeature } from '@/lib/whatsapp/require-meta-feature'
 import type { TemplateButton, TemplateSampleValues } from '@/types'
 
 /**
@@ -165,6 +166,9 @@ export async function POST() {
         { status: 400 },
       )
     }
+
+    const blocked = rejectUnlessMetaFeature(config, 'template')
+    if (blocked) return blocked
 
     if (!config.waba_id) {
       return NextResponse.json(

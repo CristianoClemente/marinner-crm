@@ -157,10 +157,20 @@ export default function FlowsPage() {
   async function handleUseTemplate(slug: string) {
     setCreating(true);
     try {
+      const localizedName = t.has(`templates.${slug}.name`)
+        ? t(`templates.${slug}.name`)
+        : undefined;
+      const localizedDesc = t.has(`templates.${slug}.description`)
+        ? t(`templates.${slug}.description`)
+        : undefined;
       const res = await fetch("/api/flows", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ template_slug: slug }),
+        body: JSON.stringify({
+          template_slug: slug,
+          ...(localizedName ? { name: localizedName } : {}),
+          ...(localizedDesc ? { description: localizedDesc } : {}),
+        }),
       });
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
@@ -264,6 +274,14 @@ export default function FlowsPage() {
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {templates.map((template) => {
                   const Icon = TEMPLATE_ICONS[template.icon] ?? FileText;
+                  const name = t.has(`templates.${template.slug}.name`)
+                    ? t(`templates.${template.slug}.name`)
+                    : template.name;
+                  const description = t.has(
+                    `templates.${template.slug}.description`,
+                  )
+                    ? t(`templates.${template.slug}.description`)
+                    : template.description;
                   return (
                     <button
                       key={template.slug}
@@ -274,10 +292,10 @@ export default function FlowsPage() {
                     >
                       <Icon className="h-5 w-5 text-primary" />
                       <span className="text-sm font-semibold text-popover-foreground">
-                        {template.name}
+                        {name}
                       </span>
                       <span className="text-xs leading-relaxed text-muted-foreground">
-                        {template.description}
+                        {description}
                       </span>
                       <span className="mt-auto border-t border-border pt-2 text-[11px] text-muted-foreground">
                         {t("nodeCount", { count: template.node_count })}

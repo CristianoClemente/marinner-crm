@@ -48,6 +48,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useTranslations } from "next-intl";
+import { useWhatsAppProvider } from "@/hooks/use-whatsapp-provider";
 
 const SIDEBAR_COLLAPSED_KEY = "marinner:sidebar:collapsed";
 
@@ -132,6 +133,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
   const t = useTranslations("Sidebar");
   const pathname = usePathname();
   const { profile, profileLoading, account, accountRole, signOut } = useAuth();
+  const { isZapi } = useWhatsAppProvider();
   const totalUnread = useTotalUnread();
   const unreadNotifications = useUnreadNotifications();
   const [collapsed, setCollapsed] = useState(false);
@@ -275,13 +277,24 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                 item.href === "/inbox" && totalUnread > 0 && !isActive;
               const showNotificationBadge =
                 item.href === "/notifications" && unreadNotifications > 0;
+              const showBroadcastsMetaOnly =
+                item.href === "/broadcasts" && isZapi;
+              const tooltipLabel = showBroadcastsMetaOnly
+                ? `${label} — ${t("broadcastsMetaOnlyHint")}`
+                : label;
 
               return (
                 <li key={item.href}>
-                  <SidebarTooltip label={label} enabled={rail}>
+                  <SidebarTooltip label={tooltipLabel} enabled={rail}>
                     <Link
                       href={item.href}
-                      title={rail ? label : undefined}
+                      title={
+                        rail
+                          ? tooltipLabel
+                          : showBroadcastsMetaOnly
+                            ? t("broadcastsMetaOnlyHint")
+                            : undefined
+                      }
                       className={cn(
                         "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors lg:py-2",
                         rail && "lg:justify-center lg:px-0",
@@ -308,6 +321,18 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                           )}
                         >
                           {t("beta")}
+                        </span>
+                      )}
+                      {showBroadcastsMetaOnly && (
+                        <span
+                          aria-label={t("broadcastsMetaOnlyHint")}
+                          className={cn(
+                            "shrink-0 text-[10px] font-medium tracking-wide text-muted-foreground/70",
+                            rail &&
+                              "lg:absolute lg:right-1 lg:bottom-1 lg:text-[8px]",
+                          )}
+                        >
+                          {t("broadcastsMetaOnly")}
                         </span>
                       )}
                       {showUnreadDot && (

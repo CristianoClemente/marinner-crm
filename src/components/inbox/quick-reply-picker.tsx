@@ -11,7 +11,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { QuickReply } from "@/types";
-import { interactivePayloadPreviewText } from "@/lib/whatsapp/interactive";
 
 interface QuickReplyPickerProps {
   open: boolean;
@@ -75,22 +74,15 @@ export function QuickReplyPicker({
                   <button
                     type="button"
                     onClick={() => onPick(qr)}
-                    className="flex w-full items-start gap-2 rounded-md border border-border bg-muted/40 p-2.5 text-left hover:border-primary/50 hover:bg-muted"
+                    className="flex w-full items-center gap-2 rounded-md border border-border bg-muted/40 p-2.5 text-left hover:border-primary/50 hover:bg-muted"
                   >
                     {qr.kind === "interactive" ? (
-                      <Zap className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                      <Zap className="h-4 w-4 shrink-0 text-primary" />
                     ) : (
-                      <MessageSquare className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                      <MessageSquare className="h-4 w-4 shrink-0 text-muted-foreground" />
                     )}
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium text-foreground">
-                        {qr.title}
-                      </span>
-                      <span className="block truncate text-xs text-muted-foreground">
-                        {qr.kind === "interactive" && qr.interactive_payload
-                          ? interactivePayloadPreviewText(qr.interactive_payload)
-                          : qr.content_text}
-                      </span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+                      {qr.title}
                     </span>
                   </button>
                 </li>

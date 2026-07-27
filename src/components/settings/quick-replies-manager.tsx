@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Loader2, MessageSquare, Pencil, Plus, Trash2, Zap } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +24,7 @@ import {
   interactivePayloadPreviewText,
   type InteractiveMessagePayload,
 } from "@/lib/whatsapp/interactive";
+import { useWhatsAppProvider } from "@/hooks/use-whatsapp-provider";
 import type { QuickReply, QuickReplyKind } from "@/types";
 
 interface DraftState {
@@ -43,10 +45,14 @@ function emptyDraft(): DraftState {
 }
 
 export function QuickRepliesManager() {
+  const t = useTranslations("Settings.quickReplies");
+  const { isZapi } = useWhatsAppProvider();
   const [items, setItems] = useState<QuickReply[]>([]);
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState<DraftState | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const hasInteractiveItems = items.some((qr) => qr.kind === "interactive");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -64,26 +70,55 @@ export function QuickRepliesManager() {
   }, [load]);
 
   const openCreate = () => setDraft(emptyDraft());
-  const openEdit = (qr: QuickReply) =>
+
+  const openEdit = (qr: QuickReply) => {
+    // On Z-API, interactive snippets are edited as plain text (body only).
+    if (isZapi && qr.kind === "interactive") {
+      const body =
+        qr.interactive_payload?.body?.trim() ||
+        (qr.interactive_payload
+          ? interactivePayloadPreviewText(qr.interactive_payload)
+          : "") ||
+        "";
+      setDraft({
+        id: qr.id,
+        title: qr.title,
+        kind: "text",
+        content_text: body,
+        interactive_payload: blankButtonsPayload(),
+      });
+      return;
+    }
     setDraft({
       id: qr.id,
       title: qr.title,
       kind: qr.kind,
       content_text: qr.content_text ?? "",
-      interactive_payload:
-        qr.interactive_payload ?? blankButtonsPayload(),
+      interactive_payload: qr.interactive_payload ?? blankButtonsPayload(),
     });
+  };
 
   const save = useCallback(async () => {
     if (!draft) return;
     if (!draft.title.trim()) {
-      toast.error("Dê um nome à resposta rápida.");
+      toast.error(t("titleRequired"));
       return;
     }
+    // Z-API accounts can only persist text quick replies.
+    const kind: QuickReplyKind =
+      isZapi || draft.kind !== "interactive" ? "text" : "interactive";
     const payload =
-      draft.kind === "interactive"
-        ? { title: draft.title, kind: "interactive", interactive_payload: draft.interactive_payload }
-        : { title: draft.title, kind: "text", content_text: draft.content_text };
+      kind === "interactive"
+        ? {
+            title: draft.title,
+            kind: "interactive" as const,
+            interactive_payload: draft.interactive_payload,
+          }
+        : {
+            title: draft.title,
+            kind: "text" as const,
+            content_text: draft.content_text,
+          };
 
     setSaving(true);
     try {
@@ -97,44 +132,50 @@ export function QuickRepliesManager() {
       );
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        toast.error(data.error ?? "Não foi possível salvar a resposta rápida.");
+        toast.error(data.error ?? t("saveFailed"));
         return;
       }
-      toast.success(draft.id ? "Resposta rápida atualizada." : "Resposta rápida criada.");
+      toast.success(draft.id ? t("updated") : t("created"));
       setDraft(null);
       await load();
     } catch {
-      toast.error("Não foi possível salvar a resposta rápida.");
+      toast.error(t("saveFailed"));
     } finally {
       setSaving(false);
     }
-  }, [draft, load]);
+  }, [draft, load, isZapi, t]);
 
   const remove = useCallback(
     async (id: string) => {
-      if (!window.confirm("Excluir esta resposta rápida?")) return;
+      if (!window.confirm(t("deleteConfirm"))) return;
       const res = await fetch(`/api/quick-replies/${id}`, { method: "DELETE" });
       if (!res.ok) {
-        toast.error("Não foi possível excluir a resposta rápida.");
+        toast.error(t("deleteFailed"));
         return;
       }
       await load();
     },
-    [load],
+    [load, t],
   );
 
   return (
     <div>
       <SettingsPanelHead
-        title="Respostas rápidas"
-        description="Trechos reutilizáveis — texto simples ou uma mensagem interativa salva — que os agentes podem inserir no compositor da caixa de entrada."
+        title={t("title")}
+        description={isZapi ? t("descriptionZapi") : t("description")}
         action={
           <Button onClick={openCreate}>
             <Plus className="mr-1 h-4 w-4" />
-            Nova resposta rápida
+            {t("new")}
           </Button>
         }
       />
+
+      {isZapi && hasInteractiveItems && (
+        <p className="mb-3 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+          {t("zapiInteractiveHint")}
+        </p>
+      )}
 
       {loading ? (
         <div className="flex justify-center py-10">
@@ -142,7 +183,7 @@ export function QuickRepliesManager() {
         </div>
       ) : items.length === 0 ? (
         <p className="rounded-lg border border-dashed border-border py-10 text-center text-sm text-muted-foreground">
-          Nenhuma resposta rápida ainda. Crie uma para reutilizá-la entre conversas.
+          {t("empty")}
         </p>
       ) : (
         <ul className="flex flex-col gap-2">
@@ -157,7 +198,9 @@ export function QuickRepliesManager() {
                 <MessageSquare className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
               )}
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-foreground">{qr.title}</p>
+                <p className="truncate text-sm font-medium text-foreground">
+                  {qr.title}
+                </p>
                 <p className="truncate text-xs text-muted-foreground">
                   {qr.kind === "interactive" && qr.interactive_payload
                     ? interactivePayloadPreviewText(qr.interactive_payload)
@@ -165,7 +208,11 @@ export function QuickRepliesManager() {
                 </p>
               </div>
               <div className="flex shrink-0 gap-1">
-                <Button variant="ghost" size="icon-sm" onClick={() => openEdit(qr)}>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => openEdit(qr)}
+                >
                   <Pencil className="h-4 w-4" />
                 </Button>
                 <Button
@@ -185,53 +232,71 @@ export function QuickRepliesManager() {
       <Dialog open={!!draft} onOpenChange={(o) => !o && setDraft(null)}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{draft?.id ? "Editar resposta rápida" : "Nova resposta rápida"}</DialogTitle>
+            <DialogTitle>
+              {draft?.id ? t("edit") : t("create")}
+            </DialogTitle>
           </DialogHeader>
           {draft && (
             <div className="max-h-[70vh] space-y-3 overflow-y-auto">
               <div>
-                <label className="mb-1 block text-xs text-muted-foreground">Nome</label>
+                <label className="mb-1 block text-xs text-muted-foreground">
+                  {t("name")}
+                </label>
                 <Input
                   value={draft.title}
-                  onChange={(e) => setDraft({ ...draft, title: e.target.value })}
-                  placeholder="ex.: Horário de atendimento"
+                  onChange={(e) =>
+                    setDraft({ ...draft, title: e.target.value })
+                  }
+                  placeholder={t("namePlaceholder")}
                   className="bg-muted text-foreground"
                 />
               </div>
-              <div className="flex gap-2">
-                <KindTab
-                  active={draft.kind === "text"}
-                  label="Texto"
-                  onClick={() => setDraft({ ...draft, kind: "text" })}
-                />
-                <KindTab
-                  active={draft.kind === "interactive"}
-                  label="Interativa"
-                  onClick={() => setDraft({ ...draft, kind: "interactive" })}
-                />
-              </div>
-              {draft.kind === "text" ? (
+              {!isZapi && (
+                <div className="flex gap-2">
+                  <KindTab
+                    active={draft.kind === "text"}
+                    label={t("kindText")}
+                    onClick={() => setDraft({ ...draft, kind: "text" })}
+                  />
+                  <KindTab
+                    active={draft.kind === "interactive"}
+                    label={t("kindInteractive")}
+                    onClick={() =>
+                      setDraft({ ...draft, kind: "interactive" })
+                    }
+                  />
+                </div>
+              )}
+              {draft.kind === "text" || isZapi ? (
                 <Textarea
                   value={draft.content_text}
-                  onChange={(e) => setDraft({ ...draft, content_text: e.target.value })}
-                  placeholder="O texto da mensagem a inserir"
+                  onChange={(e) =>
+                    setDraft({ ...draft, content_text: e.target.value })
+                  }
+                  placeholder={t("textPlaceholder")}
                   className="min-h-28 bg-muted text-foreground"
                 />
               ) : (
                 <InteractiveBuilder
                   value={draft.interactive_payload}
-                  onChange={(p) => setDraft({ ...draft, interactive_payload: p })}
+                  onChange={(p) =>
+                    setDraft({ ...draft, interactive_payload: p })
+                  }
                 />
               )}
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDraft(null)} disabled={saving}>
-              Cancelar
+            <Button
+              variant="outline"
+              onClick={() => setDraft(null)}
+              disabled={saving}
+            >
+              {t("cancel")}
             </Button>
             <Button onClick={save} disabled={saving}>
               {saving && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
-              Salvar
+              {t("save")}
             </Button>
           </DialogFooter>
         </DialogContent>

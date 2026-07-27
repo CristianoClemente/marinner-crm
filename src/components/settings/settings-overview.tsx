@@ -28,6 +28,7 @@ interface OverviewCounts {
 interface WhatsAppStatus {
   configured: boolean;
   connected: boolean;
+  provider: 'meta' | 'zapi' | null;
 }
 
 export function SettingsOverview({
@@ -121,15 +122,27 @@ export function SettingsOverview({
       const [row, health] = await Promise.allSettled([
         supabase
           .from('whatsapp_config')
-          .select('phone_number_id')
+          .select('provider, phone_number_id, zapi_instance_id, status')
           .eq('account_id', acctId)
           .maybeSingle(),
         fetch('/api/whatsapp/config', { cache: 'no-store' }).then((r) => r.json()),
       ]);
       if (cancelled) return;
+      const cfg = row.status === 'fulfilled' ? row.value.data : null;
+      const provider =
+        cfg?.provider === 'zapi' || cfg?.provider === 'meta'
+          ? cfg.provider
+          : cfg
+            ? 'meta'
+            : null;
+      const configured =
+        provider === 'zapi'
+          ? Boolean(cfg?.zapi_instance_id)
+          : Boolean(cfg?.phone_number_id);
       setWhatsapp({
-        configured: row.status === 'fulfilled' && !!row.value.data?.phone_number_id,
+        configured,
         connected: health.status === 'fulfilled' && !!health.value?.connected,
+        provider,
       });
       setWhatsappLoading(false);
     })();
@@ -163,11 +176,17 @@ export function SettingsOverview({
         t('notSetup')
       ) : whatsapp.connected ? (
         <>
-          <StatusDot tone="ok" /> {t('connected')}
+          <StatusDot tone="ok" />{' '}
+          {whatsapp.provider === 'zapi'
+            ? t('connectedZapi')
+            : t('connected')}
         </>
       ) : (
         <>
-          <StatusDot tone="muted" /> {t('needsReconnecting')}
+          <StatusDot tone="muted" />{' '}
+          {whatsapp.provider === 'zapi'
+            ? t('needsQrZapi')
+            : t('needsReconnecting')}
         </>
       ),
     },
@@ -187,13 +206,15 @@ export function SettingsOverview({
       section: 'templates',
       loading: countsLoading,
       subtitle:
-        counts?.templates == null
-          ? t('manageTemplates')
-          : `${t('templatesCount', { count: counts.templates })}${
-              counts.templatesPending
-                ? ` · ${t('pendingReview', { count: counts.templatesPending })}`
-                : ''
-            }`,
+        whatsapp?.provider === 'zapi'
+          ? t('templatesMetaOnly')
+          : counts?.templates == null
+            ? t('manageTemplates')
+            : `${t('templatesCount', { count: counts.templates })}${
+                counts.templatesPending
+                  ? ` · ${t('pendingReview', { count: counts.templatesPending })}`
+                  : ''
+              }`,
     },
     {
       section: 'deals',

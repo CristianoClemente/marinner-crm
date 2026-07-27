@@ -35,12 +35,12 @@ import {
   Plus,
   Trash2,
   Save,
-  X,
   DollarSign,
   LayoutTemplate,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { ContactExtendedFields } from '@/components/contacts/contact-extended-fields';
+import { usePipelineLabels } from '@/hooks/use-pipeline-labels';
 import {
   emptyExtendedFields,
   extendedFieldsFromContact,
@@ -62,6 +62,7 @@ export function ContactDetailView({
   onUpdated,
 }: ContactDetailViewProps) {
   const t = useTranslations('Contacts.detailView');
+  const { stageLabel } = usePipelineLabels();
   const supabase = createClient();
   const { accountId, defaultCurrency } = useAuth();
 
@@ -323,60 +324,63 @@ export function ContactDetailView({
 
   return (
     <>
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="bg-popover border-border text-popover-foreground sm:max-w-xl w-full p-0"
-      >
-        {loading || !contact ? (
-          <div className="flex items-center justify-center h-full">
-            <Loader2 className="size-6 animate-spin text-primary" />
-          </div>
-        ) : (
-          <div className="flex flex-col h-full">
-            {/* Header */}
-            <SheetHeader className="p-4 border-b border-border/50">
-              <div className="flex items-center gap-3">
-                <Avatar className="size-12 bg-muted border border-border">
-                  <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
-                    {getInitials(contact.name)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <SheetTitle className="text-popover-foreground truncate">
-                    {contact.name || t('unnamed')}
-                  </SheetTitle>
-                  <SheetDescription className="text-muted-foreground text-xs mt-0.5">
-                    {t('contactDetailsDesc')}
-                  </SheetDescription>
-                  <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-muted-foreground">
-                    <button
-                      onClick={copyPhone}
-                      className="flex items-center gap-1 hover:text-primary transition-colors cursor-pointer"
-                    >
-                      <Phone className="size-3" />
-                      {contact.phone}
-                      {copiedPhone ? (
-                        <Check className="size-3 text-primary" />
-                      ) : (
-                        <Copy className="size-3" />
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent
+          side="right"
+          className="w-full gap-0 border-border bg-popover p-0 text-popover-foreground sm:max-w-xl"
+        >
+          {loading || !contact ? (
+            <div className="flex h-full items-center justify-center">
+              <Loader2 className="size-6 animate-spin text-primary" />
+            </div>
+          ) : (
+            <div className="flex h-full flex-col">
+              <SheetHeader className="shrink-0 space-y-0 border-b border-border p-0 px-5 py-4 pr-12 text-left">
+                <div className="flex items-start gap-3">
+                  <Avatar className="size-11 shrink-0 border border-border bg-muted">
+                    <AvatarFallback className="bg-primary/10 text-sm font-medium text-primary">
+                      {getInitials(contact.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <SheetTitle className="truncate text-base font-semibold text-popover-foreground">
+                      {contact.name || t('unnamed')}
+                    </SheetTitle>
+                    <SheetDescription className="sr-only">
+                      {t('contactDetailsDesc')}
+                    </SheetDescription>
+                    <div className="mt-2 space-y-1">
+                      <button
+                        type="button"
+                        onClick={copyPhone}
+                        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      >
+                        <Phone className="size-3.5 shrink-0" />
+                        <span className="min-w-0 flex-1 truncate">
+                          {contact.phone}
+                        </span>
+                        {copiedPhone ? (
+                          <Check className="size-3.5 shrink-0 text-primary" />
+                        ) : (
+                          <Copy className="size-3.5 shrink-0 opacity-60" />
+                        )}
+                      </button>
+                      {contact.email && (
+                        <div className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-muted-foreground">
+                          <Mail className="size-3.5 shrink-0" />
+                          <span className="min-w-0 flex-1 truncate">
+                            {contact.email}
+                          </span>
+                        </div>
                       )}
-                    </button>
-                    {contact.email && (
-                      <span className="flex items-center gap-1">
-                        <Mail className="size-3" />
-                        {contact.email}
-                      </span>
-                    )}
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="mt-3">
                 <Button
                   size="sm"
                   onClick={() => setTemplatePickerOpen(true)}
                   disabled={sendingTemplate}
-                  className="bg-primary text-primary-foreground hover:bg-primary/90"
+                  className="mt-3 w-full bg-primary text-primary-foreground hover:bg-primary/90"
                 >
                   {sendingTemplate ? (
                     <Loader2 className="size-4 animate-spin" />
@@ -385,272 +389,281 @@ export function ContactDetailView({
                   )}
                   {t('sendTemplateBtn')}
                 </Button>
-              </div>
-            </SheetHeader>
+              </SheetHeader>
 
-            {/* Tabs */}
-            <Tabs defaultValue="details" className="flex min-h-0 flex-1 flex-col gap-0">
-              <TabsList
-                variant="line"
-                className="h-auto w-full shrink-0 justify-stretch gap-0 rounded-none border-b border-border bg-transparent px-2"
+              <Tabs
+                defaultValue="details"
+                className="flex min-h-0 flex-1 flex-col gap-0"
               >
-                <TabsTrigger
+                <TabsList
+                  variant="line"
+                  className="h-auto w-full shrink-0 justify-stretch gap-0 rounded-none border-b border-border bg-transparent px-5"
+                >
+                  {(
+                    [
+                      ['details', t('tabs.details')],
+                      ['tags', t('tabs.tags')],
+                      ['notes', t('tabs.notes')],
+                      ['deals', t('tabs.deals')],
+                    ] as const
+                  ).map(([value, label]) => (
+                    <TabsTrigger
+                      key={value}
+                      value={value}
+                      className="flex-1 rounded-none px-2 py-2.5 text-xs font-medium text-muted-foreground data-active:bg-transparent data-active:text-foreground data-active:shadow-none"
+                    >
+                      {label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+
+                <TabsContent
                   value="details"
-                  className="flex-1 rounded-none px-2 py-2.5 text-xs font-medium text-muted-foreground data-active:bg-transparent data-active:text-foreground data-active:shadow-none"
+                  className="mt-0 flex-1 overflow-y-auto px-5 py-4"
                 >
-                  {t('tabs.details')}
-                </TabsTrigger>
-                <TabsTrigger
-                  value="tags"
-                  className="flex-1 rounded-none px-2 py-2.5 text-xs font-medium text-muted-foreground data-active:bg-transparent data-active:text-foreground data-active:shadow-none"
-                >
-                  {t('tabs.tags')}
-                </TabsTrigger>
-                <TabsTrigger
-                  value="notes"
-                  className="flex-1 rounded-none px-2 py-2.5 text-xs font-medium text-muted-foreground data-active:bg-transparent data-active:text-foreground data-active:shadow-none"
-                >
-                  {t('tabs.notes')}
-                </TabsTrigger>
-                <TabsTrigger
-                  value="deals"
-                  className="flex-1 rounded-none px-2 py-2.5 text-xs font-medium text-muted-foreground data-active:bg-transparent data-active:text-foreground data-active:shadow-none"
-                >
-                  {t('tabs.deals')}
-                </TabsTrigger>
-              </TabsList>
-
-              {/* Details Tab */}
-              <TabsContent value="details" className="mt-0 flex-1 overflow-y-auto px-4 py-3">
-                <div className="space-y-5">
-                  <div className="grid grid-cols-1 gap-x-3 gap-y-3 sm:grid-cols-2">
-                    <div className="flex min-w-0 flex-col gap-1.5 sm:col-span-2">
-                      <Label className="block text-[11px] font-medium leading-snug text-muted-foreground">
-                        {t('name')}
-                      </Label>
-                      <Input
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                        className="h-8 w-full border-border bg-muted text-sm text-foreground"
-                      />
-                    </div>
-                    <div className="flex min-w-0 flex-col gap-1.5">
-                      <Label className="block text-[11px] font-medium leading-snug text-muted-foreground">
-                        {t('phone')} <span className="text-red-400">*</span>
-                      </Label>
-                      <Input
-                        value={editPhone}
-                        onChange={(e) => setEditPhone(e.target.value)}
-                        className="h-8 w-full border-border bg-muted text-sm text-foreground"
-                      />
-                    </div>
-                    <div className="flex min-w-0 flex-col gap-1.5">
-                      <Label className="block text-[11px] font-medium leading-snug text-muted-foreground">
-                        {t('email')}
-                      </Label>
-                      <Input
-                        value={editEmail}
-                        onChange={(e) => setEditEmail(e.target.value)}
-                        className="h-8 w-full border-border bg-muted text-sm text-foreground"
-                      />
-                    </div>
-                  </div>
-
-                  <ContactExtendedFields
-                    idPrefix="cd"
-                    compact
-                    value={editExtended}
-                    onChange={(patch) =>
-                      setEditExtended((prev) => ({ ...prev, ...patch }))
-                    }
-                  />
-
-                  <Button
-                    onClick={saveDetails}
-                    disabled={savingDetails}
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground w-full"
-                    size="sm"
-                  >
-                    {savingDetails ? (
-                      <Loader2 className="size-3.5 animate-spin" />
-                    ) : (
-                      <Save className="size-3.5" />
-                    )}
-                    {t('saveChangesBtn')}
-                  </Button>
-                </div>
-              </TabsContent>
-
-              {/* Tags Tab */}
-              <TabsContent value="tags" className="mt-0 flex-1 overflow-y-auto px-4 py-3">
-                <div className="space-y-3">
-                  <p className="text-xs text-muted-foreground">
-                    {t('tagsTab.clickTagDesc')}
-                  </p>
-                  {allTags.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      {t('tagsTab.noTagsAvailable')}
-                    </p>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {allTags.map((tag) => {
-                        const selected = contactTagIds.includes(tag.id);
-                        return (
-                          <button
-                            key={tag.id}
-                            onClick={() => toggleTag(tag.id)}
-                            disabled={savingTags}
-                            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-all cursor-pointer ${
-                              selected
-                                ? 'ring-2 ring-primary ring-offset-1 ring-offset-border'
-                                : 'opacity-50 hover:opacity-80'
-                            }`}
-                            style={{
-                              backgroundColor: tag.color + '20',
-                              color: tag.color,
-                            }}
-                          >
-                            {selected && <Check className="size-3 mr-1" />}
-                            {tag.name}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </TabsContent>
-
-              {/* Notes Tab */}
-              <TabsContent value="notes" className="mt-0 flex min-h-0 flex-1 flex-col px-4 py-3">
-                <div className="space-y-2 mb-3">
-                  <Textarea
-                    value={newNote}
-                    onChange={(e) => setNewNote(e.target.value)}
-                    placeholder={t('notesTab.placeholder')}
-                    className="bg-muted border-border text-foreground placeholder:text-muted-foreground min-h-[60px] text-sm resize-none"
-                  />
-                  <Button
-                    onClick={addNote}
-                    disabled={!newNote.trim() || savingNote}
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                    size="sm"
-                  >
-                    {savingNote ? (
-                      <Loader2 className="size-3.5 animate-spin" />
-                    ) : (
-                      <Plus className="size-3.5" />
-                    )}
-                    {t('notesTab.save')}
-                  </Button>
-                </div>
-
-                <div className="flex-1 overflow-y-auto space-y-2">
-                  {loadingNotes ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="size-5 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : notes.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-8">
-                      {t('notesTab.noNotes')}
-                    </p>
-                  ) : (
-                    notes.map((note) => (
-                      <div
-                        key={note.id}
-                        className="rounded-lg bg-muted/50 border border-border/50 p-3 group"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="text-sm text-muted-foreground whitespace-pre-wrap flex-1">
-                            {note.note_text}
-                          </p>
-                          <button
-                            onClick={() => deleteNote(note.id)}
-                            className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-400 transition-all cursor-pointer shrink-0"
-                          >
-                            <Trash2 className="size-3.5" />
-                          </button>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1.5">
-                          {new Date(note.created_at).toLocaleDateString('pt-BR', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </p>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div className="flex min-w-0 flex-col gap-1.5 sm:col-span-2">
+                        <Label className="text-xs font-medium text-muted-foreground">
+                          {t('name')}
+                        </Label>
+                        <Input
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          className="h-9 w-full border-border bg-muted text-sm text-foreground"
+                        />
                       </div>
-                    ))
-                  )}
-                </div>
-              </TabsContent>
+                      <div className="flex min-w-0 flex-col gap-1.5">
+                        <Label className="text-xs font-medium text-muted-foreground">
+                          {t('phone')}{' '}
+                          <span className="text-red-400">*</span>
+                        </Label>
+                        <Input
+                          value={editPhone}
+                          onChange={(e) => setEditPhone(e.target.value)}
+                          className="h-9 w-full border-border bg-muted text-sm text-foreground"
+                        />
+                      </div>
+                      <div className="flex min-w-0 flex-col gap-1.5">
+                        <Label className="text-xs font-medium text-muted-foreground">
+                          {t('email')}
+                        </Label>
+                        <Input
+                          value={editEmail}
+                          onChange={(e) => setEditEmail(e.target.value)}
+                          className="h-9 w-full border-border bg-muted text-sm text-foreground"
+                        />
+                      </div>
+                    </div>
 
-              {/* Deals Tab */}
-              <TabsContent value="deals" className="mt-0 flex-1 overflow-y-auto px-4 py-3">
-                {loadingDeals ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="size-5 animate-spin text-primary" />
+                    <ContactExtendedFields
+                      idPrefix="cd"
+                      compact
+                      value={editExtended}
+                      onChange={(patch) =>
+                        setEditExtended((prev) => ({ ...prev, ...patch }))
+                      }
+                    />
+
+                    <Button
+                      onClick={saveDetails}
+                      disabled={savingDetails}
+                      className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                      size="sm"
+                    >
+                      {savingDetails ? (
+                        <Loader2 className="size-3.5 animate-spin" />
+                      ) : (
+                        <Save className="size-3.5" />
+                      )}
+                      {t('saveChangesBtn')}
+                    </Button>
                   </div>
-                ) : deals.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">{t('dealsTab.noDeals')}</p>
-                ) : (
-                  <div className="space-y-2">
-                    {deals.map((deal) => (
-                      <div
-                        key={deal.id}
-                        className="rounded-lg border border-border bg-muted/50 p-3"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="text-sm font-medium text-foreground">
-                            {deal.title}
-                          </p>
-                          {deal.stage && (
-                            <span
-                              className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+                </TabsContent>
+
+                <TabsContent
+                  value="tags"
+                  className="mt-0 flex-1 overflow-y-auto px-5 py-4"
+                >
+                  <div className="space-y-4">
+                    <p className="text-xs text-muted-foreground">
+                      {t('tagsTab.clickTagDesc')}
+                    </p>
+                    {allTags.length === 0 ? (
+                      <p className="py-10 text-center text-sm text-muted-foreground">
+                        {t('tagsTab.noTagsAvailable')}
+                      </p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {allTags.map((tag) => {
+                          const selected = contactTagIds.includes(tag.id);
+                          return (
+                            <button
+                              key={tag.id}
+                              type="button"
+                              onClick={() => toggleTag(tag.id)}
+                              disabled={savingTags}
+                              className={`inline-flex cursor-pointer items-center rounded-full px-3 py-1 text-xs font-medium transition-all ${
+                                selected
+                                  ? 'ring-2 ring-primary ring-offset-1 ring-offset-popover'
+                                  : 'opacity-50 hover:opacity-80'
+                              }`}
                               style={{
-                                backgroundColor: `${deal.stage.color}20`,
-                                color: deal.stage.color,
+                                backgroundColor: tag.color + '20',
+                                color: tag.color,
                               }}
                             >
-                              {deal.stage.name}
-                            </span>
-                          )}
-                        </div>
-                        <div className="mt-1.5 flex items-center justify-between text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <DollarSign className="size-3" />
-                            {formatCurrency(
-                              deal.value ?? 0,
-                              deal.currency || defaultCurrency,
-                            )}
-                          </span>
-                          {deal.status && deal.status !== 'open' && (
-                            <span
-                              className={
-                                deal.status === 'won'
-                                  ? 'text-primary'
-                                  : 'text-red-400'
-                              }
-                            >
-                              {deal.status}
-                            </span>
-                          )}
-                        </div>
+                              {selected && <Check className="mr-1 size-3" />}
+                              {tag.name}
+                            </button>
+                          );
+                        })}
                       </div>
-                    ))}
+                    )}
                   </div>
-                )}
-              </TabsContent>
-            </Tabs>
-          </div>
-        )}
-      </SheetContent>
-    </Sheet>
-    <TemplatePicker
-      open={templatePickerOpen}
-      onOpenChange={setTemplatePickerOpen}
-      onSelect={handleSendTemplate}
-    />
+                </TabsContent>
+
+                <TabsContent
+                  value="notes"
+                  className="mt-0 flex min-h-0 flex-1 flex-col px-5 py-4"
+                >
+                  <div className="mb-4 space-y-2">
+                    <Textarea
+                      value={newNote}
+                      onChange={(e) => setNewNote(e.target.value)}
+                      placeholder={t('notesTab.placeholder')}
+                      className="min-h-18 resize-none border-border bg-muted text-sm text-foreground placeholder:text-muted-foreground"
+                    />
+                    <Button
+                      onClick={addNote}
+                      disabled={!newNote.trim() || savingNote}
+                      className="w-full bg-primary text-primary-foreground hover:bg-primary/90 sm:w-auto"
+                      size="sm"
+                    >
+                      {savingNote ? (
+                        <Loader2 className="size-3.5 animate-spin" />
+                      ) : (
+                        <Plus className="size-3.5" />
+                      )}
+                      {t('notesTab.save')}
+                    </Button>
+                  </div>
+
+                  <div className="min-h-0 flex-1 space-y-2 overflow-y-auto">
+                    {loadingNotes ? (
+                      <div className="flex items-center justify-center py-10">
+                        <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : notes.length === 0 ? (
+                      <p className="py-10 text-center text-sm text-muted-foreground">
+                        {t('notesTab.noNotes')}
+                      </p>
+                    ) : (
+                      notes.map((note) => (
+                        <div
+                          key={note.id}
+                          className="group rounded-lg border border-border bg-muted/40 p-3"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="flex-1 whitespace-pre-wrap text-sm text-foreground">
+                              {note.note_text}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => deleteNote(note.id)}
+                              className="shrink-0 cursor-pointer text-muted-foreground opacity-0 transition-all hover:text-red-400 group-hover:opacity-100"
+                            >
+                              <Trash2 className="size-3.5" />
+                            </button>
+                          </div>
+                          <p className="mt-1.5 text-xs text-muted-foreground">
+                            {new Date(note.created_at).toLocaleDateString(
+                              'pt-BR',
+                              {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              },
+                            )}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </TabsContent>
+
+                <TabsContent
+                  value="deals"
+                  className="mt-0 flex-1 overflow-y-auto px-5 py-4"
+                >
+                  {loadingDeals ? (
+                    <div className="flex items-center justify-center py-10">
+                      <Loader2 className="size-5 animate-spin text-primary" />
+                    </div>
+                  ) : deals.length === 0 ? (
+                    <p className="py-10 text-center text-sm text-muted-foreground">
+                      {t('dealsTab.noDeals')}
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {deals.map((deal) => (
+                        <div
+                          key={deal.id}
+                          className="rounded-lg border border-border bg-muted/40 p-3"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="text-sm font-medium text-foreground">
+                              {deal.title}
+                            </p>
+                            {deal.stage && (
+                              <span
+                                className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+                                style={{
+                                  backgroundColor: `${deal.stage.color}20`,
+                                  color: deal.stage.color,
+                                }}
+                              >
+                                {stageLabel(deal.stage.name)}
+                              </span>
+                            )}
+                          </div>
+                          <div className="mt-1.5 flex items-center justify-between text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <DollarSign className="size-3" />
+                              {formatCurrency(
+                                deal.value ?? 0,
+                                deal.currency || defaultCurrency,
+                              )}
+                            </span>
+                            {deal.status && deal.status !== 'open' && (
+                              <span
+                                className={
+                                  deal.status === 'won'
+                                    ? 'text-primary'
+                                    : 'text-red-400'
+                                }
+                              >
+                                {deal.status}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+      <TemplatePicker
+        open={templatePickerOpen}
+        onOpenChange={setTemplatePickerOpen}
+        onSelect={handleSendTemplate}
+      />
     </>
   );
 }

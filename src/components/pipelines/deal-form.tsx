@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { CURRENCIES } from "@/lib/currency";
+import { DEFAULT_CURRENCY } from "@/lib/currency";
 import type {
   Contact,
   Conversation,
@@ -16,6 +16,7 @@ import type {
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
@@ -28,11 +29,24 @@ import {
   X,
   Trash2,
   MessageSquare,
-  DollarSign,
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { usePipelineLabels } from "@/hooks/use-pipeline-labels";
+import { cn } from "@/lib/utils";
+
+const fieldLabelClass =
+  "text-xs font-medium text-muted-foreground";
+const fieldControlClass =
+  "h-9 w-full rounded-lg border border-border bg-muted px-2.5 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary";
+const fieldInputClass =
+  "h-9 border-border bg-muted text-sm text-foreground";
+const scrollClass =
+  "[scrollbar-width:thin] [scrollbar-color:var(--border)_transparent] " +
+  "[&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent " +
+  "[&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border/40 " +
+  "hover:[&::-webkit-scrollbar-thumb]:bg-border/70";
 
 interface DealFormProps {
   open: boolean;
@@ -54,12 +68,12 @@ export function DealForm({
   onSaved,
 }: DealFormProps) {
   const t = useTranslations("Pipelines.form");
+  const { stageLabel } = usePipelineLabels();
   const supabase = createClient();
-  const { accountId, defaultCurrency } = useAuth();
+  const { accountId } = useAuth();
 
   const [title, setTitle] = useState("");
   const [value, setValue] = useState("");
-  const [currency, setCurrency] = useState(defaultCurrency);
   const [contactId, setContactId] = useState("");
   const [stageId, setStageId] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
@@ -86,7 +100,6 @@ export function DealForm({
     if (deal) {
       setTitle(deal.title);
       setValue(String(deal.value ?? ""));
-      setCurrency(deal.currency || defaultCurrency);
       // contact_id is nullable when the contact has been deleted
       // (migration 004: ON DELETE SET NULL). "" means "no selection".
       setContactId(deal.contact_id ?? "");
@@ -97,14 +110,13 @@ export function DealForm({
     } else {
       setTitle("");
       setValue("");
-      setCurrency(defaultCurrency);
       setContactId("");
       setStageId(defaultStageId || stages[0]?.id || "");
       setAssignedTo("");
       setExpectedCloseDate("");
       setNotes("");
     }
-  }, [open, deal, defaultStageId, stages, defaultCurrency]);
+  }, [open, deal, defaultStageId, stages]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // Load supporting data once the sheet is open
@@ -161,7 +173,7 @@ export function DealForm({
     const payload = {
       title: title.trim(),
       value: parseFloat(value) || 0,
-      currency,
+      currency: DEFAULT_CURRENCY,
       contact_id: contactId,
       pipeline_id: pipelineId,
       stage_id: stageId,
@@ -249,32 +261,40 @@ export function DealForm({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="bg-popover border-border text-popover-foreground sm:max-w-lg w-full p-0"
+        className="w-full gap-0 border-border bg-popover p-0 text-popover-foreground sm:max-w-xl"
       >
         <div className="flex h-full flex-col">
-          <SheetHeader className="border-b border-border/50 p-4">
-            <SheetTitle className="text-popover-foreground">
+          <SheetHeader className="shrink-0 space-y-0 border-b border-border p-0 px-5 py-4 pr-12 text-left">
+            <SheetTitle className="text-base font-semibold text-popover-foreground">
               {deal ? t("editDeal") : t("newDeal")}
             </SheetTitle>
+            <SheetDescription className="sr-only">
+              {deal ? t("editDeal") : t("newDeal")}
+            </SheetDescription>
           </SheetHeader>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            <div className="grid gap-2">
-              <Label className="text-muted-foreground">{t("title")}</Label>
+          <div
+            className={cn(
+              "min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4",
+              scrollClass,
+            )}
+          >
+            <div className="flex flex-col gap-1.5">
+              <Label className={fieldLabelClass}>{t("title")}</Label>
               <Input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder={t("titlePlaceholder")}
-                className="border-border bg-muted text-foreground"
+                className={fieldInputClass}
               />
             </div>
 
-            <div className="grid gap-2">
-              <Label className="text-muted-foreground">{t("contact")}</Label>
+            <div className="flex flex-col gap-1.5">
+              <Label className={fieldLabelClass}>{t("contact")}</Label>
               <select
                 value={contactId}
                 onChange={(e) => setContactId(e.target.value)}
-                className="h-9 w-full rounded-lg border border-border bg-muted px-2.5 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                className={fieldControlClass}
               >
                 <option value="">{t("selectContact")}</option>
                 {contacts.map((c) => (
@@ -286,176 +306,183 @@ export function DealForm({
 
               {linkedConversation && (
                 <Link
-                  href="/inbox"
-                  className="mt-1 inline-flex items-center gap-1.5 self-start rounded-md bg-primary/10 px-2 py-1 text-xs text-primary hover:bg-primary/20"
+                  href={`/inbox?c=${linkedConversation.id}`}
+                  className="mt-0.5 inline-flex items-center gap-1.5 self-start rounded-lg px-2 py-1.5 text-xs text-primary transition-colors hover:bg-muted"
                 >
-                  <MessageSquare className="h-3 w-3" />
+                  <MessageSquare className="size-3.5" />
                   {t("linkToConversation")}
                 </Link>
               )}
             </div>
 
-            <div className="grid grid-cols-[1fr_110px] gap-3">
-              <div className="grid gap-2">
-                <Label className="text-muted-foreground">{t("value")}</Label>
-                <div className="relative">
-                  <DollarSign className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    type="number"
-                    value={value}
-                    onChange={(e) => setValue(e.target.value)}
-                    placeholder="0"
-                    className="border-border bg-muted pl-7 text-foreground"
-                  />
-                </div>
+            <div className="flex flex-col gap-1.5">
+              <Label className={fieldLabelClass}>{t("value")}</Label>
+              <div className="relative">
+                <span className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-xs font-medium text-muted-foreground">
+                  R$
+                </span>
+                <Input
+                  type="number"
+                  value={value}
+                  onChange={(e) => setValue(e.target.value)}
+                  placeholder="0"
+                  className={cn(fieldInputClass, "pl-9")}
+                />
               </div>
-              <div className="grid gap-2">
-                <Label className="text-muted-foreground">{t("currency")}</Label>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="flex min-w-0 flex-col gap-1.5">
+                <Label className={fieldLabelClass}>{t("stage")}</Label>
                 <select
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value)}
-                  className="h-9 w-full rounded-lg border border-border bg-muted px-2.5 text-sm text-foreground outline-none focus:border-primary"
+                  value={stageId}
+                  onChange={(e) => setStageId(e.target.value)}
+                  className={fieldControlClass}
                 >
-                  {CURRENCIES.map((c) => (
-                    <option key={c.code} value={c.code}>
-                      {c.code}
+                  {stages.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {stageLabel(s.name)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex min-w-0 flex-col gap-1.5">
+                <Label className={fieldLabelClass}>{t("assignedTo")}</Label>
+                <select
+                  value={assignedTo}
+                  onChange={(e) => setAssignedTo(e.target.value)}
+                  className={fieldControlClass}
+                >
+                  <option value="">{t("unassigned")}</option>
+                  {profiles.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.full_name || p.email}
                     </option>
                   ))}
                 </select>
               </div>
             </div>
 
-            <div className="grid gap-2">
-              <Label className="text-muted-foreground">{t("expectedCloseDate")}</Label>
+            <div className="flex flex-col gap-1.5">
+              <Label className={fieldLabelClass}>{t("expectedCloseDate")}</Label>
               <Input
                 type="date"
                 value={expectedCloseDate}
                 onChange={(e) => setExpectedCloseDate(e.target.value)}
-                className="border-border bg-muted text-foreground"
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label className="text-muted-foreground">{t("stage")}</Label>
-              <select
-                value={stageId}
-                onChange={(e) => setStageId(e.target.value)}
-                className="h-9 w-full rounded-lg border border-border bg-muted px-2.5 text-sm text-foreground outline-none focus:border-primary"
-              >
-                {stages.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="grid gap-2">
-              <Label className="text-muted-foreground">{t("assignedTo")}</Label>
-              <select
-                value={assignedTo}
-                onChange={(e) => setAssignedTo(e.target.value)}
-                className="h-9 w-full rounded-lg border border-border bg-muted px-2.5 text-sm text-foreground outline-none focus:border-primary"
-              >
-                <option value="">{t("unassigned")}</option>
-                {profiles.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.full_name || p.email}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="grid gap-2">
-              <Label className="text-muted-foreground">{t("notes")}</Label>
-              <Textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder={t("notesPlaceholder")}
-                className="min-h-[100px] border-border bg-muted text-foreground"
+                className={fieldInputClass}
               />
             </div>
 
             {deal && (
-              <div className="space-y-2 rounded-lg border border-border bg-muted/50 p-3">
-                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  {t("status")}
-                </p>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    onClick={() => handleStatusChange("won")}
-                    disabled={!!statusAction || deal.status === "won"}
-                    className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-                  >
-                    {statusAction === "won" ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <>
-                        <Check className="mr-1 h-4 w-4" />
-                        {t("markAsWon")}
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => handleStatusChange("lost")}
-                    disabled={!!statusAction || deal.status === "lost"}
-                    className="flex-1 bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
-                  >
-                    {statusAction === "lost" ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <>
-                        <X className="mr-1 h-4 w-4" />
-                        {t("markAsLost")}
-                      </>
-                    )}
-                  </Button>
+              <div className="flex flex-col gap-1.5">
+                <Label className={fieldLabelClass}>{t("status")}</Label>
+                <div
+                  role="group"
+                  aria-label={t("status")}
+                  className="grid grid-cols-3 gap-1 rounded-lg border border-border bg-muted p-1"
+                >
+                  {(
+                    [
+                      {
+                        value: "open" as const,
+                        label: t("statusOpen"),
+                        activeClass: "bg-background text-foreground shadow-sm",
+                      },
+                      {
+                        value: "won" as const,
+                        label: t("statusWon"),
+                        Icon: Check,
+                        activeClass: "bg-primary/15 text-primary shadow-sm",
+                      },
+                      {
+                        value: "lost" as const,
+                        label: t("statusLost"),
+                        Icon: X,
+                        activeClass: "bg-red-500/15 text-red-400 shadow-sm",
+                      },
+                    ] as const
+                  ).map((opt) => {
+                    const active = deal.status === opt.value;
+                    const Icon = "Icon" in opt ? opt.Icon : null;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        disabled={!!statusAction}
+                        aria-pressed={active}
+                        onClick={() => {
+                          if (active) return;
+                          handleStatusChange(opt.value);
+                        }}
+                        className={cn(
+                          "inline-flex h-8 items-center justify-center gap-1.5 rounded-md px-2 text-xs font-medium transition-colors",
+                          "disabled:pointer-events-none disabled:opacity-60",
+                          active
+                            ? opt.activeClass
+                            : "text-muted-foreground hover:bg-background/70 hover:text-foreground",
+                        )}
+                      >
+                        {statusAction === opt.value ? (
+                          <Loader2 className="size-3 animate-spin" />
+                        ) : (
+                          Icon && <Icon className="size-3 shrink-0" />
+                        )}
+                        {opt.label}
+                      </button>
+                    );
+                  })}
                 </div>
-                {deal.status && deal.status !== "open" && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => handleStatusChange("open")}
-                    disabled={!!statusAction}
-                    className="w-full text-muted-foreground hover:text-foreground"
-                  >
-                    {t("reopenDeal")}
-                  </Button>
-                )}
               </div>
             )}
+
+            <div className="flex flex-col gap-1.5">
+              <Label className={fieldLabelClass}>{t("notes")}</Label>
+              <Textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder={t("notesPlaceholder")}
+                className="min-h-24 resize-none border-border bg-muted text-sm text-foreground placeholder:text-muted-foreground"
+              />
+            </div>
           </div>
 
-          <div className="border-t border-border/50 bg-popover/80 p-4">
+          <div className="shrink-0 space-y-3 border-t border-border px-5 py-4">
             <div className="flex gap-2">
               <Button
                 variant="outline"
+                size="sm"
                 onClick={() => onOpenChange(false)}
-                className="flex-1 border-border bg-transparent text-muted-foreground hover:bg-muted"
+                className="flex-1 border-border bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground"
               >
                 {t("cancel")}
               </Button>
               <Button
+                size="sm"
                 onClick={handleSave}
                 disabled={saving || !title.trim() || !contactId || !stageId}
                 className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
               >
-                {saving ? t("saving") : deal ? t("saveChanges") : t("createDeal")}
+                {saving ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : null}
+                {saving
+                  ? t("saving")
+                  : deal
+                    ? t("saveChanges")
+                    : t("createDeal")}
               </Button>
             </div>
 
             {deal &&
               (confirmDelete ? (
-                <div className="mt-3 flex items-center justify-between gap-2 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs">
-                  <span className="text-red-300">{t("deletePrompt")}</span>
-                  <div className="flex gap-1">
+                <div className="flex items-center justify-between gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs">
+                  <span className="text-red-400">{t("deletePrompt")}</span>
+                  <div className="flex shrink-0 gap-1">
                     <button
                       type="button"
                       onClick={() => setConfirmDelete(false)}
                       disabled={deleting}
-                      className="rounded px-2 py-1 text-muted-foreground hover:bg-muted"
+                      className="rounded-md px-2 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                     >
                       {t("cancel")}
                     </button>
@@ -463,7 +490,7 @@ export function DealForm({
                       type="button"
                       onClick={handleDelete}
                       disabled={deleting}
-                      className="rounded bg-red-600 px-2 py-1 font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                      className="rounded-md bg-red-600 px-2 py-1 font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
                     >
                       {deleting ? t("deleting") : t("confirm")}
                     </button>
@@ -473,9 +500,9 @@ export function DealForm({
                 <button
                   type="button"
                   onClick={() => setConfirmDelete(true)}
-                  className="mt-3 flex w-full items-center justify-center gap-1 text-xs text-red-400 hover:text-red-300"
+                  className="flex w-full items-center justify-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-red-400"
                 >
-                  <Trash2 className="h-3 w-3" />
+                  <Trash2 className="size-3.5" />
                   {t("deleteDeal")}
                 </button>
               ))}

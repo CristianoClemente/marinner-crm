@@ -36,6 +36,11 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import {
+  localizePipelineName,
+  localizeStageName,
+  type DefaultStageKey,
+} from "@/lib/pipelines/default-stages";
 
 const STAGE_COLORS = [
   "#3b82f6",
@@ -70,6 +75,8 @@ export function PipelineSettings({
   onCreateNewPipeline,
 }: PipelineSettingsProps) {
   const t = useTranslations("Pipelines.settings");
+  const tStages = useTranslations("Pipelines.defaultStages");
+  const tPipeline = useTranslations("Pipelines");
   const supabase = createClient();
 
   const [name, setName] = useState(pipeline.name);
@@ -81,14 +88,28 @@ export function PipelineSettings({
   const [deleting, setDeleting] = useState(false);
 
   // Reset form state when the dialog opens or its prop inputs change
-  // — legitimate prop-driven sync.
+  // — legitimate prop-driven sync. Nomes de etapas padrão EN legado
+  // são localizados só na UI; o id permanece o do banco.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!open) return;
-    setName(pipeline.name);
-    setLocalStages([...stages].sort((a, b) => a.position - b.position));
+    setName(
+      localizePipelineName(pipeline.name, () =>
+        tPipeline("defaultPipelineName"),
+      ),
+    );
+    setLocalStages(
+      [...stages]
+        .sort((a, b) => a.position - b.position)
+        .map((stage) => ({
+          ...stage,
+          name: localizeStageName(stage.name, (key: DefaultStageKey) =>
+            tStages(key),
+          ),
+        })),
+    );
     setShowDeleteConfirm(false);
-  }, [open, pipeline, stages]);
+  }, [open, pipeline, stages, tStages, tPipeline]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const sensors = useSensors(

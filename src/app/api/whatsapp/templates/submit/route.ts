@@ -10,6 +10,7 @@ import {
 import { buildMetaTemplatePayload } from '@/lib/whatsapp/template-components'
 import { ensureImageHeaderHandle } from '@/lib/whatsapp/template-header-handle'
 import { normalizeStatus } from '@/lib/whatsapp/template-status-normalize'
+import { rejectUnlessMetaFeature } from '@/lib/whatsapp/require-meta-feature'
 
 /**
  * Shared upsert payload builder — both the Meta-failure path and the
@@ -163,6 +164,8 @@ export async function POST(request: Request) {
           { status: 400 },
         )
       }
+      const blocked = rejectUnlessMetaFeature(config, 'template')
+      if (blocked) return blocked
       if (!config.waba_id) {
         return NextResponse.json(
           {

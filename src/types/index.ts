@@ -267,24 +267,43 @@ export interface MessageReaction {
   created_at: string;
 }
 
+/** WhatsApp transport for an account — exclusive: Meta OR Z-API. */
+export type WhatsAppProvider = 'meta' | 'zapi';
+
 export interface WhatsAppConfig {
   id: string;
   user_id: string;
-  phone_number_id: string;
+  /** Account tenancy key (one config row per account). */
+  account_id?: string;
+  /**
+   * Active provider for this account. Defaults to `meta` for rows
+   * created before multi-provider support.
+   */
+  provider: WhatsAppProvider;
+  /** Meta Cloud API phone number id — required when provider = meta. */
+  phone_number_id?: string;
   waba_id?: string;
-  access_token: string;
+  /** Meta access token (encrypted at rest) — required when provider = meta. */
+  access_token?: string;
   verify_token?: string;
+  /** Z-API instance id — required when provider = zapi. */
+  zapi_instance_id?: string;
+  /** Z-API instance token (encrypted at rest) — required when provider = zapi. */
+  zapi_instance_token?: string;
+  /** Z-API account Client-Token (encrypted at rest) — required when provider = zapi. */
+  zapi_client_token?: string;
   status: 'connected' | 'disconnected';
   connected_at?: string;
   /**
    * Set when POST /{phone_number_id}/register last succeeded. NULL
    * means the number was saved but never actually subscribed for
    * webhooks on Meta's side — inbound events will be silently lost.
+   * Meta-only.
    */
   registered_at?: string;
-  /** Set when POST /{waba_id}/subscribed_apps last succeeded. */
+  /** Set when POST /{waba_id}/subscribed_apps last succeeded. Meta-only. */
   subscribed_apps_at?: string;
-  /** Last error from /register; cleared on success. */
+  /** Last error from /register; cleared on success. Meta-only. */
   last_registration_error?: string;
 }
 

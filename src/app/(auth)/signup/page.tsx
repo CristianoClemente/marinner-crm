@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { translateAuthError } from "@/lib/auth/auth-errors";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import {
   Card,
@@ -190,9 +191,8 @@ function SignupPageInner() {
               <Label htmlFor="password" className="text-muted-foreground">
                 Senha
               </Label>
-              <Input
+              <PasswordInput
                 id="password"
-                type="password"
                 placeholder="Pelo menos 6 caracteres"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -205,9 +205,8 @@ function SignupPageInner() {
               <Label htmlFor="confirmPassword" className="text-muted-foreground">
                 Confirmar senha
               </Label>
-              <Input
+              <PasswordInput
                 id="confirmPassword"
-                type="password"
                 placeholder="Repita sua senha"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}

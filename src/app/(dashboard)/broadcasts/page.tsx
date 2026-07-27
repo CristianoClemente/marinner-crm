@@ -15,7 +15,9 @@ import {
 } from '@/components/ui/table';
 import { Radio, Plus, Loader2 } from 'lucide-react';
 import { useCan } from '@/hooks/use-can';
+import { useWhatsAppProvider } from '@/hooks/use-whatsapp-provider';
 import { GatedButton } from '@/components/ui/gated-button';
+import { MetaOnlyBanner } from '@/components/whatsapp/meta-only-banner';
 import { getBroadcastStatus } from '@/lib/broadcast-status';
 import { useTranslations } from 'next-intl';
 
@@ -62,6 +64,7 @@ export default function BroadcastsPage() {
   const t = useTranslations('Broadcasts.page');
   const tStatus = useTranslations('Broadcasts.status');
   const canCreate = useCan('send-messages');
+  const { isZapi } = useWhatsAppProvider();
   const [broadcasts, setBroadcasts] = useState<Broadcast[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -180,6 +183,8 @@ export default function BroadcastsPage() {
         </div>
       )}
 
+      {isZapi && <MetaOnlyBanner feature="broadcast" />}
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
@@ -187,6 +192,7 @@ export default function BroadcastsPage() {
             {t('subtitle')}
           </p>
         </div>
+        {!isZapi && (
         <GatedButton
           canAct={canCreate}
           gateReason="create broadcasts"
@@ -196,6 +202,7 @@ export default function BroadcastsPage() {
           <Plus className="h-4 w-4" />
           {t('newBroadcast')}
         </GatedButton>
+        )}
       </div>
 
       {broadcasts.length === 0 ? (
@@ -203,8 +210,9 @@ export default function BroadcastsPage() {
           <Radio className="mb-3 h-10 w-10 text-muted-foreground" />
           <p className="text-sm font-medium text-foreground">{t('noBroadcastsYet')}</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            {t('createFirst')}
+            {isZapi ? t('zapiBlocked') : t('createFirst')}
           </p>
+          {!isZapi && (
           <GatedButton
             canAct={canCreate}
             gateReason="create broadcasts"
@@ -214,6 +222,7 @@ export default function BroadcastsPage() {
             <Plus className="h-4 w-4" />
             {t('newBroadcast')}
           </GatedButton>
+          )}
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-border bg-card">

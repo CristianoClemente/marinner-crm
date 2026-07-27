@@ -8,11 +8,23 @@ import {
   CONVERSATION_SELECT,
   normalizeConversation,
 } from "@/lib/inbox/conversations";
-import type { Conversation, Message, Contact, ConversationStatus } from "@/types";
+import type {
+  Conversation,
+  Message,
+  Contact,
+  ConversationStatus,
+  MessageTemplate,
+} from "@/types";
 import { useRealtime } from "@/hooks/use-realtime";
 import { ConversationList } from "@/components/inbox/conversation-list";
 import { MessageThread } from "@/components/inbox/message-thread";
 import { ContactSidebar } from "@/components/inbox/contact-sidebar";
+import { NewMessageDialog } from "@/components/inbox/new-message-dialog";
+import {
+  TemplatePicker,
+  type TemplateSendValues,
+} from "@/components/inbox/template-picker";
+import { useWhatsAppProvider } from "@/hooks/use-whatsapp-provider";
 import { toast } from "sonner";
 import { WifiOff } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -34,8 +46,10 @@ export default function InboxPage() {
 
 function InboxPageInner() {
   const t = useTranslations("Inbox.page");
+  const tNew = useTranslations("Inbox.newMessage");
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { isZapi } = useWhatsAppProvider();
   /**
    * `?c=<id>` deep-link support. Used when landing here from the
    * dashboard's recent-conversations list so the right thread opens
@@ -51,6 +65,10 @@ function InboxPageInner() {
   const [whatsappConnected, setWhatsappConnected] = useState<boolean | null>(
     null
   );
+  const [newMessageOpen, setNewMessageOpen] = useState(false);
+  const [newMessageBusy, setNewMessageBusy] = useState(false);
+  const [metaContactId, setMetaContactId] = useState<string | null>(null);
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
   /**
    * Bumped whenever we want children (ConversationList, MessageThread)
    * to refetch from the DB — used as a safety net against missed
@@ -488,6 +506,117 @@ function InboxPageInner() {
     [activeConversation?.id, router]
   );
 
+  const upsertAndSelectConversation = useCallback(
+    (conv: Conversation) => {
+      setConversations((prev) => {
+        const exists = prev.some((c) => c.id === conv.id);
+        if (exists) {
+          return prev.map((c) => (c.id === conv.id ? { ...c, ...conv } : c));
+        }
+        return [conv, ...prev];
+      });
+      handleSelectConversation(conv);
+    },
+    [handleSelectConversation],
+  );
+
+  const handlePickContact = useCallback(
+    async (contact: Contact) => {
+      if (isZapi) {
+        setNewMessageBusy(true);
+        try {
+          const res = await fetch("/api/whatsapp/conversations", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ contact_id: contact.id }),
+          });
+          const payload = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            toast.error(
+              payload?.error || tNew("openFailed"),
+            );
+            return;
+          }
+          const conv = payload.conversation as Conversation | undefined;
+          if (!conv?.id) {
+            toast.error(tNew("openFailed"));
+            return;
+          }
+          setNewMessageOpen(false);
+          upsertAndSelectConversation(conv);
+        } catch {
+          toast.error(tNew("openFailed"));
+        } finally {
+          setNewMessageBusy(false);
+        }
+        return;
+      }
+
+      // Meta: close picker and open approved-template flow.
+      setMetaContactId(contact.id);
+      setNewMessageOpen(false);
+      setTemplatePickerOpen(true);
+    },
+    [isZapi, tNew, upsertAndSelectConversation],
+  );
+
+  const handleSendTemplateToContact = useCallback(
+    async (template: MessageTemplate, values: TemplateSendValues) => {
+      if (!metaContactId) return;
+      setNewMessageBusy(true);
+      try {
+        const res = await fetch("/api/whatsapp/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contact_id: metaContactId,
+            message_type: "template",
+            template_name: template.name,
+            template_language: template.language,
+            template_message_params: {
+              body: values.body,
+              headerText: values.headerText,
+              buttonParams: values.buttonParams,
+            },
+            template_params: values.body,
+          }),
+        });
+        const payload = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          toast.error(
+            payload?.error || tNew("templateFailed"),
+          );
+          return;
+        }
+
+        toast.success(tNew("templateSent", { name: template.name }));
+        setTemplatePickerOpen(false);
+
+        const conversationId = payload.conversation_id as string | undefined;
+        if (conversationId) {
+          const supabase = createClient();
+          const { data } = await supabase
+            .from("conversations")
+            .select(CONVERSATION_SELECT)
+            .eq("id", conversationId)
+            .maybeSingle();
+          if (data) {
+            upsertAndSelectConversation(normalizeConversation(data));
+          } else {
+            router.replace(`/inbox?c=${conversationId}`, { scroll: false });
+            setResyncToken((n) => n + 1);
+          }
+        }
+        setMetaContactId(null);
+      } catch {
+        toast.error(tNew("templateFailed"));
+      } finally {
+        setNewMessageBusy(false);
+      }
+    },
+    [metaContactId, tNew, upsertAndSelectConversation, router],
+  );
+
   // Mobile "back" — deselect the conversation so the list pane comes
   // back. Also clears the ?c= param so a refresh lands on the list
   // instead of re-opening the thread the user just backed out of.
@@ -590,6 +719,7 @@ function InboxPageInner() {
             conversations={conversations}
             onConversationsLoaded={handleConversationsLoaded}
             resyncToken={resyncToken}
+            onNewMessage={() => setNewMessageOpen(true)}
           />
         </div>
 
@@ -636,6 +766,24 @@ function InboxPageInner() {
           </div>
         )}
       </div>
+
+      <NewMessageDialog
+        open={newMessageOpen}
+        onOpenChange={(open) => {
+          if (!newMessageBusy) setNewMessageOpen(open);
+        }}
+        onSelect={handlePickContact}
+        busy={newMessageBusy}
+      />
+
+      <TemplatePicker
+        open={templatePickerOpen}
+        onOpenChange={(open) => {
+          setTemplatePickerOpen(open);
+          if (!open) setMetaContactId(null);
+        }}
+        onSelect={handleSendTemplateToContact}
+      />
     </div>
   );
 }

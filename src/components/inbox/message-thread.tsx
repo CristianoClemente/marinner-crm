@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useWhatsAppProvider } from "@/hooks/use-whatsapp-provider";
 import { usePresence } from "@/hooks/use-presence";
 import { PresenceDot } from "@/components/presence/presence-dot";
 import { presenceLabel } from "@/lib/presence";
@@ -172,7 +173,8 @@ export function MessageThread({
   const tTimer = useTranslations("Inbox.sessionTimer");
   const tQuote = useTranslations("Inbox.replyQuote");
 
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const { isZapi } = useWhatsAppProvider();
   const { getPresence, getRow, now } = usePresence();
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -226,8 +228,10 @@ export function MessageThread({
     };
   }, []);
 
-  // 24-hour session timer
+  // 24-hour session timer — Meta Cloud API only. Z-API has no customer
+  // service window, so free-form text/media stay available.
   const sessionInfo = useMemo(() => {
+    if (isZapi) return { expired: false, remaining: "" };
     if (!messages.length) return { expired: false, remaining: "" };
 
     // Find last customer message
@@ -235,7 +239,7 @@ export function MessageThread({
       .reverse()
       .find((m) => m.sender_type === "customer");
 
-    if (!lastCustomerMsg) return { expired: true, remaining: "No customer messages" };
+    if (!lastCustomerMsg) return { expired: true, remaining: tTimer("noCustomerMessages") };
 
     const hoursSince = differenceInHours(new Date(), new Date(lastCustomerMsg.created_at));
     const expired = hoursSince >= 24;
@@ -251,7 +255,7 @@ export function MessageThread({
         : tTimer("xmRemaining", { minutes: Math.floor(hoursLeft * 60) });
 
     return { expired, remaining };
-  }, [messages, tTimer]);
+  }, [messages, tTimer, isZapi]);
 
   // Store latest callback in a ref so fetchMessages doesn't need to
   // depend on `onMessagesLoaded` — otherwise parent re-renders cause
@@ -456,6 +460,7 @@ export function MessageThread({
         id: tempId,
         conversation_id: conversation.id,
         sender_type: "agent",
+        sender_id: user?.id,
         content_type: "text",
         content_text: text,
         status: "sending",
@@ -499,7 +504,7 @@ export function MessageThread({
         onUpdateMessage(tempId, { status: "failed" });
       }
     },
-    [conversation, onNewMessage, onUpdateMessage]
+    [conversation, onNewMessage, onUpdateMessage, user?.id]
   );
 
   const handleSendMedia = useCallback(
@@ -519,6 +524,7 @@ export function MessageThread({
         id: tempId,
         conversation_id: conversation.id,
         sender_type: "agent",
+        sender_id: user?.id,
         content_type: payload.kind,
         content_text: contentText,
         media_url: payload.mediaUrl,
@@ -565,7 +571,7 @@ export function MessageThread({
         void deleteAccountMedia(CHAT_MEDIA_BUCKET, payload.path).catch(() => {});
       }
     },
-    [conversation, onNewMessage, onUpdateMessage],
+    [conversation, onNewMessage, onUpdateMessage, user?.id],
   );
 
   const handleSendInteractive = useCallback(
@@ -579,6 +585,7 @@ export function MessageThread({
         id: tempId,
         conversation_id: conversation.id,
         sender_type: "agent",
+        sender_id: user?.id,
         content_type: "interactive",
         content_text: payload.body,
         interactive_payload: payload,
@@ -618,7 +625,7 @@ export function MessageThread({
         onUpdateMessage(tempId, { status: "failed" });
       }
     },
-    [conversation, onNewMessage, onUpdateMessage],
+    [conversation, onNewMessage, onUpdateMessage, user?.id],
   );
 
   const handleStatusChange = useCallback(
@@ -658,6 +665,7 @@ export function MessageThread({
         id: tempId,
         conversation_id: conversation.id,
         sender_type: "agent",
+        sender_id: user?.id,
         content_type: "template",
         content_text: renderedBody,
         template_name: template.name,
@@ -707,7 +715,7 @@ export function MessageThread({
         onUpdateMessage(tempId, { status: "failed" });
       }
     },
-    [conversation, onNewMessage, onUpdateMessage],
+    [conversation, onNewMessage, onUpdateMessage, user?.id],
   );
 
   // Build a quick id → Message map so reply quotes can be rendered without
@@ -731,15 +739,42 @@ export function MessageThread({
 
   const contactDisplayName = contact?.name || contact?.phone || "Customer";
 
-  // Author label for a quoted message: "You" when we sent the parent,
+  const senderNameFor = useCallback(
+    (m: Message): string | null => {
+      if (m.sender_type === "customer") return null;
+      if (m.ai_generated) return t("aiSender");
+      if (m.sender_type === "bot") return t("botSender");
+      if (m.sender_id) {
+        const p = profiles.find((row) => row.user_id === m.sender_id);
+        if (p?.full_name?.trim()) return p.full_name.trim();
+        if (m.sender_id === user?.id && profile?.full_name?.trim()) {
+          return profile.full_name.trim();
+        }
+        if (p?.email) return p.email.split("@")[0] ?? p.email;
+      }
+      // Optimistic outbound bubbles before the realtime row arrives.
+      if (
+        m.id.startsWith("temp-") &&
+        m.sender_type === "agent" &&
+        profile?.full_name?.trim()
+      ) {
+        return profile.full_name.trim();
+      }
+      return m.sender_type === "agent" ? t("agentSender") : null;
+    },
+    [profiles, user?.id, profile?.full_name, t],
+  );
+
+  // Author label for a quoted message: agent name when we sent the parent,
   // contact name when the customer sent it.
   const authorLabelFor = useCallback(
     (m: Message): string => {
       const isAgentMsg =
         m.sender_type === "agent" || m.sender_type === "bot";
-      return isAgentMsg ? "You" : contactDisplayName;
+      if (!isAgentMsg) return contactDisplayName;
+      return senderNameFor(m) || t("agentSender");
     },
-    [contactDisplayName],
+    [contactDisplayName, senderNameFor, t],
   );
 
   const handleStartReply = useCallback(
@@ -901,8 +936,8 @@ export function MessageThread({
             <h2 className="truncate text-sm font-semibold text-foreground">{displayName}</h2>
             <p className="truncate text-xs text-muted-foreground">{contact.phone}</p>
           </div>
-          {/* Session timer badge — hidden on the narrowest phones so
-              the name + back arrow keep their room. */}
+          {/* Session timer badge — Meta 24h window only; hidden for Z-API. */}
+          {!isZapi && sessionInfo.remaining && (
           <Badge
             variant="outline"
             className={cn(
@@ -913,6 +948,7 @@ export function MessageThread({
             <Clock className="h-3 w-3" />
             {sessionInfo.remaining}
           </Badge>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -1058,7 +1094,16 @@ export function MessageThread({
       </div>
 
       {/* Messages Area */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4">
+      <div
+        ref={scrollRef}
+        className={
+          'flex-1 overflow-y-auto px-4 py-4 ' +
+          '[scrollbar-width:thin] [scrollbar-color:var(--border)_transparent] ' +
+          '[&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent ' +
+          '[&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border/40 ' +
+          'hover:[&::-webkit-scrollbar-thumb]:bg-border/70'
+        }
+      >
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -1088,10 +1133,7 @@ export function MessageThread({
                       : null;
                     const reply = parent
                       ? {
-                          authorLabel:
-                            parent.sender_type === "agent" || parent.sender_type === "bot"
-                              ? t("me") 
-                              : contact?.name || contact?.phone || "Unknown",
+                          authorLabel: authorLabelFor(parent),
                           preview: buildReplyPreview(parent, tQuote),
                         }
                       : null;
@@ -1111,6 +1153,7 @@ export function MessageThread({
                       <MessageActions
                         key={msg.id}
                         message={msg}
+                        reactionsEnabled={!isZapi}
                         onReply={() => handleStartReply(msg)}
                         onReact={(emoji) => {
                           if (emoji) void postReaction(msg.id, emoji);
@@ -1121,7 +1164,10 @@ export function MessageThread({
                           reply={reply}
                           reactions={msgReactions}
                           currentUserId={user?.id}
-                          onToggleReaction={handlePillToggle}
+                          senderName={senderNameFor(msg)}
+                          onToggleReaction={
+                            isZapi ? undefined : handlePillToggle
+                          }
                         />
                       </MessageActions>
                     );
@@ -1153,6 +1199,7 @@ export function MessageThread({
       <MessageComposer
         conversationId={conversation.id}
         sessionExpired={sessionInfo.expired}
+        metaFeaturesEnabled={!isZapi}
         onSend={handleSend}
         onSendMedia={handleSendMedia}
         onSendInteractive={handleSendInteractive}
@@ -1161,11 +1208,13 @@ export function MessageThread({
         onClearReply={() => setReplyTo(null)}
       />
 
-      <TemplatePicker
-        open={templateModalOpen}
-        onOpenChange={setTemplateModalOpen}
-        onSelect={handleSendTemplate}
-      />
+      {!isZapi && (
+        <TemplatePicker
+          open={templateModalOpen}
+          onOpenChange={setTemplateModalOpen}
+          onSelect={handleSendTemplate}
+        />
+      )}
     </div>
   );
 }

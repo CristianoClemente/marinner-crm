@@ -11,6 +11,7 @@ import {
 } from '@/lib/whatsapp/template-validators'
 import { buildMetaTemplatePayload } from '@/lib/whatsapp/template-components'
 import { ensureImageHeaderHandle } from '@/lib/whatsapp/template-header-handle'
+import { rejectUnlessMetaFeature } from '@/lib/whatsapp/require-meta-feature'
 
 /**
  * Per-template lifecycle endpoint.
@@ -149,6 +150,8 @@ export async function PATCH(
           { status: 400 },
         )
       }
+      const blocked = rejectUnlessMetaFeature(config, 'template')
+      if (blocked) return blocked
       const accessToken = decrypt(config.access_token)
 
       // Image headers need a fresh Resumable-Upload handle on every edit
@@ -289,6 +292,8 @@ export async function DELETE(
           { status: 400 },
         )
       }
+      const blocked = rejectUnlessMetaFeature(config, 'template')
+      if (blocked) return blocked
       const accessToken = decrypt(config.access_token)
       try {
         await deleteMessageTemplate({

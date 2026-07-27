@@ -38,6 +38,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { usePipelineLabels } from "@/hooks/use-pipeline-labels"
 import { Switch } from "@/components/ui/switch"
 import {
   DropdownMenu,
@@ -430,6 +431,7 @@ function DealPipelineFields({
   t: ReturnType<typeof useTranslations>
 }) {
   const { pipelines, stages } = useResources()
+  const { stageLabel, pipelineLabel } = usePipelineLabels()
 
   if (pipelines.length === 0) {
     return (
@@ -480,7 +482,7 @@ function DealPipelineFields({
           <option value="">{t("pipelines.selectPipeline")}</option>
           {pipelines.map((p) => (
             <option key={p.id} value={p.id}>
-              {p.name}
+              {pipelineLabel(p.name)}
             </option>
           ))}
           {pipelineId && !selectedPipeline && (
@@ -502,7 +504,7 @@ function DealPipelineFields({
           </option>
           {stageOptions.map((s) => (
             <option key={s.id} value={s.id}>
-              {s.name}
+              {stageLabel(s.name)}
             </option>
           ))}
           {stageId && pipelineId && !selectedStage && (

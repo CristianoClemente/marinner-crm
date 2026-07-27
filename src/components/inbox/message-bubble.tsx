@@ -28,6 +28,8 @@ interface MessageBubbleProps {
   reactions?: MessageReaction[];
   currentUserId?: string;
   onToggleReaction?: (emoji: string) => void;
+  /** Display name of the agent/bot who sent this outbound message. */
+  senderName?: string | null;
 }
 
 function StatusIcon({ status }: { status: Message["status"] }) {
@@ -264,6 +266,7 @@ export function MessageBubble({
   reactions,
   currentUserId,
   onToggleReaction,
+  senderName,
 }: MessageBubbleProps) {
   const t = useTranslations("Inbox.bubble");
 
@@ -287,6 +290,16 @@ export function MessageBubble({
             : "rounded-bl-md bg-muted text-foreground",
         )}
       >
+        {isAgent && senderName && (
+          <p
+            className={cn(
+              "mb-0.5 text-[11px] font-semibold leading-tight",
+              "text-primary-foreground/85",
+            )}
+          >
+            {senderName}
+          </p>
+        )}
         {reply && (
           <ReplyQuote
             authorLabel={reply.authorLabel}

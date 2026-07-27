@@ -15,6 +15,7 @@ import {
   rateLimitResponse,
   RATE_LIMITS,
 } from '@/lib/rate-limit'
+import { rejectUnlessMetaFeature } from '@/lib/whatsapp/require-meta-feature'
 
 interface BroadcastResult {
   phone: string
@@ -149,6 +150,9 @@ export async function POST(request: Request) {
         { status: 400 }
       )
     }
+
+    const blocked = rejectUnlessMetaFeature(config, 'broadcast')
+    if (blocked) return blocked
 
     const accessToken = decrypt(config.access_token)
 

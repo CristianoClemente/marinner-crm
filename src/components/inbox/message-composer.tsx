@@ -21,6 +21,7 @@ import {
   Sparkles,
   Plus,
   MessageSquareDashed,
+  MessageSquare,
   Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -52,9 +53,43 @@ import {
   InteractiveBuilder,
   blankButtonsPayload,
 } from "@/components/interactive/interactive-builder";
-import { validateInteractivePayload } from "@/lib/whatsapp/interactive";
+import { validateInteractivePayload, interactivePayloadPreviewText } from "@/lib/whatsapp/interactive";
 import type { InteractiveMessagePayload, QuickReply } from "@/types";
 import { QuickReplyPicker } from "./quick-reply-picker";
+import { useAiAccountStatus } from "@/hooks/use-ai-account-status";
+
+/** Detect a `/query` token at the cursor (start of line or after whitespace). */
+function getSlashMatch(
+  value: string,
+  cursor: number,
+): { start: number; query: string } | null {
+  const before = value.slice(0, cursor);
+  const match = /(?:^|[\s\n])\/([^\n]*)$/.exec(before);
+  if (!match) return null;
+  const start = before.lastIndexOf("/");
+  if (start < 0) return null;
+  return { start, query: match[1] ?? "" };
+}
+
+function quickReplyInsertText(
+  qr: QuickReply,
+  metaFeaturesEnabled: boolean,
+): string | null {
+  if (
+    qr.kind === "interactive" &&
+    qr.interactive_payload &&
+    metaFeaturesEnabled
+  ) {
+    return null;
+  }
+  if (qr.kind === "interactive" && qr.interactive_payload) {
+    return (
+      qr.interactive_payload.body?.trim() ||
+      interactivePayloadPreviewText(qr.interactive_payload)
+    );
+  }
+  return qr.content_text ?? "";
+}
 
 /** Media content types an agent can send from the composer. */
 export type ComposerMediaKind = "image" | "video" | "document" | "audio";
@@ -112,6 +147,8 @@ interface MediaDraft {
 interface MessageComposerProps {
   conversationId: string;
   sessionExpired: boolean;
+  /** Templates + interactive require Meta Cloud API. */
+  metaFeaturesEnabled?: boolean;
   onSend: (text: string, replyToId?: string) => void;
   onSendMedia: (payload: SendMediaPayload) => void;
   onSendInteractive: (payload: InteractiveMessagePayload, replyToId?: string) => void;
@@ -134,6 +171,7 @@ const OPUS_ENCODER_PATH = "/opus/encoderWorker.min.js";
 export function MessageComposer({
   conversationId,
   sessionExpired,
+  metaFeaturesEnabled = true,
   onSend,
   onSendMedia,
   onSendInteractive,
@@ -142,6 +180,8 @@ export function MessageComposer({
   onClearReply,
 }: MessageComposerProps) {
   const t = useTranslations("Inbox.composer");
+  const aiStatus = useAiAccountStatus();
+  const aiDraftAvailable = aiStatus?.draftAvailable === true;
 
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
@@ -154,6 +194,15 @@ export function MessageComposer({
     useState<InteractiveMessagePayload>(blankButtonsPayload);
   const [savingQuickReply, setSavingQuickReply] = useState(false);
   const [quickReplyOpen, setQuickReplyOpen] = useState(false);
+
+  // Slash menu (`/` → quick replies) above the textarea.
+  const [slashOpen, setSlashOpen] = useState(false);
+  const [slashQuery, setSlashQuery] = useState("");
+  const [slashStart, setSlashStart] = useState(0);
+  const [slashIndex, setSlashIndex] = useState(0);
+  const [slashItems, setSlashItems] = useState<QuickReply[]>([]);
+  const [slashLoading, setSlashLoading] = useState(false);
+  const slashCacheRef = useRef<QuickReply[] | null>(null);
 
   // Media attachment state. `draft` holds an uploaded-but-not-yet-sent
   // attachment; `busy` covers the upload/transcode window.
@@ -216,9 +265,17 @@ export function MessageComposer({
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = "auto";
-    // Max 4 lines (~96px)
+    // Max ~4 lines (leading-5 × 4 + padding)
     el.style.height = `${Math.min(el.scrollHeight, 96)}px`;
   }, []);
+
+  const openInteractiveBuilder = useCallback(
+    (seed?: InteractiveMessagePayload) => {
+      setInteractivePayload(seed ?? blankButtonsPayload());
+      setInteractiveOpen(true);
+    },
+    [],
+  );
 
   const handleSend = useCallback(async () => {
     const trimmed = text.trim();
@@ -228,6 +285,7 @@ export function MessageComposer({
     try {
       onSend(trimmed, replyTo?.id);
       setText("");
+      setSlashOpen(false);
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
       }
@@ -236,22 +294,158 @@ export function MessageComposer({
     }
   }, [text, sending, sessionExpired, onSend, replyTo?.id]);
 
+  const filteredSlashItems = slashItems.filter((qr) => {
+    if (!slashQuery) return true;
+    const q = slashQuery.toLowerCase();
+    const title = qr.title.toLowerCase();
+    const preview =
+      qr.kind === "interactive" && qr.interactive_payload
+        ? interactivePayloadPreviewText(qr.interactive_payload).toLowerCase()
+        : (qr.content_text ?? "").toLowerCase();
+    return title.includes(q) || preview.includes(q);
+  });
+
+  const loadSlashItems = useCallback(async () => {
+    if (slashCacheRef.current) {
+      setSlashItems(slashCacheRef.current);
+      return;
+    }
+    setSlashLoading(true);
+    try {
+      const res = await fetch("/api/quick-replies", { cache: "no-store" });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        const list = (data.quick_replies as QuickReply[]) ?? [];
+        slashCacheRef.current = list;
+        setSlashItems(list);
+      }
+    } finally {
+      setSlashLoading(false);
+    }
+  }, []);
+
+  const syncSlashMenu = useCallback(
+    (value: string, cursor: number) => {
+      if (readOnly || sessionExpired) {
+        setSlashOpen(false);
+        return;
+      }
+      const match = getSlashMatch(value, cursor);
+      if (!match) {
+        setSlashOpen(false);
+        return;
+      }
+      setSlashStart(match.start);
+      setSlashQuery(match.query);
+      setSlashIndex(0);
+      setSlashOpen(true);
+      void loadSlashItems();
+    },
+    [readOnly, sessionExpired, loadSlashItems],
+  );
+
+  const applySlashPick = useCallback(
+    (qr: QuickReply) => {
+      const el = textareaRef.current;
+      const cursor = el?.selectionStart ?? text.length;
+      const before = text.slice(0, slashStart);
+      const after = text.slice(cursor);
+
+      if (
+        qr.kind === "interactive" &&
+        qr.interactive_payload &&
+        metaFeaturesEnabled
+      ) {
+        setText(before + after);
+        setSlashOpen(false);
+        openInteractiveBuilder(qr.interactive_payload);
+        return;
+      }
+
+      const body = quickReplyInsertText(qr, metaFeaturesEnabled) ?? "";
+      const next = `${before}${body}${after}`;
+      setText(next);
+      setSlashOpen(false);
+      requestAnimationFrame(() => {
+        adjustHeight();
+        const node = textareaRef.current;
+        if (node) {
+          const pos = before.length + body.length;
+          node.focus();
+          node.setSelectionRange(pos, pos);
+        }
+      });
+    },
+    [
+      text,
+      slashStart,
+      metaFeaturesEnabled,
+      openInteractiveBuilder,
+      adjustHeight,
+    ],
+  );
+
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
+      if (slashOpen) {
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          setSlashIndex((i) =>
+            filteredSlashItems.length === 0
+              ? 0
+              : (i + 1) % filteredSlashItems.length,
+          );
+          return;
+        }
+        if (e.key === "ArrowUp") {
+          e.preventDefault();
+          setSlashIndex((i) =>
+            filteredSlashItems.length === 0
+              ? 0
+              : (i - 1 + filteredSlashItems.length) % filteredSlashItems.length,
+          );
+          return;
+        }
+        if (e.key === "Escape") {
+          e.preventDefault();
+          setSlashOpen(false);
+          return;
+        }
+        if (
+          (e.key === "Enter" || e.key === "Tab") &&
+          filteredSlashItems.length > 0
+        ) {
+          e.preventDefault();
+          applySlashPick(
+            filteredSlashItems[
+              Math.min(slashIndex, filteredSlashItems.length - 1)
+            ]!,
+          );
+          return;
+        }
+      }
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         handleSend();
       }
     },
-    [handleSend]
+    [
+      slashOpen,
+      filteredSlashItems,
+      slashIndex,
+      applySlashPick,
+      handleSend,
+    ],
   );
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      setText(e.target.value);
+      const value = e.target.value;
+      setText(value);
       adjustHeight();
+      syncSlashMenu(value, e.target.selectionStart ?? value.length);
     },
-    [adjustHeight]
+    [adjustHeight, syncSlashMenu],
   );
 
   // Ask the AI assistant for a suggested reply and drop it into the
@@ -300,14 +494,6 @@ export function MessageComposer({
 
   // ---- Interactive message + quick replies --------------------------
 
-  const openInteractiveBuilder = useCallback(
-    (seed?: InteractiveMessagePayload) => {
-      setInteractivePayload(seed ?? blankButtonsPayload());
-      setInteractiveOpen(true);
-    },
-    [],
-  );
-
   const sendInteractive = useCallback(() => {
     const result = validateInteractivePayload(interactivePayload);
     if (!result.ok) {
@@ -347,6 +533,7 @@ export function MessageComposer({
         return;
       }
       toast.success(t("quickReplySaved"));
+      slashCacheRef.current = null;
     } catch {
       toast.error(t("quickReplySaveError"));
     } finally {
@@ -354,16 +541,24 @@ export function MessageComposer({
     }
   }, [interactivePayload, t]);
 
-  // A picked quick reply: text fills the composer; interactive opens the
-  // builder pre-filled so the agent can tweak before sending.
+  // A picked quick reply: text fills the composer; interactive on Meta
+  // opens the builder; on Z-API interactive snippets degrade to body text.
   const handlePickQuickReply = useCallback(
     (qr: QuickReply) => {
       setQuickReplyOpen(false);
-      if (qr.kind === "interactive" && qr.interactive_payload) {
+      if (
+        qr.kind === "interactive" &&
+        qr.interactive_payload &&
+        metaFeaturesEnabled
+      ) {
         openInteractiveBuilder(qr.interactive_payload);
         return;
       }
-      const body = qr.content_text ?? "";
+      const body =
+        qr.kind === "interactive" && qr.interactive_payload
+          ? qr.interactive_payload.body?.trim() ||
+            interactivePayloadPreviewText(qr.interactive_payload)
+          : (qr.content_text ?? "");
       // Separate the snippet from any existing draft with a newline so the
       // words don't run together ("Thanks" + "we'll…" → "Thankswe'll…").
       setText((prev) =>
@@ -378,7 +573,7 @@ export function MessageComposer({
         }
       });
     },
-    [openInteractiveBuilder, adjustHeight],
+    [openInteractiveBuilder, adjustHeight, metaFeaturesEnabled],
   );
 
   // Upload a captured file to chat-media and stage it as a draft.
@@ -536,7 +731,7 @@ export function MessageComposer({
   // ---- Render --------------------------------------------------------
 
   return (
-    <div className="border-t border-border bg-card p-3">
+    <div className="border-t border-border bg-card px-3 py-2.5">
       {replyTo && (
         <div className="mb-2">
           <ReplyQuote
@@ -629,147 +824,220 @@ export function MessageComposer({
           </Button>
         </div>
       ) : (
-        <div className="flex items-end gap-2">
-          {/* Attach menu — photo / video / document / voice. */}
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              disabled={inputsDisabled || busy}
-              title={
-                readOnly
-                  ? t("readOnlyTitle")
-                  : inputsDisabled
-                    ? undefined
-                    : t("attachMedia")
-              }
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md p-0 text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {busy ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Paperclip className="h-4 w-4" />
+        <div className="flex min-h-11 w-full items-end gap-0.5 rounded-2xl border border-border bg-muted px-1 py-1">
+            {/* Toolbar — fixed-size icons, pinned to the bottom when the
+                textarea grows past one line. */}
+            <div className="flex shrink-0 items-center self-end">
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  disabled={inputsDisabled || busy}
+                  title={
+                    readOnly
+                      ? t("readOnlyTitle")
+                      : inputsDisabled
+                        ? undefined
+                        : t("attachMedia")
+                  }
+                  className="inline-flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-background/70 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {busy ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Paperclip className="size-4" />
+                  )}
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="start"
+                  className="border-border bg-popover"
+                >
+                  <DropdownMenuItem
+                    onClick={() => imageInputRef.current?.click()}
+                  >
+                    <ImageIcon className="mr-2 h-4 w-4" />
+                    {t("photo")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => videoInputRef.current?.click()}
+                  >
+                    <Video className="mr-2 h-4 w-4" />
+                    {t("video")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => documentInputRef.current?.click()}
+                  >
+                    <FileText className="mr-2 h-4 w-4" />
+                    {t("document")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => void startRecording()}>
+                    <Mic className="mr-2 h-4 w-4" />
+                    {t("voiceNote")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  disabled={inputsDisabled}
+                  title={
+                    readOnly
+                      ? t("readOnlyTitle")
+                      : inputsDisabled
+                        ? undefined
+                        : t("moreActions")
+                  }
+                  className="inline-flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-background/70 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Plus className="size-4" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="start"
+                  className="border-border bg-popover"
+                >
+                  {metaFeaturesEnabled && (
+                    <DropdownMenuItem onClick={() => openInteractiveBuilder()}>
+                      <MessageSquareDashed className="mr-2 h-4 w-4" />
+                      {t("interactiveMessage")}
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onClick={() => setQuickReplyOpen(true)}>
+                    <Zap className="mr-2 h-4 w-4" />
+                    {t("quickReplies")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {metaFeaturesEnabled && (
+                <GatedButton
+                  variant="ghost"
+                  size="sm"
+                  canAct={!readOnly}
+                  gateReason="send messages"
+                  title={readOnly ? undefined : t("sendTemplate")}
+                  className="size-9 p-0 text-muted-foreground hover:bg-background/70 hover:text-foreground"
+                  onClick={onOpenTemplates}
+                >
+                  <LayoutTemplate className="size-4" />
+                </GatedButton>
               )}
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="border-border bg-popover">
-              <DropdownMenuItem onClick={() => imageInputRef.current?.click()}>
-                <ImageIcon className="mr-2 h-4 w-4" />
-                {t("photo")}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => videoInputRef.current?.click()}>
-                <Video className="mr-2 h-4 w-4" />
-                {t("video")}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => documentInputRef.current?.click()}>
-                <FileText className="mr-2 h-4 w-4" />
-                {t("document")}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => void startRecording()}>
-                <Mic className="mr-2 h-4 w-4" />
-                {t("voiceNote")}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
 
-          {/* + menu — interactive messages + quick replies. Gated on the
-              24h window like free-form text (interactive requires it). */}
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              disabled={inputsDisabled}
-              title={
-                readOnly
-                  ? t("readOnlyTitle")
-                  : inputsDisabled
-                    ? undefined
-                    : t("moreActions")
-              }
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md p-0 text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Plus className="h-4 w-4" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="border-border bg-popover">
-              <DropdownMenuItem onClick={() => openInteractiveBuilder()}>
-                <MessageSquareDashed className="mr-2 h-4 w-4" />
-                {t("interactiveMessage")}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setQuickReplyOpen(true)}>
-                <Zap className="mr-2 h-4 w-4" />
-                {t("quickReplies")}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              {aiDraftAvailable && (
+                <GatedButton
+                  variant="ghost"
+                  size="sm"
+                  canAct={!readOnly}
+                  gateReason="send messages"
+                  disabled={drafting}
+                  title={readOnly ? undefined : t("draftWithAI")}
+                  className="size-9 p-0 text-muted-foreground hover:bg-background/70 hover:text-primary"
+                  onClick={handleDraft}
+                >
+                  {drafting ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="size-4" />
+                  )}
+                </GatedButton>
+              )}
+            </div>
 
-          <GatedButton
-            variant="ghost"
-            size="sm"
-            canAct={!readOnly}
-            gateReason="send messages"
-            title={readOnly ? undefined : t("sendTemplate")}
-            className="h-9 w-9 shrink-0 p-0 text-muted-foreground hover:text-foreground"
-            onClick={onOpenTemplates}
-          >
-            <LayoutTemplate className="h-4 w-4" />
-          </GatedButton>
+            <div className="relative min-w-0 flex-1 self-center">
+              {slashOpen && (
+                <div
+                  className="absolute bottom-full left-0 right-0 z-50 mb-1.5 max-h-56 overflow-y-auto rounded-lg border border-border bg-popover py-1 shadow-md"
+                  role="listbox"
+                  aria-label={t("quickReplies")}
+                >
+                  {slashLoading ? (
+                    <div className="flex justify-center py-3">
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : filteredSlashItems.length === 0 ? (
+                    <p className="px-3 py-2 text-xs text-muted-foreground">
+                      {t("quickRepliesEmpty")}
+                    </p>
+                  ) : (
+                    filteredSlashItems.map((qr, i) => {
+                      const active = i === slashIndex;
+                      return (
+                        <button
+                          key={qr.id}
+                          type="button"
+                          role="option"
+                          aria-selected={active}
+                          className={cn(
+                            "flex w-full items-center gap-2 px-3 py-2 text-left text-sm",
+                            active
+                              ? "bg-primary/10 text-foreground"
+                              : "text-foreground hover:bg-muted",
+                          )}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            applySlashPick(qr);
+                          }}
+                          onMouseEnter={() => setSlashIndex(i)}
+                        >
+                          {qr.kind === "interactive" ? (
+                            <Zap className="h-3.5 w-3.5 shrink-0 text-primary" />
+                          ) : (
+                            <MessageSquare className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                          )}
+                          <span className="min-w-0 flex-1 truncate font-medium">
+                            {qr.title}
+                          </span>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              )}
+              <textarea
+                ref={textareaRef}
+                value={text}
+                onChange={handleChange}
+                onKeyDown={handleKeyDown}
+                onClick={(e) =>
+                  syncSlashMenu(
+                    e.currentTarget.value,
+                    e.currentTarget.selectionStart ?? 0,
+                  )
+                }
+                onSelect={(e) =>
+                  syncSlashMenu(
+                    e.currentTarget.value,
+                    e.currentTarget.selectionStart ?? 0,
+                  )
+                }
+                placeholder={
+                  readOnly
+                    ? t("readOnlyPlaceholder")
+                    : sessionExpired
+                      ? t("sessionExpiredPlaceholder")
+                      : t("typeMessagePlaceholder")
+                }
+                disabled={sessionExpired || readOnly}
+                rows={1}
+                title={readOnly ? t("readOnlyTitle") : undefined}
+                className={cn(
+                  "max-h-24 min-h-9 w-full resize-none bg-transparent px-2 py-2 text-sm leading-5 text-foreground placeholder-muted-foreground outline-none",
+                  (sessionExpired || readOnly) &&
+                    "cursor-not-allowed opacity-50",
+                )}
+              />
+            </div>
 
-          <GatedButton
-            variant="ghost"
-            size="sm"
-            canAct={!readOnly}
-            gateReason="send messages"
-            disabled={drafting}
-            title={readOnly ? undefined : t("draftWithAI")}
-            className="h-9 w-9 shrink-0 p-0 text-muted-foreground hover:text-primary"
-            onClick={handleDraft}
-          >
-            {drafting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="h-4 w-4" />
-            )}
-          </GatedButton>
-
-          <textarea
-            ref={textareaRef}
-            value={text}
-            onChange={handleChange}
-            onKeyDown={handleKeyDown}
-            placeholder={
-              readOnly
-                ? t("readOnlyPlaceholder")
-                : sessionExpired
-                  ? t("sessionExpiredPlaceholder")
-                  : t("typeMessagePlaceholder")
-            }
-            disabled={sessionExpired || readOnly}
-            rows={1}
-            // Textarea keeps its own inline title — the GatedButton
-            // wrapping pattern doesn't apply to non-button inputs.
-            // The placeholder text also surfaces the read-only state.
-            title={readOnly ? t("readOnlyTitle") : undefined}
-            className={cn(
-              "flex-1 resize-none rounded-xl border border-border bg-muted px-4 py-2.5 text-sm text-foreground placeholder-muted-foreground outline-none transition-colors focus:border-primary/50",
-              (sessionExpired || readOnly) && "cursor-not-allowed opacity-50"
-            )}
-          />
-
-          <GatedButton
-            size="sm"
-            canAct={!readOnly}
-            gateReason="send messages"
-            disabled={!text.trim() || sessionExpired || sending}
-            onClick={handleSend}
-            className="h-9 w-9 shrink-0 bg-primary p-0 hover:bg-primary/90 disabled:opacity-40"
-          >
-            <Send className="h-4 w-4" />
-          </GatedButton>
+            <div className="flex shrink-0 items-center self-end">
+              <GatedButton
+                size="sm"
+                canAct={!readOnly}
+                gateReason="send messages"
+                disabled={!text.trim() || sessionExpired || sending}
+                onClick={handleSend}
+                className="size-9 rounded-full bg-primary p-0 hover:bg-primary/90 disabled:opacity-40"
+              >
+                <Send className="size-4" />
+              </GatedButton>
+            </div>
         </div>
-      )}
-
-      {/* Hint sits outside the flex row so its height doesn't push
-          `items-end` buttons below the textarea. Indented to line up
-          under the textarea left edge. */}
-      {!draft && !recording && (
-        <p className="mt-1 pl-[5.5rem] text-[10px] text-muted-foreground">
-          {t("draftHint")}
-        </p>
       )}
 
       {/* Interactive-message builder dialog. */}

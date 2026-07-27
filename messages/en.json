@@ -27,6 +27,8 @@
     "aiAgents": "AI Agents",
     "settings": "Settings",
     "beta": "Beta",
+    "broadcastsMetaOnly": "Meta",
+    "broadcastsMetaOnlyHint": "Mass broadcasts require the official Meta API",
     "unreadConversations": "{count} unread {count, plural, =1 {conversation} other {conversations}}",
     "unreadNotifications": "{count} unread {count, plural, =1 {notification} other {notifications}}",
     "roleOwner": "Owner",
@@ -131,6 +133,16 @@
     "page": {
       "whatsappNotConnected": "WhatsApp® is not connected. Go to Settings to connect your account."
     },
+    "newMessage": {
+      "button": "New message",
+      "title": "New message",
+      "searchPlaceholder": "Search by name or phone…",
+      "empty": "No contacts with a phone number found",
+      "unnamed": "Unnamed",
+      "openFailed": "Couldn't open the conversation",
+      "templateFailed": "Failed to send the template",
+      "templateSent": "Template \"{name}\" sent"
+    },
     "conversationList": {
       "searchPlaceholder": "Search conversations...",
       "filterAll": "All",
@@ -163,6 +175,9 @@
       "unassign": "Unassign",
       "noTeammates": "No teammates available",
       "me": " (me)",
+      "aiSender": "AI",
+      "botSender": "Bot",
+      "agentSender": "Agent",
       "noMessagesYet": "No messages yet",
       "sendTemplateHint": "Send a template to start the conversation",
       "selectConversation": "Select a conversation",
@@ -177,12 +192,11 @@
       "noCustomerMessages": "No customer messages"
     },
     "composer": {
-      "draftHint": "Tap the ✨ to draft a reply with AI — you can edit it before sending",
       "sessionExpiredHint": "24-hour session expired. Use a template to re-engage.",
       "templates": "Templates",
       "readOnlyPlaceholder": "Read-only — viewers can browse but not reply",
       "sessionExpiredPlaceholder": "Session expired - use a template",
-      "typeMessagePlaceholder": "Type a message... (Shift+Enter for new line)",
+      "typeMessagePlaceholder": "Type a message… / for quick replies",
       "readOnlyTitle": "Read-only — your role can't send messages",
       "recording": "Recording… {current} / {max}",
       "cancel": "Cancel",
@@ -204,7 +218,8 @@
       "send": "Send",
       "quickReplyNamePrompt": "Name this quick reply:",
       "quickReplySaved": "Saved as a quick reply.",
-      "quickReplySaveError": "Couldn't save the quick reply."
+      "quickReplySaveError": "Couldn't save the quick reply.",
+      "metaOnlyInteractive": "Interactive messages require the official Meta API. This account uses Z-API."
     },
     "bubble": {
       "photo": "Photo",
@@ -541,10 +556,21 @@
     }
   },
   "Pipelines": {
+    "defaultPipelineName": "Sales Pipeline",
+    "defaultStages": {
+      "newLead": "New Lead",
+      "qualified": "Qualified",
+      "proposalSent": "Proposal Sent",
+      "negotiation": "Negotiation",
+      "won": "Won"
+    },
     "page": {
+      "title": "Pipelines",
+      "subtitle": "Current pipeline: {name}",
+      "subtitleEmpty": "Create a pipeline to start tracking deals",
       "selectPipeline": "Select Pipeline",
       "noPipelinesYet": "No pipelines yet",
-      "managePipelines": "Manage Pipelines",
+      "managePipelines": "Manage",
       "addPipeline": "Add Pipeline",
       "addDeal": "Add Deal",
       "createToStartTracking": "Create a pipeline to start tracking deals",
@@ -578,7 +604,7 @@
       "titlePlaceholder": "Deal title",
       "contact": "Contact",
       "selectContact": "Select a contact",
-      "linkToConversation": "Link to Conversation",
+      "linkToConversation": "Open conversation",
       "value": "Value",
       "currency": "Currency",
       "expectedCloseDate": "Expected Close Date",
@@ -588,6 +614,9 @@
       "notes": "Notes",
       "notesPlaceholder": "Add notes...",
       "status": "Status",
+      "statusOpen": "Open",
+      "statusWon": "Won",
+      "statusLost": "Lost",
       "markAsWon": "Mark as Won",
       "markAsLost": "Mark as Lost",
       "reopenDeal": "Reopen deal",
@@ -670,7 +699,9 @@
         "date": "Date"
       },
       "errorLoad": "Failed to load broadcasts",
-      "retry": "Retry"
+      "retry": "Retry",
+      "zapiBlocked": "Broadcasts require the official Meta API. This account is connected via Z-API.",
+      "backToList": "Back to broadcasts"
     },
     "status": {
       "draft": "Draft",
@@ -1074,7 +1105,21 @@
       "triggerKeywordNone": "Triggers on keyword (none set)",
       "triggerKeyword": "Triggers on: {keywords}",
       "triggerFirstInbound": "Triggers on a contact's first-ever inbound message",
-      "triggerManual": "Manual trigger"
+      "triggerManual": "Manual trigger",
+      "templates": {
+        "welcome_menu": {
+          "name": "Welcome menu",
+          "description": "Greet customers who type a keyword and route them to the right agent based on whether they're new or existing."
+        },
+        "faq_bot": {
+          "name": "FAQ bot",
+          "description": "Answer common questions automatically. Customer picks a topic from a list; the bot replies with the answer and ends."
+        },
+        "lead_capture": {
+          "name": "Lead capture",
+          "description": "Greet first-time inbounds, capture name + email + company, then hand off to sales with the answers in the note."
+        }
+      }
     },
     "edit": {
       "notFound": "Flow not found.",
@@ -1270,11 +1315,14 @@
     "overview": {
       "notSetup": "Not set up yet",
       "connected": "Connected",
+      "connectedZapi": "Connected (Z-API)",
       "needsReconnecting": "Needs reconnecting",
+      "needsQrZapi": "Waiting for QR (Z-API)",
       "viewTeamMembers": "View team members",
       "membersCount": "{count} {count, plural, =1 {member} other {members}}",
       "pendingInvites": "{count} pending {count, plural, =1 {invite} other {invites}}",
       "manageTemplates": "Manage message templates",
+      "templatesMetaOnly": "Available only with the official Meta API",
       "templatesCount": "{count} {count, plural, =1 {template} other {templates}}",
       "pendingReview": "{count} pending review",
       "tagsAndFields": "Tags",
@@ -1498,6 +1546,42 @@
     "whatsapp": {
       "title": "WhatsApp connection",
       "description": "Connect your Meta WhatsApp Business API. Credentials, webhook, and setup steps all live here.",
+      "descriptionZapi": "Connect a Z-API instance. Credentials, QR code, and webhook all live here.",
+      "providerMeta": "Official API (Meta)",
+      "providerZapi": "Z-API",
+      "providerHint": "An account uses one provider at a time. Saving with the other provider replaces the current configuration.",
+      "providerSwitchConfirm": "Switch provider? Saving will replace the current configuration.",
+      "saveFailed": "Failed to save configuration",
+      "webhookCopied": "Webhook URL copied to clipboard",
+      "zapiCredentialsTitle": "Z-API credentials",
+      "zapiCredentialsDesc": "Enter Instance ID, instance token, and account Client-Token (Z-API panel → Security).",
+      "zapiInstanceId": "Instance ID",
+      "zapiInstanceToken": "Instance token",
+      "zapiClientToken": "Client-Token",
+      "zapiClientTokenHint": "Z-API account security token, sent as the Client-Token header.",
+      "zapiInstanceIdRequired": "Instance ID is required",
+      "zapiTokensRequired": "Instance token and Client-Token are required for the initial setup",
+      "zapiConnected": "Z-API connected to WhatsApp",
+      "zapiSavedScanQr": "Credentials saved. Scan the QR code with WhatsApp to connect.",
+      "zapiWebhookWarn": "Credentials saved, but automatic webhook registration failed",
+      "zapiStatusConnected": "Instance connected",
+      "zapiStatusDisconnected": "Waiting for connection",
+      "zapiStatusConnectedDesc": "WhatsApp is linked to the Z-API instance. Messages flow through the inbox.",
+      "zapiStatusDisconnectedDesc": "Save credentials and scan the QR code on your phone to connect the session.",
+      "zapiMetaOnlyTitle": "Meta-only features",
+      "zapiMetaOnlyDesc": "With Z-API, official Meta templates, broadcasts, and interactive messages are unavailable. Inbox text and media work normally.",
+      "zapiQrTitle": "QR Code",
+      "zapiQrDesc": "Open WhatsApp → Linked devices → Link a device and scan the code.",
+      "zapiQrEmpty": "Could not load the QR code. Click refresh.",
+      "zapiQrRefresh": "Refresh QR",
+      "zapiQrFailed": "Failed to fetch QR code from Z-API",
+      "zapiChallengeRequired": "The instance requested passkey authentication. Complete it in the Z-API panel.",
+      "zapiDisconnect": "Disconnect session",
+      "zapiDisconnectConfirm": "Disconnect WhatsApp from this Z-API instance?",
+      "zapiDisconnectFailed": "Failed to disconnect",
+      "zapiDisconnected": "Session disconnected",
+      "zapiWebhookDesc": "URL Z-API calls for events. Registered automatically on save.",
+      "zapiWebhookAuto": "On save, Marinner tries to point all instance webhooks to this URL.",
       "tokenCorrupted": "Stored token can't be decrypted",
       "resetting": "Resetting...",
       "resetConfig": "Reset Configuration",
@@ -1694,6 +1778,29 @@
       "saveFailed": "Failed to save default currency",
       "saveSuccess": "Default currency updated"
     },
+    "quickReplies": {
+      "title": "Quick replies",
+      "description": "Reusable snippets — plain text or a saved interactive message — that agents can insert in the inbox composer.",
+      "descriptionZapi": "Reusable text snippets agents insert in the composer. On this account (Z-API) only text replies are supported.",
+      "zapiInteractiveHint": "Previously saved interactive replies only insert the body text on Z-API (no buttons).",
+      "new": "New quick reply",
+      "empty": "No quick replies yet. Create one to reuse across conversations.",
+      "edit": "Edit quick reply",
+      "create": "New quick reply",
+      "name": "Name",
+      "namePlaceholder": "e.g. Business hours",
+      "kindText": "Text",
+      "kindInteractive": "Interactive",
+      "textPlaceholder": "The message text to insert",
+      "cancel": "Cancel",
+      "save": "Save",
+      "titleRequired": "Give the quick reply a name.",
+      "saveFailed": "Could not save the quick reply.",
+      "created": "Quick reply created.",
+      "updated": "Quick reply updated.",
+      "deleteConfirm": "Delete this quick reply?",
+      "deleteFailed": "Could not delete the quick reply."
+    },
     "aiConfig": {
       "title": "Agent setup",
       "description": "Bring your own OpenAI or Anthropic key. Marinner calls the provider directly with your key — no per-seat AI fees, and your data stays yours. This powers AI-drafted replies in the inbox, the auto-reply bot, and the Playground.",
@@ -1760,6 +1867,15 @@
       "reindex": "Reindex",
       "reindexTooltip": "Re-embed all documents (e.g. after adding an embeddings key)",
       "loading": "Loading…"
+    }
+  },
+  "WhatsApp": {
+    "metaOnly": {
+      "title": "Meta-only feature",
+      "templates": "Templates and Meta sync require the official API. This account uses Z-API — text and media inbox still work.",
+      "broadcast": "Bulk broadcasts use Meta-approved templates and are not available with Z-API.",
+      "interactive": "Interactive messages (buttons and lists) require the official Meta API.",
+      "reactions": "Message reactions require the official Meta API."
     }
   }
 }

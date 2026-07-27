@@ -8,6 +8,7 @@ import {
   rateLimitResponse,
   RATE_LIMITS,
 } from '@/lib/rate-limit';
+import { rejectUnlessMetaFeature } from '@/lib/whatsapp/require-meta-feature';
 
 /**
  * POST /api/whatsapp/react
@@ -111,7 +112,7 @@ export async function POST(request: Request) {
     // WhatsApp config + access token. Account-scoped post-multi-user.
     const { data: config, error: configError } = await supabase
       .from('whatsapp_config')
-      .select('phone_number_id, access_token')
+      .select('provider, phone_number_id, access_token')
       .eq('account_id', accountId)
       .single();
 
@@ -121,6 +122,9 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
+
+    const blocked = rejectUnlessMetaFeature(config, 'reaction');
+    if (blocked) return blocked;
 
     const accessToken = decrypt(config.access_token);
     const sanitizedPhone = sanitizePhoneForMeta(contact.phone);

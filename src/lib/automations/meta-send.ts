@@ -1,4 +1,4 @@
-import { sendTextMessage, sendTemplateMessage } from '@/lib/whatsapp/meta-api'
+import { sendTemplateMessage } from '@/lib/whatsapp/meta-api'
 import type { InteractiveMessagePayload } from '@/lib/whatsapp/interactive'
 import {
   engineSendInteractiveButtons,
@@ -11,6 +11,11 @@ import {
   phoneVariants,
   isRecipientNotAllowedError,
 } from '@/lib/whatsapp/phone-utils'
+import {
+  assertProviderSupports,
+  createWhatsAppProviderFromConfig,
+  resolveConfigProvider,
+} from '@/lib/whatsapp/providers'
 import { supabaseAdmin } from './admin-client'
 
 // ------------------------------------------------------------
@@ -140,13 +145,26 @@ async function sendViaMeta(input: SendInput): Promise<{ whatsapp_message_id: str
     throw new Error('WhatsApp not configured for this account')
   }
 
-  const accessToken = decrypt(config.access_token)
+  const messaging = createWhatsAppProviderFromConfig(config)
+  if (input.kind === 'template') {
+    assertProviderSupports(messaging, 'template')
+  }
+
+  const providerKind = resolveConfigProvider(config)
+  const metaAccessToken =
+    providerKind === 'meta' && typeof config.access_token === 'string'
+      ? decrypt(config.access_token)
+      : null
+  const metaPhoneNumberId =
+    providerKind === 'meta' && typeof config.phone_number_id === 'string'
+      ? config.phone_number_id
+      : null
 
   const attempt = async (phone: string): Promise<string> => {
     if (input.kind === 'template') {
       const r = await sendTemplateMessage({
-        phoneNumberId: config.phone_number_id,
-        accessToken,
+        phoneNumberId: metaPhoneNumberId!,
+        accessToken: metaAccessToken!,
         to: phone,
         templateName: input.templateName,
         language: input.language,
@@ -154,13 +172,11 @@ async function sendViaMeta(input: SendInput): Promise<{ whatsapp_message_id: str
       })
       return r.messageId
     }
-    const r = await sendTextMessage({
-      phoneNumberId: config.phone_number_id,
-      accessToken,
+    const r = await messaging.sendText({
       to: phone,
       text: input.text,
     })
-    return r.messageId
+    return r.providerMessageId
   }
 
   // Same phone-variant retry as /api/whatsapp/send — Meta sandbox and

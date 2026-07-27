@@ -84,10 +84,10 @@ export async function POST(request: Request) {
         trigger_type?: 'keyword' | 'first_inbound_message' | 'manual'
         trigger_config?: Record<string, unknown>
         /**
-         * If set, clone the matching template's name + trigger +
+         * If set, clone the matching template's trigger +
          * entry_node_id + nodes[] into a fresh draft for this user.
-         * `name` from the body overrides the template default if
-         * provided.
+         * `name` / `description` from the body override the template
+         * defaults when provided (used for localized clones).
          */
         template_slug?: string
       }
@@ -113,7 +113,7 @@ export async function POST(request: Request) {
         user_id: userId,
         account_id: accountId,
         name: body.name?.trim() || template.name,
-        description: template.description,
+        description: body.description?.trim() || template.description,
         status: 'draft',
         trigger_type: template.trigger_type,
         trigger_config: template.trigger_config,
