@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import { ArrowLeft, Send, Loader2, Users, Save } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { formatNumber } from '@/lib/format';
 
 interface AudienceConfig {
   type: string;
@@ -132,7 +133,7 @@ export function Step4ScheduleSend({
               ) : (
                 <>
                   <Users className="h-3.5 w-3.5 text-primary" />
-                  <p className="font-medium text-foreground">{estimatedReach.toLocaleString('pt-BR')}</p>
+                  <p className="font-medium text-foreground">{formatNumber(estimatedReach)}</p>
                 </>
               )}
             </div>
@@ -204,7 +205,7 @@ export function Step4ScheduleSend({
               <DialogTitle className="text-popover-foreground">Confirm Broadcast</DialogTitle>
               <DialogDescription className="text-muted-foreground">
                 You are about to send this broadcast to{' '}
-                <span className="font-medium text-popover-foreground">{estimatedReach.toLocaleString('pt-BR')}</span>{' '}
+                <span className="font-medium text-popover-foreground">{formatNumber(estimatedReach)}</span>{' '}
                 contacts using the{' '}
                 <span className="font-medium text-popover-foreground">{template.name}</span> template.
                 This action cannot be undone.

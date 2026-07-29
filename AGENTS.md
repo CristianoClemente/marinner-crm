@@ -8,6 +8,11 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 Comunique-se e escreva código (comentários, mensagens, commits) em **pt-BR**.
 
+**Padrão do produto:** locale UI `pt-BR` (`messages/pt-BR.json` apenas) e moeda
+`BRL` (`DEFAULT_CURRENCY` / `DEFAULT_LOCALE` em `@/lib/format` e `@/lib/currency`).
+Datas e números via `formatDate` / `formatDateTime` / `formatNumber`; valores via
+`formatCurrency`. Novos negócios nascem em BRL; histórico com outra moeda é preservado.
+
 ## Stack
 
 Next.js 16 (App Router) · React 19 · TypeScript `strict` · Tailwind CSS v4 (CSS-first,

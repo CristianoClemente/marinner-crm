@@ -20,6 +20,7 @@ import { GatedButton } from '@/components/ui/gated-button';
 import { MetaOnlyBanner } from '@/components/whatsapp/meta-only-banner';
 import { getBroadcastStatus } from '@/lib/broadcast-status';
 import { useTranslations } from 'next-intl';
+import { formatDate } from '@/lib/format';
 
 /**
  * Poll cadence while any broadcast is sending. Kept modest so we don't
@@ -287,7 +288,7 @@ export default function BroadcastsPage() {
                       </span>
                     </TableCell>
                     <TableCell className="hidden text-muted-foreground sm:table-cell">
-                      {new Date(broadcast.created_at).toLocaleDateString('pt-BR')}
+                      {formatDate(broadcast.created_at)}
                     </TableCell>
                   </TableRow>
                 );

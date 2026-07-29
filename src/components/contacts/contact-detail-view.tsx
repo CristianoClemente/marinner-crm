@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { addContactTag, deleteContactTag } from '@/lib/contacts/tag-api';
 import { useAuth } from '@/hooks/use-auth';
 import { formatCurrency } from '@/lib/currency';
+import { formatDateTime } from '@/lib/format';
 import { toast } from 'sonner';
 import type { Contact, Tag, ContactNote, Deal, MessageTemplate } from '@/types';
 import {
@@ -577,16 +578,13 @@ export function ContactDetailView({
                             </button>
                           </div>
                           <p className="mt-1.5 text-xs text-muted-foreground">
-                            {new Date(note.created_at).toLocaleDateString(
-                              'pt-BR',
-                              {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              },
-                            )}
+                            {formatDateTime(note.created_at, {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
                           </p>
                         </div>
                       ))

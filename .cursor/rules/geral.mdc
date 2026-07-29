@@ -5,9 +5,16 @@ alwaysApply: true
 
 # Geral — Marinner CRM
 
-## Idioma
+## Idioma e moeda
 
 **Sempre pt-BR** em comentários, mensagens de erro/sucesso, commits, PRs e documentação.
+
+Padrão do produto no front:
+
+- Locale UI: `pt-BR` — único dicionário em `messages/pt-BR.json`
+- Moeda: `BRL` (`DEFAULT_CURRENCY`) — novos negócios/contas; histórico preserva a coluna
+- Formatação: `formatDate` / `formatDateTime` / `formatNumber` (`@/lib/format`) e
+  `formatCurrency` (`@/lib/currency`) — sem `toLocale*('pt-BR')` solto
 
 ## Stack real
 
@@ -31,7 +38,7 @@ server actions, codegen de tipos do Supabase. Não assuma nenhum deles.
 | `src/hooks/` | Auth, permissões, realtime, tema — **não** é camada de data-fetch |
 | `src/lib/<domínio>/` | Regra de negócio, integrações, engines |
 | `src/types/` | Tipos de domínio compartilhados (barrel `index.ts`) |
-| `messages/` | Dicionários next-intl (`pt-BR.json`, `en.json`, `ko.json`) |
+| `messages/` | Dicionário next-intl (`pt-BR.json` apenas) |
 
 ## Nomenclatura
 

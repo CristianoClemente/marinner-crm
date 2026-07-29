@@ -68,6 +68,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { usePresence } from '@/hooks/use-presence';
 import type { AccountRole } from '@/lib/auth/roles';
 import { presenceLabel, summarize } from '@/lib/presence';
+import { formatDate } from '@/lib/format';
 import {
   PRESENCE_DOT_CLASS,
   PresenceDot,
@@ -106,9 +107,7 @@ const EDITABLE_ROLES: { value: AccountRole }[] = [
 // primary (admin) → muted (agent / viewer).
 
 function fmtDate(iso: string): string {
-  // Match the rest of the dashboard's locale-light formatting.
-  const d = new Date(iso);
-  return d.toLocaleDateString('pt-BR', {
+  return formatDate(iso, {
     day: '2-digit',
     month: 'short',
     year: 'numeric',

@@ -4,6 +4,7 @@ import { memo } from "react";
 import type { Deal, PipelineStage } from "@/types";
 import { Calendar, Check, X } from "lucide-react";
 import { DEFAULT_CURRENCY, formatCurrency } from "@/lib/currency";
+import { formatDate } from "@/lib/format";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
@@ -14,11 +15,10 @@ interface DealCardProps {
   isOverlay?: boolean;
 }
 
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString("pt-BR", {
+function formatDueDate(dateStr: string): string {
+  return formatDate(dateStr, {
     day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
+    month: "short",
   });
 }
 
@@ -96,7 +96,7 @@ export const DealCard = memo(function DealCard({
         {deal.expected_close_date && (
           <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
             <Calendar className="size-3" />
-            {formatDate(deal.expected_close_date)}
+            {formatDueDate(deal.expected_close_date)}
           </span>
         )}
       </div>

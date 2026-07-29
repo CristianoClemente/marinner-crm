@@ -19,6 +19,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
 import { useTranslations } from 'next-intl';
 import { usePipelineLabels } from '@/hooks/use-pipeline-labels';
+import { DEFAULT_CURRENCY, formatCurrency } from '@/lib/currency';
 
 interface ContactSidebarProps {
   contact: Contact | null;
@@ -220,8 +221,7 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
                     </p>
                     <div className="mt-1.5 flex items-center justify-between gap-2 text-xs text-muted-foreground">
                       <span>
-                        {deal.currency ?? '$'}
-                        {deal.value.toLocaleString('pt-BR')}
+                        {formatCurrency(deal.value, deal.currency || DEFAULT_CURRENCY)}
                       </span>
                       {deal.stage && (
                         <span

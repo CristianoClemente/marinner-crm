@@ -54,8 +54,10 @@ interface ApiKey {
   created_at: string;
 }
 
+import { formatDate } from '@/lib/format';
+
 function fmtDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('pt-BR', {
+  return formatDate(iso, {
     day: '2-digit',
     month: 'short',
     year: 'numeric',

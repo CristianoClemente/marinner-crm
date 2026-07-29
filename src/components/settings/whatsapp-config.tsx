@@ -15,6 +15,7 @@ import {
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { useTranslations } from 'next-intl';
+import { formatDateTime } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
@@ -559,7 +560,7 @@ export function WhatsAppConfig() {
                 <span>
                   {t('subscribedSince', {
                     date: config.registered_at
-                      ? new Date(config.registered_at).toLocaleString('pt-BR')
+                      ? formatDateTime(config.registered_at)
                       : t('unknownDate'),
                   })}
                 </span>

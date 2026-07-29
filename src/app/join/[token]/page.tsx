@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { formatDate } from '@/lib/format';
 import {
   Card,
   CardContent,
@@ -307,7 +308,7 @@ export default function JoinPage() {
           {ROLE_LABEL[peek.role]}
         </span>
         . Link válido até{' '}
-        {new Date(peek.expires_at).toLocaleDateString('pt-BR', {
+        {formatDate(peek.expires_at, {
           year: 'numeric',
           month: 'short',
           day: 'numeric',

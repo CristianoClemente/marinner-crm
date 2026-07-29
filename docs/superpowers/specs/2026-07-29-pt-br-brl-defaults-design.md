@@ -1,7 +1,7 @@
 # Design: pt-BR e BRL como padrão do produto
 
 **Data:** 2026-07-29  
-**Status:** aprovado (design) — aguardando revisão do arquivo antes da implementação  
+**Status:** implementado  
 **Abordagem:** A — helpers centralizados + limpeza cirúrgica
 
 ## Decisões do produto

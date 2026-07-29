@@ -6,6 +6,7 @@ import type { ConversationsSeriesPoint } from '@/lib/dashboard/types'
 import { EmptyState } from './empty-state'
 import { Skeleton } from './skeleton'
 import { cn } from '@/lib/utils'
+import { formatDate } from '@/lib/format'
 
 type RangeDays = 7 | 30 | 90
 
@@ -319,13 +320,13 @@ function shortDayLabel(key: string): string {
   // appended time avoids timezone-shift surprises across midnight.
   const [y, m, d] = key.split('-').map(Number)
   const date = new Date(y, m - 1, d)
-  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+  return formatDate(date, { day: '2-digit', month: 'short' })
 }
 
 function longDayLabel(key: string): string {
   const [y, m, d] = key.split('-').map(Number)
   const date = new Date(y, m - 1, d)
-  return date.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })
+  return formatDate(date, { weekday: 'short', day: '2-digit', month: 'short' })
 }
 
 /**

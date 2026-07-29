@@ -1,65 +1,54 @@
 /**
- * Currency — single source of truth for deal-value formatting and
- * the currency picker options.
+ * Moeda — padrão do produto é BRL (pt-BR).
  *
- * Before this module, ~6 components each defined their own
- * `Intl.NumberFormat(..., { currency: "USD" })` helper with USD
- * baked in. The default currency is now configurable per account
- * (accounts.default_currency, migration 021), so every formatter
- * takes a currency and falls back to DEFAULT_CURRENCY only when
- * nothing is known.
+ * Novos negócios/contas usam sempre BRL. Negócios legados com outra
+ * moeda gravada continuam sendo formatados nessa moeda.
  */
 
-/** App-wide fallback when no account/deal currency is available. */
+import { DEFAULT_LOCALE, formatNumber } from "@/lib/format";
+
+/** Fallback quando não há moeda de conta/negócio. */
 export const DEFAULT_CURRENCY = "BRL";
 
-/** Locale used for number/currency grouping and symbols (Brasil). */
-const FORMAT_LOCALE = "pt-BR";
-
 export interface CurrencyOption {
-  /** ISO-4217 code, e.g. "USD". Stored verbatim in the DB. */
+  /** Código ISO-4217, ex.: "BRL". */
   code: string;
-  /** Human label for the dropdown, e.g. "US Dollar". */
+  /** Rótulo para exibição, ex.: "Real". */
   label: string;
-  /** Symbol for compact display, e.g. "$". */
+  /** Símbolo compacto, ex.: "R$". */
   symbol: string;
 }
 
 /**
- * The currencies offered in pickers. Codes must be valid ISO-4217 so
- * `Intl.NumberFormat` renders the right symbol/grouping. Extend this
- * list to offer more — nothing else needs to change.
+ * Moedas oferecidas na UI. O produto trava em BRL — a lista existe
+ * só para label/símbolo. Histórico com outros códigos ainda formata
+ * via Intl sem precisar estar aqui.
  */
 export const CURRENCIES: CurrencyOption[] = [
-  { code: "USD", label: "US Dollar", symbol: "$" },
-  { code: "EUR", label: "Euro", symbol: "€" },
-  { code: "GBP", label: "British Pound", symbol: "£" },
-  { code: "INR", label: "Indian Rupee", symbol: "₹" },
-  { code: "AUD", label: "Australian Dollar", symbol: "A$" },
-  { code: "CAD", label: "Canadian Dollar", symbol: "C$" },
-  { code: "BRL", label: "Brazilian Real", symbol: "R$" },
-  { code: "JPY", label: "Japanese Yen", symbol: "¥" },
-  { code: "CNY", label: "Chinese Yuan", symbol: "¥" },
-  { code: "AED", label: "UAE Dirham", symbol: "د.إ" },
-  { code: "ZAR", label: "South African Rand", symbol: "R" },
-  { code: "NGN", label: "Nigerian Naira", symbol: "₦" },
-  { code: "SGD", label: "Singapore Dollar", symbol: "S$" },
-  { code: "MXN", label: "Mexican Peso", symbol: "$" },
-  { code: "COP", label: "Colombian Peso", symbol: "$" },
+  { code: "BRL", label: "Real", symbol: "R$" },
 ];
 
+function currencySymbol(code: string): string {
+  const known = CURRENCIES.find((c) => c.code === code)?.symbol;
+  if (known) return known;
+  try {
+    const part = new Intl.NumberFormat(DEFAULT_LOCALE, {
+      style: "currency",
+      currency: code,
+      currencyDisplay: "narrowSymbol",
+    })
+      .formatToParts(0)
+      .find((p) => p.type === "currency");
+    return part?.value ?? `${code} `;
+  } catch {
+    return `${code} `;
+  }
+}
+
 /**
- * Format a deal value as a currency string. Whole-number output
- * (no minor units) — deal values are tracked to the dollar across
- * the app. `currency` defaults to USD so callers with nothing better
- * stay safe, but pass the account/deal currency wherever known.
- *
- * Total by design: `Intl.NumberFormat` throws a RangeError on a
- * structurally invalid currency code, and `deals.currency` carries
- * NO DB CHECK (only `accounts.default_currency` does), so legacy
- * rows, imports, or hand-edited data can hold malformed values like
- * "United States". We never let that crash a render — on a bad code
- * we fall back to "CODE 1,234".
+ * Formata valor monetário. Híbrido: inteiros sem centavos
+ * (`R$ 1.234`); com fração mostra até 2 casas (`R$ 1.234,56`).
+ * `currency` legado (USD etc.) ainda é respeitado na formatação.
  */
 export function formatCurrency(
   value: number,
@@ -68,39 +57,31 @@ export function formatCurrency(
   const code = (currency || DEFAULT_CURRENCY).trim();
   const amount = Number(value) || 0;
   try {
-    return new Intl.NumberFormat(FORMAT_LOCALE, {
+    return new Intl.NumberFormat(DEFAULT_LOCALE, {
       style: "currency",
       currency: code,
       minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+      maximumFractionDigits: 2,
     }).format(amount);
   } catch {
-    // Invalid ISO code — show the raw code + grouped number so the
-    // value is still legible instead of throwing.
-    return `${code} ${new Intl.NumberFormat(FORMAT_LOCALE, {
-      maximumFractionDigits: 0,
-    }).format(amount)}`;
+    return `${code} ${formatNumber(amount, { maximumFractionDigits: 0 })}`;
   }
 }
 
 /**
- * Compact currency for tight spaces (donut center, legend rows):
- * "$1.2M" / "€34.5k" / "₹900". Uses the currency's symbol from
- * CURRENCIES, falling back to the code when we don't carry a symbol.
+ * Moeda compacta para espaços apertados: `R$1.2M` / `R$3.4k`.
  */
 export function formatCurrencyShort(
   value: number,
   currency: string = DEFAULT_CURRENCY,
 ): string {
   const code = currency || DEFAULT_CURRENCY;
-  const symbol = CURRENCIES.find((c) => c.code === code)?.symbol ?? `${code} `;
+  const symbol = currencySymbol(code);
   return `${symbol}${formatCompactNumber(value)}`;
 }
 
 /**
- * Compact number for tight spaces (chart tiles, legends): 1_234 → "1.2k",
- * 1_200_000 → "1.2M", 900 → "900". The unit-less core shared with
- * {@link formatCurrencyShort}.
+ * Número compacto: 1_234 → "1.2k", 1_200_000 → "1.2M".
  */
 export function formatCompactNumber(value: number): string {
   const v = Number(value || 0);

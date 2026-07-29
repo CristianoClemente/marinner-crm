@@ -1,4 +1,5 @@
 import type { AutomationTriggerType } from '@/types'
+import { formatDate } from '@/lib/format'
 
 export interface TriggerMeta {
   label: string
@@ -59,5 +60,5 @@ export function formatRelative(iso: string | null | undefined): string {
   if (diffSec < 3600) return `há ${Math.floor(diffSec / 60)}min`
   if (diffSec < 86400) return `há ${Math.floor(diffSec / 3600)}h`
   if (diffSec < 2_592_000) return `há ${Math.floor(diffSec / 86400)}d`
-  return new Date(iso).toLocaleDateString('pt-BR')
+  return formatDate(iso)
 }

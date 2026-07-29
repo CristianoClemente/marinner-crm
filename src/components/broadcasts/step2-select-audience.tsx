@@ -14,6 +14,7 @@ import {
   X,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { formatNumber } from '@/lib/format';
 
 type AudienceType = 'all' | 'tags' | 'csv';
 
@@ -315,7 +316,7 @@ export function Step2SelectAudience({
           <div className="flex items-center gap-2">
             <Users className="h-4 w-4 text-primary" />
             <span className="text-sm text-foreground">
-              {estimatedCount.toLocaleString('pt-BR')}
+              {formatNumber(estimatedCount)}
             </span>
             <span className="text-xs text-muted-foreground">estimated recipients</span>
           </div>
