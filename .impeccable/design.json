@@ -1,0 +1,186 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-29T18:47:00.000Z",
+  "title": "Design System: Marinner",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Farol Marinner",
+        "canonical": "oklch(0.646 0.222 41)",
+        "hexApprox": "#ea580c",
+        "tonalRamp": [
+          "oklch(0.25 0.12 41)",
+          "oklch(0.35 0.16 41)",
+          "oklch(0.45 0.19 41)",
+          "oklch(0.55 0.21 41)",
+          "oklch(0.646 0.222 41)",
+          "oklch(0.74 0.18 41)",
+          "oklch(0.84 0.12 41)",
+          "oklch(0.94 0.05 41)"
+        ]
+      },
+      "background-dark": {
+        "role": "neutral",
+        "displayName": "Ponte",
+        "canonical": "oklch(0.13 0.01 260)",
+        "tonalRamp": [
+          "oklch(0.1 0.01 260)",
+          "oklch(0.13 0.01 260)",
+          "oklch(0.16 0.01 260)",
+          "oklch(0.18 0.01 260)",
+          "oklch(0.22 0.01 260)",
+          "oklch(0.28 0.01 260)",
+          "oklch(0.45 0.01 260)",
+          "oklch(0.65 0.01 260)"
+        ]
+      },
+      "card-dark": {
+        "role": "neutral",
+        "displayName": "Convés",
+        "canonical": "oklch(0.18 0.01 260)",
+        "tonalRamp": [
+          "oklch(0.13 0.01 260)",
+          "oklch(0.16 0.01 260)",
+          "oklch(0.18 0.01 260)",
+          "oklch(0.205 0.01 260)",
+          "oklch(0.22 0.01 260)",
+          "oklch(0.28 0.01 260)",
+          "oklch(0.45 0.01 260)",
+          "oklch(0.65 0.01 260)"
+        ]
+      },
+      "destructive": {
+        "role": "destructive",
+        "displayName": "Alerta",
+        "canonical": "oklch(0.577 0.245 27.325)",
+        "tonalRamp": [
+          "oklch(0.3 0.12 27)",
+          "oklch(0.4 0.16 27)",
+          "oklch(0.5 0.2 27)",
+          "oklch(0.577 0.245 27.325)",
+          "oklch(0.65 0.2 27)",
+          "oklch(0.75 0.14 27)",
+          "oklch(0.85 0.08 27)",
+          "oklch(0.94 0.03 27)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "body": { "displayName": "Body", "purpose": "Texto padrão da UI (text-sm)." },
+      "title": { "displayName": "Title", "purpose": "Títulos de card e seções." },
+      "label": { "displayName": "Label", "purpose": "Labels de formulário." }
+    },
+    "shadows": [
+      {
+        "name": "ring-card",
+        "value": "0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent)",
+        "purpose": "Borda sutil de card (ring), substitui sombra em repouso."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-standard",
+        "value": "transition-all",
+        "purpose": "Transições curtas de estado em botões e controles."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Ação principal compacta (h-8) no accent Farol Marinner.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\">Salvar</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; height: 2rem; padding: 0.375rem 0.625rem; border: none; border-radius: 0.5rem; background: oklch(0.646 0.222 41); color: oklch(0.985 0 0); font: 500 0.875rem/1.25 Inter, ui-sans-serif, system-ui, sans-serif; cursor: pointer; transition: background 0.15s ease; } .ds-btn-primary:hover { background: oklch(0.71 0.2 41); } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 3px oklch(0.646 0.222 41 / 0.5); }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Ação secundária com borda neutra.",
+      "html": "<button class=\"ds-btn-outline\" type=\"button\">Cancelar</button>",
+      "css": ".ds-btn-outline { display: inline-flex; align-items: center; justify-content: center; height: 2rem; padding: 0.375rem 0.625rem; border: 1px solid oklch(0.28 0.01 260); border-radius: 0.5rem; background: oklch(0.13 0.01 260); color: oklch(0.985 0 0); font: 500 0.875rem/1.25 Inter, ui-sans-serif, system-ui, sans-serif; cursor: pointer; } .ds-btn-outline:hover { background: oklch(0.22 0.01 260); } .ds-btn-outline:focus-visible { outline: none; box-shadow: 0 0 0 3px oklch(0.646 0.222 41 / 0.45); }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Ação terciária sem borda.",
+      "html": "<button class=\"ds-btn-ghost\" type=\"button\">Mais</button>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; justify-content: center; height: 2rem; padding: 0.375rem 0.625rem; border: none; border-radius: 0.5rem; background: transparent; color: oklch(0.985 0 0); font: 500 0.875rem/1.25 Inter, ui-sans-serif, system-ui, sans-serif; cursor: pointer; } .ds-btn-ghost:hover { background: oklch(0.22 0.01 260); } .ds-btn-ghost:focus-visible { outline: none; box-shadow: 0 0 0 3px oklch(0.646 0.222 41 / 0.45); }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Campo denso sobre muted, foco no accent.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">E-mail</span><input class=\"ds-input\" type=\"email\" placeholder=\"voce@escola.com\" /></label>",
+      "css": ".ds-field { display: flex; flex-direction: column; gap: 0.5rem; width: 100%; max-width: 20rem; } .ds-field-label { font: 500 0.875rem/1.25 Inter, ui-sans-serif, system-ui, sans-serif; color: oklch(0.65 0.01 260); } .ds-input { height: 2.25rem; padding: 0 0.75rem; border: 1px solid oklch(0.28 0.01 260); border-radius: 0.5rem; background: oklch(0.22 0.01 260); color: oklch(0.985 0 0); font: 400 0.875rem/1.25 Inter, ui-sans-serif, system-ui, sans-serif; } .ds-input::placeholder { color: oklch(0.65 0.01 260); } .ds-input:focus-visible { outline: none; border-color: oklch(0.646 0.222 41); box-shadow: 0 0 0 3px oklch(0.646 0.222 41 / 0.35); }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Painel flat com ring sutil.",
+      "html": "<section class=\"ds-card\"><h3 class=\"ds-card-title\">Marca da escola</h3><p class=\"ds-card-desc\">Nome, logo e subdomínio.</p></section>",
+      "css": ".ds-card { display: flex; flex-direction: column; gap: 0.5rem; padding: 1rem; border-radius: 0.875rem; background: oklch(0.18 0.01 260); color: oklch(0.985 0 0); box-shadow: 0 0 0 1px oklch(0.985 0 0 / 0.1); } .ds-card-title { margin: 0; font: 500 1rem/1.35 Inter, ui-sans-serif, system-ui, sans-serif; } .ds-card-desc { margin: 0; font: 400 0.875rem/1.45 Inter, ui-sans-serif, system-ui, sans-serif; color: oklch(0.65 0.01 260); }"
+    },
+    {
+      "name": "Status Chip",
+      "kind": "chip",
+      "refersTo": null,
+      "description": "Chip de status com borda + soft fill.",
+      "html": "<span class=\"ds-chip\">Ativo</span>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; padding: 0.125rem 0.5rem; border-radius: 999px; border: 1px solid oklch(0.646 0.222 41 / 0.4); background: oklch(0.646 0.222 41 / 0.12); color: oklch(0.85 0.12 41); font: 600 0.625rem/1.2 Inter, ui-sans-serif, system-ui, sans-serif; letter-spacing: 0.04em; text-transform: uppercase; }"
+    },
+    {
+      "name": "Sidebar Nav Item",
+      "kind": "nav",
+      "refersTo": null,
+      "description": "Item de navegação; ativo com soft primary.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-item\" href=\"#\">Inbox</a><a class=\"ds-nav-item ds-nav-item-active\" href=\"#\">Configurações</a></nav>",
+      "css": ".ds-nav { display: flex; flex-direction: column; gap: 0.25rem; padding: 0.5rem; background: oklch(0.16 0.01 260); border-radius: 0.625rem; width: 12rem; } .ds-nav-item { display: block; padding: 0.5rem 0.75rem; border-radius: 0.5rem; color: oklch(0.85 0.01 260); text-decoration: none; font: 500 0.875rem/1.25 Inter, ui-sans-serif, system-ui, sans-serif; } .ds-nav-item:hover { background: oklch(0.22 0.01 260); color: oklch(0.985 0 0); } .ds-nav-item-active { background: oklch(0.646 0.222 41 / 0.12); color: oklch(0.985 0 0); } .ds-nav-item:focus-visible { outline: none; box-shadow: 0 0 0 2px oklch(0.646 0.222 41); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "A Ponte de Comando",
+    "overview": "A interface do Marinner é um posto de operação: escura por padrão, densa o bastante para inbox e funil no mesmo turno de trabalho, com o laranja do logotipo como farol de ação — não como decoração de marketing. A marca da escola (logo + nome no shell) lidera a identidade no tenant; o chrome do produto permanece neutro e subordinado.\n\nDensidade e scanability vencem expressão. Tokens em OKLCH, superfícies frias (matiz ~260), tipografia única (Inter) e cantos moderados (0.625rem base). Modo claro existe como opção; a identidade visual do produto é o dark + accent laranja.",
+    "keyCharacteristics": [
+      "Dark-first; light é opt-in",
+      "Accent padrão = laranja da logo (#ea580c / oklch(0.646 0.222 41)); 12+ accents opcionais por dispositivo",
+      "Profundidade por tom e ring, não por sombra ostensiva",
+      "Controles compactos (botão default h-8)",
+      "White-label da escola no shell; Marinner no apex"
+    ],
+    "rules": [
+      { "name": "The One Beacon Rule", "body": "O accent aparece em ações e estado ativo — não como fundo de página inteira nem gradiente decorativo.", "section": "colors" },
+      { "name": "The School Crest Rule", "body": "No tenant, logo/nome da escola no shell; no apex, logo Marinner. Não misturar as duas identidades no mesmo cabeçalho.", "section": "colors" },
+      { "name": "The One Voice Type Rule", "body": "Não introduzir uma segunda família tipográfica em telas Operate sem atualizar o DESIGN.md.", "section": "typography" },
+      { "name": "The Tool Density Rule", "body": "Em superfícies Operate, preferir compactação legível a hero marketing ou cards vazios.", "section": "layout" },
+      { "name": "The Flat-By-Default Rule", "body": "Superfícies em repouso são planas. Elevação visual = tom ou ring.", "section": "elevation" },
+      { "name": "The Soft Instrument Rule", "body": "Formas de instrumento digital moderno — sem skeuomorphism náutico literal.", "section": "shapes" }
+    ],
+    "dos": [
+      "Do usar tokens semânticos (bg-background, text-muted-foreground, bg-primary) — nunca hex solto em feature UI.",
+      "Do manter dark como default do produto; light como preferência do dispositivo.",
+      "Do reservar o laranja (ou accent escolhido) para ação e estado.",
+      "Do respeitar white-label: shell mostra a escola no tenant.",
+      "Do manter densidade de ferramenta em inbox/funil/settings."
+    ],
+    "donts": [
+      "Don't aplicar gradientes roxo→azul / purple SaaS genérico como identidade Marinner.",
+      "Don't aninhar cards dentro de cards sem necessidade operacional.",
+      "Don't usar cinza puro sem tint (neutros já carregam matiz 260).",
+      "Don't transformar o app Operate em landing (hero full-bleed, stats strips no primeiro viewport do CRM).",
+      "Don't inventar tipografia display náutica sem redesign acordado — o incumbe é Inter.",
+      "Don't pintar fundos inteiros com primary; soft tints no máximo."
+    ]
+  }
+}
