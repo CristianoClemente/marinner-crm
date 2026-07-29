@@ -1,7 +1,7 @@
 # Design: Catálogo, estoque e PDV (Fatia 1)
 
 **Data:** 2026-07-29  
-**Status:** aprovado (design) — aguardando revisão do arquivo antes do plano de implementação  
+**Status:** implementado (código + migration 043 aplicada)  
 **Abordagem:** A — catálogo unificado (`product` | `service`) + movimentos de estoque + vendas PDV
 
 ## Decisões do produto
@@ -17,7 +17,7 @@
 | Baixa de estoque | Na **confirmação da venda** (produtos do carrinho) |
 | Ajustes manuais | Entrada / saída / correção com motivo + histórico |
 | Moeda | BRL; valores `NUMERIC(12,2)` como `deals.value` |
-| Funil (Fatia 2+) | Itens no deal + baixa ao ganhar; estorno de venda; NF/gateway |
+| Funil (Fatia 3+) | Itens no deal + baixa ao ganhar; NF/gateway |
 
 ## Problema
 
@@ -142,10 +142,10 @@ Validação: type guards manuais (sem Zod). Multi-tenant: sempre filtrar `accoun
 - Unit (`src/lib/catalog` / `sales`): venda mista produto+serviço baixa só produto; ajuste não deixa saldo negativo; serviço rejeita stock.
 - API (Vitest onde o projeto já testa rotas, ou testes de lib se rotas forem só thin wrappers).
 
-### Fora de escopo (Fatia 2+)
+### Fora de escopo (Fatia 1 — feito nas fatias seguintes)
 
-- `deal_items` / recalcular `deals.value` / baixa ao `status = won`
-- Estorno/cancelamento de venda com reversão de estoque
+- `deal_items` / recalcular `deals.value` / baixa ao `status = won` → Fatia 3+
+- Estorno/cancelamento de venda com reversão de estoque → **Fatia 2** (`2026-07-29-sale-refund-design.md`)
 - Gateway de pagamento, NF-e, múltiplos depósitos, variantes de SKU
 - Relatórios financeiros avançados
 
