@@ -338,40 +338,47 @@ export default function ContactsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
+      <div className="flex items-start justify-between gap-3 sm:items-center">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
           <p className="text-sm text-muted-foreground mt-1">
             {totalCount > 0 ? t('subtitle', { count: totalCount }) : t('subtitleZero')}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        {/* No mobile as ações viram ícones de 36px; o rótulo reaparece a partir
+            de `sm`. O `after:-inset-1` leva a área de toque aos 44px mínimos
+            sem aumentar o botão (com `gap-2` as áreas encostam sem sobrepor). */}
+        <div className="flex shrink-0 items-center gap-2">
           <GatedButton
             variant="outline"
             canAct={canEdit}
             gateReason="add or import contacts"
             onClick={() => setImportOpen(true)}
-            className="border-border text-muted-foreground hover:bg-muted"
+            aria-label={t('importBtn')}
+            className="relative size-9 p-0 border-border text-muted-foreground after:absolute after:-inset-1 hover:bg-muted sm:h-8 sm:w-auto sm:px-2.5 sm:after:hidden"
           >
             <Upload className="size-4" />
-            {t('importBtn')}
+            <span className="hidden sm:inline">{t('importBtn')}</span>
           </GatedButton>
           <GatedButton
             canAct={canEdit}
             gateReason="add or import contacts"
             onClick={openAddForm}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground"
+            aria-label={t('addContactBtn')}
+            className="relative size-9 p-0 bg-primary text-primary-foreground after:absolute after:-inset-1 hover:bg-primary/90 sm:h-8 sm:w-auto sm:px-2.5 sm:after:hidden"
           >
             <Plus className="size-4" />
-            {t('addContactBtn')}
+            <span className="hidden sm:inline">{t('addContactBtn')}</span>
           </GatedButton>
         </div>
       </div>
 
       {/* Search + tag filter */}
       <div className="space-y-2">
-        <div className="flex flex-col sm:flex-row gap-2">
-          <div className="relative w-full max-w-sm">
+        <div className="flex gap-2">
+          {/* `flex-1 sm:max-w-sm`: no mobile a busca toma a linha inteira ao
+              lado do filtro; no desktop volta a ser um campo de 384px. */}
+          <div className="relative flex-1 sm:max-w-sm">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
               value={search}
@@ -382,7 +389,7 @@ export default function ContactsPage() {
                 setPage(0);
               }}
               placeholder={t('searchPlaceholder')}
-              className="pl-8 bg-card border-border text-foreground placeholder:text-muted-foreground"
+              className="h-9 pl-8 bg-card border-border text-foreground placeholder:text-muted-foreground sm:h-8"
             />
           </div>
 
@@ -391,14 +398,17 @@ export default function ContactsPage() {
               render={
                 <Button
                   variant="outline"
-                  className="border-border text-muted-foreground hover:bg-muted shrink-0"
+                  aria-label={t('filterByTags')}
+                  className="relative size-9 shrink-0 p-0 border-border text-muted-foreground hover:bg-muted sm:h-8 sm:w-auto sm:px-2.5"
                 />
               }
             >
               <Filter className="size-4" />
-              {t('filterByTags')}
+              <span className="hidden sm:inline">{t('filterByTags')}</span>
               {selectedTagIds.length > 0 && (
-                <span className="ml-1 inline-flex items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground">
+                // Com o rótulo oculto o contador não cabe na linha: vira um
+                // selo no canto do ícone e volta a ser inline a partir de `sm`.
+                <span className="absolute -top-1 -right-1 inline-flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] leading-4 font-semibold text-primary-foreground sm:static sm:ml-1 sm:px-1.5">
                   {selectedTagIds.length}
                 </span>
               )}

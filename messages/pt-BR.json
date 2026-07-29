@@ -573,6 +573,7 @@
       "managePipelines": "Gerenciar",
       "addPipeline": "Adicionar funil",
       "addDeal": "Adicionar negócio",
+      "moreActions": "Mais ações",
       "createToStartTracking": "Crie um funil para começar a acompanhar negócios",
       "createPipeline": "Criar funil",
       "newPipeline": "Novo funil",
@@ -1312,6 +1313,7 @@
   "Settings": {
     "pageTitle": "Configurações",
     "pageDesc": "Tudo em um só lugar — sua conta e seu espaço de trabalho. Escolha uma seção para gerenciar.",
+    "railLabel": "Seções de configurações",
     "overview": {
       "notSetup": "Ainda não configurado",
       "connected": "Conectado",
@@ -1553,6 +1555,7 @@
       "providerSwitchConfirm": "Trocar de provedor? Ao salvar, a configuração atual será substituída.",
       "saveFailed": "Falha ao salvar a configuração",
       "webhookCopied": "URL do webhook copiada para a área de transferência",
+      "copyWebhook": "Copiar URL do webhook",
       "zapiCredentialsTitle": "Credenciais Z-API",
       "zapiCredentialsDesc": "Informe Instance ID, Token da instância e Client-Token da conta (painel Z-API → Segurança).",
       "zapiInstanceId": "Instance ID",
@@ -1751,7 +1754,7 @@
       "nameLabel": "Nome",
       "namePlaceholder": "ex.: Automação do Zapier",
       "scopesLabel": "Escopos",
-      "scopesHint": "Uma chave sem escopos ainda pode chamar <code className=\"text-[11px]\">GET /api/v1/me</code> para verificar se funciona.",
+      "scopesHint": "Uma chave sem escopos ainda pode chamar <code>GET /api/v1/me</code> para verificar se funciona.",
       "cancel": "Cancelar",
       "creating": "Criando…",
       "createKey": "Criar chave",
@@ -1786,6 +1789,7 @@
       "new": "Nova resposta rápida",
       "empty": "Nenhuma resposta rápida ainda. Crie uma para reutilizá-la entre conversas.",
       "edit": "Editar resposta rápida",
+      "remove": "Excluir resposta rápida",
       "create": "Nova resposta rápida",
       "name": "Nome",
       "namePlaceholder": "ex.: Horário de atendimento",
@@ -1839,7 +1843,8 @@
       "saveSuccess": "Assistente de IA salvo.",
       "saveFailed": "Falha ao salvar.",
       "removeSuccess": "Configuração de IA removida.",
-      "removeFailed": "Falha ao remover."
+      "removeFailed": "Falha ao remover.",
+      "loading": "Carregando…"
     },
     "aiKnowledge": {
       "loadFailed": "Falha ao carregar a base de conhecimento",
@@ -1866,7 +1871,9 @@
       "addDoc": "Adicionar documento",
       "reindex": "Reindexar",
       "reindexTooltip": "Regerar embeddings de todos os documentos (ex.: após adicionar uma chave de embeddings)",
-      "loading": "Carregando…"
+      "loading": "Carregando…",
+      "edit": "Editar documento",
+      "remove": "Remover documento"
     }
   },
   "WhatsApp": {

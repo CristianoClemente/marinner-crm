@@ -48,21 +48,28 @@ export function SettingsRail({
 
   return (
     <nav
-      aria-label="Settings sections"
+      aria-label={t('railLabel')}
       className={cn(
         'flex gap-1 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
         'border-b border-border',
         'lg:sticky lg:top-0 lg:flex-col lg:overflow-visible lg:border-b-0 lg:pb-0',
       )}
     >
-      {RAIL_GROUPS.map(({ label, group }) => {
+      {RAIL_GROUPS.map(({ label, group }, groupIndex) => {
         const items = SETTINGS_SECTIONS.filter(
           (s) => SECTION_META[s].group === group,
         );
         return (
           <div
             key={group}
-            className="flex shrink-0 gap-1 lg:flex-col lg:gap-0.5"
+            className={cn(
+              'flex shrink-0 gap-1 lg:flex-col lg:gap-0.5',
+              // No mobile os rótulos de grupo ficam ocultos, então os 11
+              // itens virariam uma fileira contínua. Um divisor recria a
+              // separação que o desktop faz com os títulos.
+              groupIndex > 0 &&
+                'ml-1 border-l border-border pl-2 lg:ml-0 lg:border-l-0 lg:pl-0',
+            )}
           >
             {label ? (
               <div className="hidden px-3 pt-3.5 pb-1.5 text-[11px] font-semibold tracking-[0.09em] text-muted-foreground uppercase lg:block">
@@ -82,7 +89,9 @@ export function SettingsRail({
                   aria-current={isActive ? 'page' : undefined}
                   className={cn(
                     'flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium whitespace-nowrap transition-colors',
-                    'lg:w-full',
+                    // `min-h` (e não `h`) para o alvo de toque: o padding
+                    // continua definindo a altura no desktop.
+                    'min-h-11 lg:min-h-0 lg:w-full',
                     isActive
                       ? 'bg-primary-soft text-primary'
                       : 'text-muted-foreground hover:bg-muted hover:text-foreground',

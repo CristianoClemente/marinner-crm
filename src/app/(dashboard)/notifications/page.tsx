@@ -164,8 +164,8 @@ export default function NotificationsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-start justify-between gap-3 sm:items-center">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold text-foreground">Notificações</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             As conversas que outros colegas atribuem a você aparecem aqui.
@@ -176,13 +176,15 @@ export default function NotificationsPage() {
           size="sm"
           disabled={unreadIds.length === 0 || markingAll}
           onClick={markAllRead}
+          aria-label="Marcar todas como lidas"
+          className="relative size-9 p-0 after:absolute after:-inset-1 sm:h-7 sm:w-auto sm:px-2.5 sm:after:hidden"
         >
           {markingAll ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <CheckCheck className="h-4 w-4" />
           )}
-          Marcar todas como lidas
+          <span className="hidden sm:inline">Marcar todas como lidas</span>
         </Button>
       </div>
 

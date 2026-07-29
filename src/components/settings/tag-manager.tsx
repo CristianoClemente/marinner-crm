@@ -189,7 +189,7 @@ export function TagManager() {
                       type="button"
                       onClick={() => confirmDelete(tag)}
                       aria-label={t('deleteAria', { name: tag.name })}
-                      className="ml-0.5 rounded-full p-0.5 opacity-60 transition-opacity hover:bg-black/10 hover:opacity-100 dark:hover:bg-white/10"
+                      className="relative ml-0.5 inline-flex size-6 items-center justify-center rounded-full opacity-60 transition-opacity after:absolute after:-inset-1 hover:bg-black/10 hover:opacity-100 sm:size-auto sm:p-0.5 sm:after:hidden dark:hover:bg-white/10"
                     >
                       <X className="size-3" />
                     </button>
@@ -215,7 +215,9 @@ export function TagManager() {
                 maxLength={40}
                 className="min-w-[180px] flex-1"
               />
-              <div className="flex gap-1.5">
+              {/* Amostras maiores e com quebra no mobile: em 24px os oito
+                  alvos ficavam menores que a ponta do dedo. */}
+              <div className="flex flex-wrap gap-2 sm:gap-1.5">
                 {PRESET_COLORS.map((color) => (
                   <button
                     key={color.value}
@@ -224,7 +226,7 @@ export function TagManager() {
                     aria-label={t('useColor', { color: t(`colors.${color.name}` as Parameters<typeof t>[0]) })}
                     aria-pressed={selectedColor === color.value}
                     className={cn(
-                      'size-6 rounded-md transition-transform hover:scale-110',
+                      'size-8 rounded-md transition-transform hover:scale-110 sm:size-6',
                       selectedColor === color.value &&
                         'outline outline-2 outline-offset-2 outline-primary',
                     )}

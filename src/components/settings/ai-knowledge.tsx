@@ -193,22 +193,26 @@ export function AiKnowledgeCard({
                       {doc.title}
                     </span>
                     {canEdit && (
-                      <span className="flex shrink-0 gap-1">
+                      // `gap-2` no mobile é o dobro do `after:-inset-1`, então
+                      // as áreas de toque de 44px encostam sem se sobrepor.
+                      <span className="flex shrink-0 gap-2 sm:gap-1">
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-8 w-8 p-0"
+                          className="relative size-9 p-0 after:absolute after:-inset-1 sm:size-8 sm:after:hidden"
                           onClick={() => void openEdit(doc.id)}
-                          title="Edit"
+                          title={t('edit')}
+                          aria-label={t('edit')}
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                          className="relative size-9 p-0 text-destructive after:absolute after:-inset-1 hover:text-destructive sm:size-8 sm:after:hidden"
                           onClick={() => void remove(doc.id)}
-                          title="Delete"
+                          title={t('remove')}
+                          aria-label={t('remove')}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -254,7 +258,7 @@ export function AiKnowledgeCard({
               </div>
             ) : (
               canEdit && (
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <Button variant="outline" size="sm" onClick={openNew}>
                     <Plus className="mr-2 h-4 w-4" /> {t('addDoc')}
                   </Button>

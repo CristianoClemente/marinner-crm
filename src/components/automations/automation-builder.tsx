@@ -33,6 +33,7 @@ import {
   ArrowUp,
   MousePointerClick,
   List,
+  Check,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -702,7 +703,9 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
           value={state.name}
           onChange={(e) => patchTop("name", e.target.value)}
           placeholder={t("untitled")}
-          className="min-w-0 flex-1 rounded-md bg-transparent px-2 py-1 text-sm font-semibold text-foreground placeholder:text-muted-foreground focus:bg-muted focus:outline-none sm:text-base"
+          // `text-base` sem breakpoint: estava `text-sm sm:text-base`, ou seja
+          // 14px justamente no mobile, onde o Safari dá zoom ao focar.
+          className="min-w-0 flex-1 rounded-md bg-transparent px-2 py-1 text-base font-semibold text-foreground placeholder:text-muted-foreground focus:bg-muted focus:outline-none"
         />
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span className="hidden sm:inline">{t("active")}</span>
@@ -715,10 +718,17 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
         <Button
           onClick={save}
           disabled={saving}
-          className="bg-primary text-primary-foreground hover:bg-primary/90"
+          aria-label={isEditing ? t("save") : t("saveDraft")}
+          className="relative size-9 shrink-0 p-0 bg-primary text-primary-foreground after:absolute after:-inset-1 hover:bg-primary/90 sm:h-8 sm:w-auto sm:px-2.5 sm:after:hidden"
         >
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-          {isEditing ? t("save") : t("saveDraft")}
+          {saving ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Check className="h-4 w-4 sm:hidden" />
+          )}
+          <span className="hidden sm:inline">
+            {isEditing ? t("save") : t("saveDraft")}
+          </span>
         </Button>
       </header>
 

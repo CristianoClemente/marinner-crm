@@ -516,7 +516,7 @@ export function TemplateManager() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <p className="text-muted-foreground text-sm">{t('noTemplates')}</p>
-            <p className="text-muted-foreground text-xs mt-1">
+            <p className="text-muted-foreground text-sm mt-1">
               {t('createFirst')}
             </p>
           </CardContent>
@@ -569,7 +569,7 @@ export function TemplateManager() {
                       </p>
                     )}
                     {(template.rejection_reason || template.submission_error) && (
-                      <div className="flex items-start gap-1.5 text-xs text-red-400 bg-red-950/20 border border-red-900/40 rounded px-2 py-1.5">
+                      <div className="flex items-start gap-1.5 text-sm text-red-400 bg-red-950/20 border border-red-900/40 rounded px-2 py-1.5">
                         <AlertCircle className="size-3.5 mt-0.5 shrink-0" />
                         <span>
                           {template.rejection_reason || template.submission_error}
@@ -578,7 +578,7 @@ export function TemplateManager() {
                     )}
                   </div>
                   {!isZapi && (
-                  <div className="flex items-center gap-1 shrink-0 ml-2">
+                  <div className="flex items-center gap-2 shrink-0 ml-2 sm:gap-1">
                     {statusKey === 'APPROVED' && (
                       <Button
                         variant="ghost"
@@ -586,10 +586,12 @@ export function TemplateManager() {
                         onClick={() => openEdit(template)}
                         title={t('editTitle')}
                         aria-label={t('editLabel')}
-                        className="text-muted-foreground hover:text-primary hover:bg-primary/10 h-8 px-2"
+                        // Só ícone no mobile: o rótulo tirava ~55px da largura
+                        // do nome e do corpo do modelo em 288px.
+                        className="relative size-9 p-0 text-muted-foreground after:absolute after:-inset-1 hover:text-primary hover:bg-primary/10 sm:h-8 sm:w-auto sm:px-2 sm:after:hidden"
                       >
                         <Pencil className="size-3.5" />
-                        {t('edit')}
+                        <span className="hidden sm:inline">{t('edit')}</span>
                       </Button>
                     )}
                     {(statusKey === 'REJECTED' || statusKey === 'PAUSED') && (
@@ -599,10 +601,10 @@ export function TemplateManager() {
                         onClick={() => openEdit(template)}
                         title={t('resubmitTitle')}
                         aria-label={t('resubmitLabel')}
-                        className="text-muted-foreground hover:text-primary hover:bg-primary/10 h-8 px-2"
+                        className="relative size-9 p-0 text-muted-foreground after:absolute after:-inset-1 hover:text-primary hover:bg-primary/10 sm:h-8 sm:w-auto sm:px-2 sm:after:hidden"
                       >
                         <RotateCcw className="size-3.5" />
-                        {t('resubmit')}
+                        <span className="hidden sm:inline">{t('resubmit')}</span>
                       </Button>
                     )}
                     <Button
@@ -620,7 +622,7 @@ export function TemplateManager() {
                           ? t('deleteMetaLocallyTitle')
                           : t('deleteLocallyTitle')
                       }
-                      className="text-muted-foreground hover:text-red-400 hover:bg-red-950/30 h-8 w-8"
+                      className="relative size-9 text-muted-foreground after:absolute after:-inset-1 hover:text-red-400 hover:bg-red-950/30 sm:size-8 sm:after:hidden"
                     >
                       {deletingId === template.id ? (
                         <Loader2 className="size-4 animate-spin" />
@@ -647,7 +649,7 @@ export function TemplateManager() {
           }
         }}
       >
-        <DialogContent className="bg-popover border-border sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-popover border-border sm:max-w-2xl max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-popover-foreground">
               {editingId ? t('dialogEditTitle') : t('dialogNewTitle')}
@@ -676,14 +678,14 @@ export function TemplateManager() {
                 disabled={editingId !== null}
                 className="bg-muted border-border text-foreground placeholder:text-muted-foreground disabled:opacity-60 disabled:cursor-not-allowed"
               />
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 {editingId
                   ? t('nameFixed')
                   : t('nameHint')}
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label className="text-muted-foreground">{t('category')}</Label>
                 <Select
@@ -729,7 +731,7 @@ export function TemplateManager() {
                     <option key={code} value={code} />
                   ))}
                 </datalist>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   {editingId ? (
                     t('langFixed')
                   ) : (
@@ -837,7 +839,7 @@ export function TemplateManager() {
                         )}
                         {t('uploadImage')}
                       </Button>
-                      <span className="text-[11px] text-muted-foreground">
+                      <span className="text-sm text-muted-foreground">
                         {t('uploadHint')}
                       </span>
                     </div>
@@ -858,7 +860,7 @@ export function TemplateManager() {
                       className="max-h-28 rounded-md border border-border object-contain"
                     />
                   )}
-                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  <p className="text-sm text-muted-foreground leading-relaxed">
                     {form.header_format === 'image'
                       ? t('imageHint')
                       : t('mediaHint')}
@@ -883,13 +885,13 @@ export function TemplateManager() {
                 maxLength={TEMPLATE_LIMITS.bodyMaxLength}
                 className="bg-muted border-border text-foreground placeholder:text-muted-foreground resize-none"
               />
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 {t('bodyHint')}
               </p>
 
               {bodyVarCount > 0 && (
                 <div className="space-y-1.5 pt-1">
-                  <Label className="text-[11px] text-muted-foreground">
+                  <Label className="text-xs text-muted-foreground">
                     {t('sampleValues')}
                   </Label>
                   {form.body_samples.map((val, i) => {
@@ -943,7 +945,7 @@ export function TemplateManager() {
                 </Button>
               </div>
               {form.buttons.length === 0 ? (
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   {t('buttonsLimit', { max: TEMPLATE_LIMITS.maxButtonsTotal })}
                 </p>
               ) : (
@@ -953,7 +955,7 @@ export function TemplateManager() {
                       key={i}
                       className="space-y-2 rounded border border-border bg-muted/50 p-2"
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Select
                           value={btn.type}
                           onValueChange={(val) => {
@@ -964,7 +966,7 @@ export function TemplateManager() {
                             changeButtonType(i, val as TemplateButton['type']);
                           }}
                         >
-                          <SelectTrigger className="w-40 bg-muted border-border text-foreground h-8 text-xs">
+                          <SelectTrigger className="w-full sm:w-40 bg-muted border-border text-foreground h-8 text-xs">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent className="bg-popover border-border">
@@ -1001,7 +1003,7 @@ export function TemplateManager() {
                           onChange={(e) =>
                             updateButton(i, { text: e.target.value })
                           }
-                          className="flex-1 bg-muted border-border text-foreground placeholder:text-muted-foreground h-8 text-xs"
+                          className="flex-1 bg-muted border-border text-foreground placeholder:text-muted-foreground h-8 text-base md:text-xs"
                         />
                         <Button
                           type="button"
@@ -1021,7 +1023,7 @@ export function TemplateManager() {
                             onChange={(e) =>
                               updateButton(i, { url: e.target.value })
                             }
-                            className="bg-muted border-border text-foreground placeholder:text-muted-foreground h-8 text-xs"
+                            className="bg-muted border-border text-foreground placeholder:text-muted-foreground h-8 text-base md:text-xs"
                           />
                           {extractVariableIndices(btn.url).length > 0 && (
                             <Input
@@ -1030,7 +1032,7 @@ export function TemplateManager() {
                               onChange={(e) =>
                                 updateButton(i, { example: e.target.value })
                               }
-                              className="bg-muted border-border text-foreground placeholder:text-muted-foreground h-8 text-xs"
+                              className="bg-muted border-border text-foreground placeholder:text-muted-foreground h-8 text-base md:text-xs"
                             />
                           )}
                         </div>
@@ -1042,7 +1044,7 @@ export function TemplateManager() {
                           onChange={(e) =>
                             updateButton(i, { phone_number: e.target.value })
                           }
-                          className="bg-muted border-border text-foreground placeholder:text-muted-foreground h-8 text-xs"
+                          className="bg-muted border-border text-foreground placeholder:text-muted-foreground h-8 text-base md:text-xs"
                         />
                       )}
                       {btn.type === 'COPY_CODE' && (
@@ -1052,7 +1054,7 @@ export function TemplateManager() {
                           onChange={(e) =>
                             updateButton(i, { example: e.target.value })
                           }
-                          className="bg-muted border-border text-foreground placeholder:text-muted-foreground h-8 text-xs"
+                          className="bg-muted border-border text-foreground placeholder:text-muted-foreground h-8 text-base md:text-xs"
                         />
                       )}
                     </div>

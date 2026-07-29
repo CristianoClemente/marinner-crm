@@ -1018,7 +1018,9 @@ export function MessageComposer({
                 rows={1}
                 title={readOnly ? t("readOnlyTitle") : undefined}
                 className={cn(
-                  "max-h-24 min-h-9 w-full resize-none bg-transparent px-2 py-2 text-sm leading-5 text-foreground placeholder-muted-foreground outline-none",
+                  // `text-base` no mobile: abaixo de 16px o Safari no iOS dá
+                  // zoom ao focar, e este é o campo mais tocado do app.
+                  "max-h-24 min-h-9 w-full resize-none bg-transparent px-2 py-2 text-base leading-5 text-foreground placeholder-muted-foreground outline-none md:text-sm",
                   (sessionExpired || readOnly) &&
                     "cursor-not-allowed opacity-50",
                 )}
@@ -1154,7 +1156,7 @@ function MediaDraftPreview({
               }
             }}
             placeholder={t("addCaption")}
-            className="flex-1 rounded-xl border border-border bg-muted px-4 py-2.5 text-sm text-foreground placeholder-muted-foreground outline-none transition-colors focus:border-primary/50"
+            className="flex-1 rounded-xl border border-border bg-muted px-4 py-2.5 text-base text-foreground placeholder-muted-foreground outline-none transition-colors focus:border-primary/50 md:text-sm"
           />
         )}
         <GatedButton

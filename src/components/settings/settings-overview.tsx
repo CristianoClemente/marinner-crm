@@ -238,25 +238,29 @@ export function SettingsOverview({
 
   return (
     <section className="animate-in fade-in-50 duration-200">
-      {/* Identity */}
-      <Card className="flex-row items-center gap-4 px-5 py-5">
-        <Avatar size="lg" className="size-14">
-          {profile?.avatar_url ? (
-            <AvatarImage src={profile.avatar_url} alt={displayName} />
-          ) : null}
-          <AvatarFallback className="bg-primary/10 text-xl text-primary">
-            {initial}
-          </AvatarFallback>
-        </Avatar>
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-base font-semibold text-foreground">
-            {displayName}
-          </div>
-          {profile?.email ? (
-            <div className="truncate text-sm text-muted-foreground">
-              {profile.email}
+      {/* Identity. No mobile o chip de papel vai para uma segunda linha:
+          disputando a mesma linha com o avatar, sobravam ~75px para o
+          nome e o e-mail, que truncavam quase por completo. */}
+      <Card className="items-start gap-3 px-4 py-4 sm:flex-row sm:items-center sm:gap-4 sm:px-5 sm:py-5">
+        <div className="flex w-full min-w-0 items-center gap-3 sm:w-auto sm:flex-1 sm:gap-4">
+          <Avatar size="lg" className="size-12 sm:size-14">
+            {profile?.avatar_url ? (
+              <AvatarImage src={profile.avatar_url} alt={displayName} />
+            ) : null}
+            <AvatarFallback className="bg-primary/10 text-xl text-primary">
+              {initial}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-base font-semibold text-foreground">
+              {displayName}
             </div>
-          ) : null}
+            {profile?.email ? (
+              <div className="truncate text-sm text-muted-foreground">
+                {profile.email}
+              </div>
+            ) : null}
+          </div>
         </div>
         {roleMeta && RoleIcon ? (
           <SettingsChip variant={roleMeta.variant}>
@@ -288,7 +292,7 @@ export function SettingsOverview({
                 <span className="block text-sm font-semibold text-foreground">
                   {tSections(section)}
                 </span>
-                <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span className="mt-0.5 flex items-center gap-1.5 text-sm text-muted-foreground">
                   {loading ? (
                     <>
                       <Loader2 className="size-3 animate-spin" /> {t('loading')}

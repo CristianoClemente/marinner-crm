@@ -92,7 +92,9 @@ export function DealsSettings() {
               value={selected}
               onChange={(e) => setSelected(e.target.value)}
               disabled={!canEditSettings || profileLoading}
-              className="h-9 w-full rounded-lg border border-border bg-muted px-2.5 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60"
+              // `text-base` no mobile: em um <select> nativo com fonte menor
+              // que 16px o Safari do iOS aplica zoom automático ao abrir.
+              className="h-11 w-full rounded-lg border border-border bg-muted px-2.5 text-base text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60 md:h-9 md:text-sm"
             >
               {CURRENCIES.map((c) => (
                 <option key={c.code} value={c.code}>
@@ -101,7 +103,7 @@ export function DealsSettings() {
               ))}
             </select>
             {!canEditSettings && (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 {t("adminOnlyHint")}
               </p>
             )}

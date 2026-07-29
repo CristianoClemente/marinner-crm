@@ -573,6 +573,7 @@
       "managePipelines": "Manage",
       "addPipeline": "Add Pipeline",
       "addDeal": "Add Deal",
+      "moreActions": "More actions",
       "createToStartTracking": "Create a pipeline to start tracking deals",
       "createPipeline": "Create Pipeline",
       "newPipeline": "New Pipeline",
@@ -1312,6 +1313,7 @@
   "Settings": {
     "pageTitle": "Settings",
     "pageDesc": "Everything in one place — your account and your workspace. Pick a section to manage it.",
+    "railLabel": "Settings sections",
     "overview": {
       "notSetup": "Not set up yet",
       "connected": "Connected",
@@ -1553,6 +1555,7 @@
       "providerSwitchConfirm": "Switch provider? Saving will replace the current configuration.",
       "saveFailed": "Failed to save configuration",
       "webhookCopied": "Webhook URL copied to clipboard",
+      "copyWebhook": "Copy webhook URL",
       "zapiCredentialsTitle": "Z-API credentials",
       "zapiCredentialsDesc": "Enter Instance ID, instance token, and account Client-Token (Z-API panel → Security).",
       "zapiInstanceId": "Instance ID",
@@ -1751,7 +1754,7 @@
       "nameLabel": "Name",
       "namePlaceholder": "e.g. Zapier automation",
       "scopesLabel": "Scopes",
-      "scopesHint": "A key with no scopes can still call <code className=\"text-[11px]\">GET /api/v1/me</code> to verify it works.",
+      "scopesHint": "A key with no scopes can still call <code>GET /api/v1/me</code> to verify it works.",
       "cancel": "Cancel",
       "creating": "Creating…",
       "createKey": "Create key",
@@ -1786,6 +1789,7 @@
       "new": "New quick reply",
       "empty": "No quick replies yet. Create one to reuse across conversations.",
       "edit": "Edit quick reply",
+      "remove": "Delete quick reply",
       "create": "New quick reply",
       "name": "Name",
       "namePlaceholder": "e.g. Business hours",
@@ -1839,7 +1843,8 @@
       "saveSuccess": "AI assistant saved.",
       "saveFailed": "Failed to save.",
       "removeSuccess": "AI configuration removed.",
-      "removeFailed": "Failed to remove."
+      "removeFailed": "Failed to remove.",
+      "loading": "Loading…"
     },
     "aiKnowledge": {
       "loadFailed": "Failed to load knowledge base",
@@ -1866,7 +1871,9 @@
       "addDoc": "Add document",
       "reindex": "Reindex",
       "reindexTooltip": "Re-embed all documents (e.g. after adding an embeddings key)",
-      "loading": "Loading…"
+      "loading": "Loading…",
+      "edit": "Edit document",
+      "remove": "Remove document"
     }
   },
   "WhatsApp": {

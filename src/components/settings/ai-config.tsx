@@ -236,8 +236,7 @@ export function AiConfig() {
   if (loading || profileLoading) {
     return (
       <div className="flex items-center justify-center py-16 text-muted-foreground">
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t('loadFailed')} {/* Re-using label or a global one, wait, loading is better. Let's use useTranslations from overview or just hardcode Loading... actually I should add loading to aiConfig */}
-        {/* Wait, I didn't add loading to aiConfig. I'll just use loading. */}
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t('loading')}
       </div>
     );
   }
@@ -302,7 +301,9 @@ export function AiConfig() {
 
             <div className="space-y-2">
               <Label htmlFor="ai-key">{t('apiKey')}</Label>
-              <div className="flex gap-2">
+              {/* Empilhado no mobile: lado a lado, a chave ficava com ~140px
+                  dos 288px úteis. */}
+              <div className="flex flex-col gap-2 sm:flex-row">
                 <PasswordInput
                   id="ai-key"
                   value={apiKey}
@@ -325,6 +326,7 @@ export function AiConfig() {
                   variant="outline"
                   onClick={handleTest}
                   disabled={disabled || testing}
+                  className="w-full sm:w-auto"
                 >
                   {testing ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -360,7 +362,7 @@ export function AiConfig() {
                 disabled={disabled}
                 autoComplete="off"
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 {t('embeddingsHint', {
                   sameKeyText: provider === 'openai' ? t('sameKeyText') : '',
                 })}
@@ -389,12 +391,12 @@ export function AiConfig() {
               />
             </div>
 
-            <div className="flex items-center justify-between gap-4 rounded-md border border-border p-3">
-              <div>
+            <div className="flex items-start justify-between gap-3 rounded-md border border-border p-3">
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-foreground">
                   {t('enableAssistant')}
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="mt-0.5 text-sm text-muted-foreground">
                   {t('enableAssistantDesc')}
                 </p>
               </div>
@@ -405,12 +407,12 @@ export function AiConfig() {
               />
             </div>
 
-            <div className="flex items-center justify-between gap-4 rounded-md border border-border p-3">
-              <div>
+            <div className="flex items-start justify-between gap-3 rounded-md border border-border p-3">
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-foreground">
                   {t('autoReply')}
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="mt-0.5 text-sm text-muted-foreground">
                   {t('autoReplyDesc')}
                 </p>
               </div>
@@ -421,10 +423,10 @@ export function AiConfig() {
               />
             </div>
 
-            <div className="flex items-center justify-between gap-4">
-              <div>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="min-w-0">
                 <Label htmlFor="ai-max">{t('maxAutoReplies')}</Label>
-                <p className="text-xs text-muted-foreground">
+                <p className="mt-0.5 text-sm text-muted-foreground">
                   {t('maxAutoRepliesDesc')}
                 </p>
               </div>
@@ -446,7 +448,7 @@ export function AiConfig() {
 
             <div className="space-y-2">
               <Label htmlFor="ai-handoff">{t('handoffTo')}</Label>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 {t('handoffToDesc')}
               </p>
               <Select

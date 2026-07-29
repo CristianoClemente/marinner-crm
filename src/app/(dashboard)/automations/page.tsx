@@ -160,8 +160,8 @@ export default function AutomationsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-start justify-between gap-3 sm:items-center">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold text-foreground">{t("title")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {t("subtitle")}
@@ -171,10 +171,11 @@ export default function AutomationsPage() {
           canAct={canCreate}
           gateReason="create automations"
           onClick={() => router.push("/automations/new")}
-          className="bg-primary text-primary-foreground hover:bg-primary/90"
+          aria-label={t("create")}
+          className="relative size-9 p-0 bg-primary text-primary-foreground after:absolute after:-inset-1 hover:bg-primary/90 sm:h-8 sm:w-auto sm:px-2.5 sm:after:hidden"
         >
           <Plus className="h-4 w-4" />
-          {t("create")}
+          <span className="hidden sm:inline">{t("create")}</span>
         </GatedButton>
       </div>
 

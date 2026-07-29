@@ -247,15 +247,7 @@ export function ContactForm({
             </DialogDescription>
           </DialogHeader>
 
-          <div
-            className={
-              'min-h-0 flex-1 space-y-6 overflow-y-auto px-4 py-4 ' +
-              '[scrollbar-width:thin] [scrollbar-color:var(--border)_transparent] ' +
-              '[&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent ' +
-              '[&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border/50 ' +
-              'hover:[&::-webkit-scrollbar-thumb]:bg-border/80'
-            }
-          >
+          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-4 py-4">
             {/* Contato principal */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-3">
               <div className="min-w-0 space-y-1.5">

@@ -113,7 +113,9 @@ export function ContactExtendedFields({
   const t = useTranslations('Contacts.extendedFields');
   const inputClass = cn(
     'w-full bg-muted border-border text-foreground',
-    compact ? 'h-8 text-sm' : 'placeholder:text-muted-foreground',
+    // `text-base md:text-sm`: abaixo de 16px o Safari no iOS aplica zoom
+    // automático ao focar o campo.
+    compact ? 'h-8 text-base md:text-sm' : 'placeholder:text-muted-foreground',
   );
   const labelClass = compact
     ? 'text-[11px] font-medium leading-snug text-muted-foreground line-clamp-2 min-h-[1.375rem]'

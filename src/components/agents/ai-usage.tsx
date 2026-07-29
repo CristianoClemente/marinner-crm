@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { toast } from 'sonner';
 import { BarChart3, Bot, PencilLine } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
@@ -103,10 +103,13 @@ export function AiUsageCard() {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-start justify-between gap-4">
-          <div>
+        {/* Empilhado no mobile: ao lado de um seletor de 128px, a descrição
+            sobrava num filete de texto. */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <div className="min-w-0">
             <CardTitle className="flex items-center gap-2 text-base">
-              <BarChart3 className="h-4 w-4 text-primary" /> Uso de tokens
+              <BarChart3 className="h-4 w-4 shrink-0 text-primary" /> Uso de
+              tokens
             </CardTitle>
             <CardDescription>
               Tokens gastos na sua chave do provedor por rascunhos e pelo bot de
@@ -118,7 +121,7 @@ export function AiUsageCard() {
             value={String(days)}
             onValueChange={(v) => setDays(Number(v))}
           >
-            <SelectTrigger className="w-32 flex-shrink-0">
+            <SelectTrigger className="w-full sm:w-32 sm:flex-shrink-0">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -138,7 +141,7 @@ export function AiUsageCard() {
           <div className="flex flex-col items-center justify-center gap-2 py-10 text-center text-sm text-muted-foreground">
             <BarChart3 className="h-8 w-8 opacity-40" />
             <p>Nenhum uso de IA nos últimos {data.window_days} dias.</p>
-            <p className="text-xs">
+            <p>
               Isto é preenchido conforme o assistente redige e responde
               automaticamente.
             </p>
@@ -164,16 +167,31 @@ export function AiUsageCard() {
               <p className="mb-2 text-xs font-medium text-muted-foreground">
                 Tokens por dia
               </p>
-              <BarChart
-                data={chartData}
-                index="day"
-                categories={['Tokens']}
-                colors={['violet']}
-                valueFormatter={(v) => formatCompactNumber(v)}
-                showLegend={false}
-                yAxisWidth={48}
-                className="h-[200px]"
-              />
+              {/* 30 a 90 barras não são legíveis nos ~230px de um celular, então
+                  o gráfico rola na horizontal reservando ~18px por dia. A
+                  largura mínima vai por variável CSS para poder ser desligada
+                  em `sm`, onde o card já é largo o bastante. */}
+              <div
+                className="overflow-x-auto"
+                style={
+                  {
+                    '--chart-min-w': `${Math.max(280, chartData.length * 18)}px`,
+                  } as CSSProperties
+                }
+              >
+                <div className="min-w-[var(--chart-min-w)] sm:min-w-0">
+                  <BarChart
+                    data={chartData}
+                    index="day"
+                    categories={['Tokens']}
+                    colors={['violet']}
+                    valueFormatter={(v) => formatCompactNumber(v)}
+                    showLegend={false}
+                    yAxisWidth={48}
+                    className="h-[200px]"
+                  />
+                </div>
+              </div>
             </div>
 
             {data.by_model.length > 0 && (
@@ -185,7 +203,7 @@ export function AiUsageCard() {
                   {data.by_model.map((m) => (
                     <li
                       key={`${m.provider}:${m.model}`}
-                      className="flex items-center justify-between px-3 py-2 text-sm"
+                      className="flex flex-col gap-0.5 px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between sm:gap-2"
                     >
                       <span className="min-w-0 truncate">
                         <span className="text-foreground">{m.model}</span>{' '}
@@ -204,7 +222,7 @@ export function AiUsageCard() {
             )}
 
             {data.truncated && (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 Mostrando um período parcial — o uso é alto o suficiente para
                 que apenas os registros mais recentes sejam resumidos aqui.
               </p>

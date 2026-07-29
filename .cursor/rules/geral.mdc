@@ -1,0 +1,52 @@
+---
+description: Idioma, stack real e princípios de arquitetura do Marinner CRM
+alwaysApply: true
+---
+
+# Geral — Marinner CRM
+
+## Idioma
+
+**Sempre pt-BR** em comentários, mensagens de erro/sucesso, commits, PRs e documentação.
+
+## Stack real
+
+Next.js 16 (App Router, Turbopack) · React 19 · TypeScript `strict` · Tailwind CSS v4
+(CSS-first, sem `tailwind.config`) · shadcn/ui estilo `base-nova` sobre `@base-ui/react` ·
+Supabase (Auth + Postgres + RLS) · next-intl · Vitest · Recharts · sonner
+
+**Não existe neste projeto:** Nuxt, Vue, Pinia, Zod, TanStack Query, SWR, Redux, Zustand,
+server actions, codegen de tipos do Supabase. Não assuma nenhum deles.
+
+> Next.js 16 tem breaking changes em relação a versões que você talvez conheça.
+> Consulte `node_modules/next/dist/docs/` antes de usar API sobre a qual tenha dúvida.
+
+## Estrutura de diretórios
+
+| Diretório | Responsabilidade |
+| --- | --- |
+| `src/app/` | Rotas, layouts, páginas e handlers em `api/**/route.ts` |
+| `src/components/ui/` | Primitivos shadcn — sem lógica de domínio |
+| `src/components/<feature>/` | Componentes por domínio (`inbox/`, `contacts/`, `flows/`…) |
+| `src/hooks/` | Auth, permissões, realtime, tema — **não** é camada de data-fetch |
+| `src/lib/<domínio>/` | Regra de negócio, integrações, engines |
+| `src/types/` | Tipos de domínio compartilhados (barrel `index.ts`) |
+| `messages/` | Dicionários next-intl (`pt-BR.json`, `en.json`, `ko.json`) |
+
+## Nomenclatura
+
+| Tipo | Padrão | Exemplo |
+| --- | --- | --- |
+| Arquivos (todos) | kebab-case | `template-manager.tsx`, `use-auth.tsx` |
+| Export React | PascalCase | `export function TemplateManager()` |
+| Hooks | `use-` + kebab-case | `use-total-unread.ts` |
+| Rotas de API | `route.ts` | `src/app/api/contacts/route.ts` |
+| Testes | `*.test.ts(x)` co-localizado | `src/lib/auth/roles.test.ts` |
+
+Import sempre pelo alias `@/*` (mapeado para `./src/*`); tipos compartilhados via `@/types`.
+
+## Princípios
+
+- **Responsabilidade única** — se um arquivo cresce demais, quebre em arquivos menores.
+- **Componentizar** — componentes pequenos e coesos; regra de negócio em `src/lib/`.
+- **Verificar antes de concluir** — `npm run typecheck` e `npm run lint` devem passar.

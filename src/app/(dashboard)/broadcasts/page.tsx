@@ -185,8 +185,8 @@ export default function BroadcastsPage() {
 
       {isZapi && <MetaOnlyBanner feature="broadcast" />}
 
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-start justify-between gap-3 sm:items-center">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {t('subtitle')}
@@ -197,10 +197,11 @@ export default function BroadcastsPage() {
           canAct={canCreate}
           gateReason="create broadcasts"
           onClick={() => router.push('/broadcasts/new')}
-          className="bg-primary text-primary-foreground hover:bg-primary/90"
+          aria-label={t('newBroadcast')}
+          className="relative size-9 p-0 bg-primary text-primary-foreground after:absolute after:-inset-1 hover:bg-primary/90 sm:h-8 sm:w-auto sm:px-2.5 sm:after:hidden"
         >
           <Plus className="h-4 w-4" />
-          {t('newBroadcast')}
+          <span className="hidden sm:inline">{t('newBroadcast')}</span>
         </GatedButton>
         )}
       </div>

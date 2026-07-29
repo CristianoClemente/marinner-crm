@@ -1,0 +1,44 @@
+---
+description: Regras de clean code para TypeScript e React no Marinner CRM
+globs: src/**/*.ts, src/**/*.tsx
+alwaysApply: false
+---
+
+# Clean Code
+
+## Logging
+
+**Zero `console.log`** — o projeto tem 0 ocorrências hoje; mantenha assim.
+
+`console.error` / `console.warn` são permitidos em `src/lib/**` e `src/app/api/**` para
+falhas reais, sempre com prefixo de contexto entre colchetes:
+
+```ts
+console.error('[getCurrentAccount] profile fetch error:', error)
+console.error('[automations] contact ownership check failed:', ownErr)
+```
+
+Em componentes, erro vai para a UI (toast via `sonner`) e/ou state — não só para o console:
+
+```tsx
+// ❌ o usuário não vê nada acontecer
+catch (e) { console.error(e) }
+
+// ✅ feedback visível
+catch (e) { toast.error(t('loadError')) }
+```
+
+## Tipagem
+
+- `strict: true` está ligado. Nunca use `any` em parâmetro ou retorno — declare a interface.
+- `as any` só se tolera em wrapper de biblioteca sem tipos (ex.: `src/components/tremor/`),
+  e com comentário explicando o motivo.
+- Não use `@ts-expect-error` que não suprime erro real — diretiva não utilizada quebra o lint.
+- Não há tipos gerados do Supabase: as entidades são declaradas à mão em `src/types/index.ts`.
+
+## Imports
+
+- Importe só o que usa; import morto é avisado pelo ESLint.
+- Sempre alias `@/…`, nunca caminho relativo longo (`../../../lib/utils`).
+- `src/lib/auth/account.ts` é **server-only** (usa `next/headers` via o client SSR):
+  importá-lo de um client component quebra o build.

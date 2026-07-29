@@ -1,0 +1,58 @@
+---
+description: Padrões de componentes React, estilo, acesso a dados e permissões na UI
+globs: src/components/**/*.tsx, src/app/**/*.tsx
+alwaysApply: false
+---
+
+# Componentes
+
+- `"use client"` na primeira linha de todo componente interativo — o projeto é
+  majoritariamente client-side (Server Components ficam nos layouts e no login).
+- **Não há server actions.** Mutations vão por `fetch('/api/…')` ou pelo Supabase client.
+- `useId()` para ids fixos, evitando divergência de hidratação no SSR.
+- Props tipadas com `interface`, sem `any`.
+- Primitivos de `src/components/ui/` são genéricos: nunca coloque regra de domínio neles.
+
+## Acesso a dados
+
+Não existe store global nem TanStack Query. O padrão é state local + uma destas vias:
+
+```tsx
+const supabase = createClient()                          // @/lib/supabase/client
+const { data } = await supabase.from('tags').select('*')  // a RLS aplica o escopo da conta
+```
+
+```tsx
+const res = await fetch('/api/flows')  // lógica encapsulada no route handler
+```
+
+Componente de apresentação puro não busca dados — receba por props.
+
+## Estilo
+
+- Sempre `cn()` de `@/lib/utils` para compor classes (usa `tailwind-merge`).
+- `cva` só nos primitivos de `src/components/ui/`, nunca em componente de feature.
+- Use tokens de tema, nunca cor crua para superfície ou texto:
+
+```tsx
+// ❌ quebra nos temas e no modo escuro
+className="bg-white text-gray-900 border-gray-200"
+
+// ✅ tokens
+className="bg-card text-foreground border-border"
+```
+
+Tokens: `background`, `foreground`, `card`, `popover`, `muted`, `muted-foreground`,
+`primary`, `secondary`, `border`, `input`, `ring`, `destructive`.
+
+## Permissões
+
+```tsx
+const canEdit = useCan('edit-settings')   // @/hooks/use-can
+<RequireRole min="admin">…</RequireRole>   // @/components/auth/require-role
+```
+
+## i18n
+
+`useTranslations('Namespace')` em client component; `getTranslations` em server.
+Zero string de UI hardcoded — adicione a chave em `messages/pt-BR.json` e nos demais locales.

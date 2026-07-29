@@ -39,13 +39,6 @@ interface StageBucket {
 
 const EMPTY_BUCKET: StageBucket = { deals: [], totalValue: 0 };
 
-const columnScrollClass =
-  "[scrollbar-width:thin] [scrollbar-color:var(--border)_transparent] " +
-  "[&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent " +
-  "[&::-webkit-scrollbar-thumb]:rounded-full " +
-  "[&::-webkit-scrollbar-thumb]:bg-border/50 " +
-  "hover:[&::-webkit-scrollbar-thumb]:bg-border/80";
-
 export function PipelineBoard({
   stages,
   deals,
@@ -161,6 +154,8 @@ export function PipelineBoard({
         .pipeline-scroll {
           scroll-behavior: smooth;
         }
+        /* Touch: esconde a barra — o snap horizontal já guia o gesto.
+           Desktop herda o scroll discreto global de globals.css. */
         @media (hover: none), (pointer: coarse) {
           .pipeline-scroll::-webkit-scrollbar {
             height: 0;
@@ -168,30 +163,6 @@ export function PipelineBoard({
           }
           .pipeline-scroll {
             scrollbar-width: none;
-          }
-        }
-        @media (hover: hover) and (pointer: fine) {
-          .pipeline-scroll {
-            scrollbar-width: thin;
-            scrollbar-color: color-mix(in oklab, var(--border) 70%, transparent)
-              transparent;
-          }
-          .pipeline-scroll::-webkit-scrollbar {
-            height: 4px;
-          }
-          .pipeline-scroll::-webkit-scrollbar-track {
-            background: transparent;
-          }
-          .pipeline-scroll::-webkit-scrollbar-thumb {
-            background-color: color-mix(
-              in oklab,
-              var(--border) 70%,
-              transparent
-            );
-            border-radius: 9999px;
-          }
-          .pipeline-scroll::-webkit-scrollbar-thumb:hover {
-            background-color: var(--border);
           }
         }
       `}</style>
@@ -242,7 +213,6 @@ const StageColumn = memo(function StageColumn({
         ref={setNodeRef}
         className={cn(
           "mt-3 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto rounded-md transition-colors",
-          columnScrollClass,
           isOver ? "bg-primary/5 ring-1 ring-dashed ring-primary/40" : "",
         )}
       >

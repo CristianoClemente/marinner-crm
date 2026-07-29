@@ -28,6 +28,7 @@ import {
   CircleDot,
   History,
   Loader2,
+  MoreVertical,
   PauseCircle,
   PlayCircle,
   Save,
@@ -36,7 +37,19 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+
+// No mobile as ações da barra viram ícones de 36px; o rótulo volta em `sm`.
+// `after:-inset-1` leva a área de toque a 44px, e o `gap-2` do container é o
+// dobro da expansão, então as áreas vizinhas encostam sem se sobrepor.
+const barActionClass =
+  "relative size-9 p-0 after:absolute after:-inset-1 sm:h-7 sm:w-auto sm:px-2.5 sm:after:hidden";
 import {
   useFlowEditor,
   type BuilderState,
@@ -58,7 +71,7 @@ export function EditorHeader() {
   } = useFlowEditor();
 
   return (
-    <div className="flex flex-col gap-1.5 px-6 pt-5">
+    <div className="flex flex-col gap-1.5 px-4 pt-5 sm:px-6">
       <div className="flex flex-wrap items-center gap-3">
         {/* ---- left: back · icon · name · status · edited ---- */}
         <button
@@ -70,7 +83,8 @@ export function EditorHeader() {
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+        {/* Ícone decorativo — some no mobile para o nome do fluxo ganhar largura. */}
+        <span className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary sm:flex">
           <Workflow className="h-[18px] w-[18px]" />
         </span>
         <input
@@ -94,40 +108,46 @@ export function EditorHeader() {
         )}
 
         {/* ---- right: runs · delete · activate · save ---- */}
-        <div className="ml-auto flex flex-wrap items-center gap-1.5">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push(`/flows/${flow.id}/runs`)}
-          >
-            <History className="h-3.5 w-3.5" />
-            Execuções
-            <span className="ml-0.5 rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
-              {flow.execution_count}
-            </span>
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => void deleteFlow()}
-            className="text-red-400 hover:bg-red-500/10 hover:text-red-300"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-            Excluir
-          </Button>
+        <div className="ml-auto flex flex-wrap items-center gap-2 sm:gap-1.5">
+          {/* Execuções e Excluir são secundárias: no mobile vivem no ⋮ abaixo,
+              para a barra sobrar espaço ao nome do fluxo. */}
+          <div className="hidden sm:flex sm:items-center sm:gap-1.5">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push(`/flows/${flow.id}/runs`)}
+            >
+              <History className="h-3.5 w-3.5" />
+              Execuções
+              <span className="ml-0.5 rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
+                {flow.execution_count}
+              </span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => void deleteFlow()}
+              className="text-red-400 hover:bg-red-500/10 hover:text-red-300"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Excluir
+            </Button>
+          </div>
           {state.status === "active" ? (
             <Button
               variant="outline"
               size="sm"
               onClick={() => void setStatus("draft")}
               disabled={activating}
+              aria-label="Pausar"
+              className={barActionClass}
             >
               {activating ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
                 <PauseCircle className="h-3.5 w-3.5" />
               )}
-              Pausar
+              <span className="hidden sm:inline">Pausar</span>
             </Button>
           ) : (
             <Button
@@ -135,28 +155,59 @@ export function EditorHeader() {
               size="sm"
               onClick={() => void setStatus("active")}
               disabled={activating || !canActivate}
+              aria-label="Ativar"
               title={
                 !canActivate
                   ? "Corrija os problemas abaixo antes de ativar"
                   : undefined
               }
+              className={barActionClass}
             >
               {activating ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
                 <PlayCircle className="h-3.5 w-3.5" />
               )}
-              Ativar
+              <span className="hidden sm:inline">Ativar</span>
             </Button>
           )}
-          <Button onClick={() => void save()} disabled={saving} size="sm">
+          <Button
+            onClick={() => void save()}
+            disabled={saving}
+            size="sm"
+            aria-label="Salvar"
+            className={barActionClass}
+          >
             {saving ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
             ) : (
               <Save className="h-3.5 w-3.5" />
             )}
-            Salvar
+            <span className="hidden sm:inline">Salvar</span>
           </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              aria-label="Mais ações"
+              className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground data-popup-open:bg-muted sm:hidden"
+            >
+              <MoreVertical className="size-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => router.push(`/flows/${flow.id}/runs`)}
+              >
+                <History className="size-4" />
+                Execuções ({flow.execution_count})
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={() => void deleteFlow()}
+              >
+                <Trash2 className="size-4" />
+                Excluir
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -168,7 +219,7 @@ export function EditorHeader() {
         }
         placeholder="Adicione uma breve descrição (interna — os clientes não veem isto)"
         aria-label="Descrição do fluxo"
-        className="w-full max-w-[78ch] rounded-md border border-transparent bg-transparent px-2 py-1 text-[13px] text-muted-foreground outline-none transition-colors placeholder:text-muted-foreground/60 hover:bg-muted/50 focus:border-primary focus:bg-transparent focus:text-foreground"
+        className="w-full max-w-[78ch] rounded-md border border-transparent bg-transparent px-2 py-1 text-base text-muted-foreground outline-none transition-colors placeholder:text-muted-foreground/60 hover:bg-muted/50 focus:border-primary focus:bg-transparent focus:text-foreground md:text-[13px]"
       />
     </div>
   );

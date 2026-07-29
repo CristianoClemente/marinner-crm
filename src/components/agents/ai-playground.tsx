@@ -79,25 +79,36 @@ export function AiPlayground({ onGoToSetup }: { onGoToSetup?: () => void }) {
     }
   };
 
+  // `dvh` e não `vh`: a barra de endereço dos navegadores mobile muda a altura
+  // do viewport, e com `vh` o composer some atrás dela. O desconto de 17rem
+  // cobre a cromagem acima (header 3.5rem, padding do main 2rem, título +
+  // subtítulo ~5rem, abas ~4.5rem, margem do painel 1rem); o `min-h` é o piso
+  // para telas curtas, onde a página passa a rolar.
   return (
-    <div className="flex h-[60vh] min-h-[420px] flex-col rounded-xl border border-border bg-card">
+    <div className="flex h-[calc(100dvh-17rem)] min-h-[380px] flex-col rounded-xl border border-border bg-card sm:h-[60vh] sm:min-h-[420px]">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-border px-4 py-3">
-        <div className="flex items-center gap-2">
-          <Bot className="h-4 w-4 text-primary" />
-          <span className="text-sm font-medium text-foreground">Playground</span>
-          <span className="text-xs text-muted-foreground">
-            — teste respostas como se você fosse um cliente
-          </span>
+      <div className="flex items-start justify-between gap-2 border-b border-border px-4 py-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <Bot className="h-4 w-4 shrink-0 text-primary" />
+            <span className="text-sm font-medium text-foreground">
+              Playground
+            </span>
+          </div>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            Teste respostas como se você fosse um cliente
+          </p>
         </div>
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setTurns([])}
           disabled={turns.length === 0 || sending}
-          className="text-muted-foreground"
+          aria-label="Limpar"
+          className="relative size-9 shrink-0 p-0 text-muted-foreground after:absolute after:-inset-1 sm:h-7 sm:w-auto sm:px-2.5 sm:after:hidden"
         >
-          <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> Limpar
+          <RotateCcw className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Limpar</span>
         </Button>
       </div>
 
@@ -107,7 +118,7 @@ export function AiPlayground({ onGoToSetup }: { onGoToSetup?: () => void }) {
           <div className="flex h-full flex-col items-center justify-center text-center text-sm text-muted-foreground">
             <Bot className="mb-2 h-8 w-8 text-muted-foreground/60" />
             <p>Envie uma mensagem para ver como seu agente responderia.</p>
-            <p className="mt-1 text-xs">
+            <p className="mt-1">
               Ele usa sua base de conhecimento e se comporta exatamente como o
               bot de resposta automática — incluindo a transferência.
             </p>
@@ -116,7 +127,7 @@ export function AiPlayground({ onGoToSetup }: { onGoToSetup?: () => void }) {
                 variant="link"
                 size="sm"
                 onClick={onGoToSetup}
-                className="mt-1 h-auto p-0 text-xs"
+                className="mt-2 h-auto p-0 text-sm"
               >
                 Ainda não configurou? Ir para a configuração <ArrowRight className="ml-1 h-3 w-3" />
               </Button>
@@ -178,7 +189,7 @@ export function AiPlayground({ onGoToSetup }: { onGoToSetup?: () => void }) {
           onKeyDown={handleKeyDown}
           placeholder="Digite uma mensagem de cliente…"
           rows={1}
-          className="flex-1 resize-none rounded-xl border border-border bg-muted px-4 py-2.5 text-sm text-foreground placeholder-muted-foreground outline-none focus:border-primary/50"
+          className="flex-1 resize-none rounded-xl border border-border bg-muted px-4 py-2.5 text-base text-foreground placeholder-muted-foreground outline-none focus:border-primary/50 md:text-sm"
         />
         <Button
           size="sm"

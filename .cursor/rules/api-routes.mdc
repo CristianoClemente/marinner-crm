@@ -1,0 +1,83 @@
+---
+description: Autenticação, escopo de conta, validação e respostas nas rotas de API
+globs: src/app/api/**/route.ts, src/lib/auth/**/*.ts
+alwaysApply: false
+---
+
+# Rotas de API
+
+## Auth: sempre pelos helpers, nunca manual
+
+```ts
+// ❌ auth manual duplicada
+const { data: { user } } = await supabase.auth.getUser()
+const { data: profile } = await supabase.from('profiles').select('account_id')…
+
+// ✅ contexto completo em uma linha
+const ctx = await requireRole('agent')   // ou getCurrentAccount()
+```
+
+`requireRole(min)` e `getCurrentAccount()` vêm de `@/lib/auth/account` e retornam
+`{ supabase, userId, accountId, role, account }`.
+
+Hierarquia de roles: `owner` (4) > `admin` (3) > `agent` (2) > `viewer` (1).
+Nunca compare role como string inline — use os predicados de `@/lib/auth/roles`
+(`canManageMembers`, `canEditSettings`, `canSendMessages`, `hasMinRole`…).
+
+A API pública (`/api/v1/*`) autentica por `requireApiKey(request, scope)` de
+`@/lib/auth/api-context` e responde no envelope de `@/lib/api/v1/respond`
+(`ok()`, `okList()`, `fail()`, `toApiErrorResponse()`).
+
+## Template de rota do dashboard
+
+```ts
+import { NextResponse } from 'next/server'
+import { requireRole, toErrorResponse } from '@/lib/auth/account'
+
+export async function POST(request: Request) {
+  try {
+    const ctx = await requireRole('admin')
+
+    const body = await request.json().catch(() => null)
+    const title = typeof body?.title === 'string' ? body.title.trim() : ''
+    if (!title) {
+      return NextResponse.json({ error: 'title is required' }, { status: 400 })
+    }
+
+    const { data, error } = await ctx.supabase
+      .from('minha_tabela')
+      .insert({ account_id: ctx.accountId, title })
+      .select()
+      .single()
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+    return NextResponse.json({ data })
+  } catch (err) {
+    return toErrorResponse(err) // mapeia 401/403; qualquer outro colapsa em 500 genérico
+  }
+}
+```
+
+`toErrorResponse` nunca vaza `err.message` de erro não classificado — não contorne isso.
+
+## Validação
+
+Não há Zod no projeto. Valide com type guards manuais (`typeof body?.x === 'string'`) e
+reutilize os validadores de domínio de `src/lib/**` (`validateInteractivePayload`,
+`validateTemplatePayload`, `isAccountRole`…). Não introduza Zod sem alinhar antes.
+
+## Escopo de conta (multi-tenant por coluna `account_id`)
+
+Não há tenant por subdomínio: o isolamento é a coluna `account_id` + RLS.
+
+- `ctx.supabase` é o cliente SSR com RLS aplicada ao usuário — leituras podem confiar nela.
+- `supabaseAdmin()` (service-role) **ignora RLS**: use só depois de `requireRole` /
+  `requireApiKey` e **sempre** filtre ou insira com `account_id: ctx.accountId` explícito.
+
+| Import | Uso |
+| --- | --- |
+| `@/lib/supabase/client` | Browser (client components), chave anon |
+| `@/lib/supabase/server` | Server (route handlers, RSC), RLS do usuário |
+| `supabaseAdmin()` de `src/lib/{flows,automations,ai}/admin-client` | Service-role, bypass de RLS |

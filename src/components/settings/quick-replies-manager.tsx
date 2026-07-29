@@ -172,7 +172,7 @@ export function QuickRepliesManager() {
       />
 
       {isZapi && hasInteractiveItems && (
-        <p className="mb-3 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+        <p className="mb-3 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
           {t("zapiInteractiveHint")}
         </p>
       )}
@@ -207,11 +207,16 @@ export function QuickRepliesManager() {
                     : qr.content_text}
                 </p>
               </div>
-              <div className="flex shrink-0 gap-1">
+              {/* `gap-2` no mobile é o dobro do `after:-inset-1`, então as
+                  áreas de toque de 44px encostam sem se sobrepor. */}
+              <div className="flex shrink-0 gap-2 sm:gap-1">
                 <Button
                   variant="ghost"
                   size="icon-sm"
                   onClick={() => openEdit(qr)}
+                  title={t("edit")}
+                  aria-label={t("edit")}
+                  className="relative size-9 p-0 after:absolute after:-inset-1 sm:size-7 sm:after:hidden"
                 >
                   <Pencil className="h-4 w-4" />
                 </Button>
@@ -219,7 +224,9 @@ export function QuickRepliesManager() {
                   variant="ghost"
                   size="icon-sm"
                   onClick={() => remove(qr.id)}
-                  className="text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                  title={t("remove")}
+                  aria-label={t("remove")}
+                  className="relative size-9 p-0 text-red-400 after:absolute after:-inset-1 hover:bg-red-500/10 hover:text-red-300 sm:size-7 sm:after:hidden"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -237,9 +244,9 @@ export function QuickRepliesManager() {
             </DialogTitle>
           </DialogHeader>
           {draft && (
-            <div className="max-h-[70vh] space-y-3 overflow-y-auto">
+            <div className="max-h-[70dvh] space-y-3 overflow-y-auto">
               <div>
-                <label className="mb-1 block text-xs text-muted-foreground">
+                <label className="mb-1 block text-sm text-muted-foreground">
                   {t("name")}
                 </label>
                 <Input

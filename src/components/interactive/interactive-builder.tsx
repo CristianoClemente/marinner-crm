@@ -114,7 +114,7 @@ export function InteractiveBuilder({
           />
         </Field>
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <Field
             label="Cabeçalho (opcional)"
             counter={`${(value.header ?? "").length}/${INTERACTIVE_LIMITS.headerTextMaxLength}`}
@@ -213,14 +213,14 @@ function ButtonsEditor({
         {buttons.map((b, i) => (
           <div
             key={i}
-            className="flex items-center gap-2 rounded-md border border-border bg-muted/40 p-2"
+            className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-muted/40 p-2"
           >
             {advanced && (
               <Input
                 value={b.id}
                 onChange={(e) => update(i, { id: slugify(e.target.value, `btn_${i + 1}`) })}
                 placeholder="id"
-                className="w-28 bg-muted font-mono text-xs"
+                className="w-full bg-muted font-mono text-base sm:w-28 md:text-xs"
               />
             )}
             <Input
@@ -340,7 +340,7 @@ function ListEditor({
               value={section.title ?? ""}
               onChange={(e) => updateSection(sIdx, { title: e.target.value })}
               placeholder="Título da seção (opcional)"
-              className="flex-1 bg-muted text-xs"
+              className="flex-1 bg-muted text-base md:text-xs"
             />
             {sections.length > 1 && (
               <Button
@@ -356,7 +356,7 @@ function ListEditor({
           <div className="flex flex-col gap-2">
             {section.rows.map((row, rIdx) => (
               <div key={rIdx} className="rounded border border-border bg-card p-2">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   {advanced && (
                     <Input
                       value={row.id}
@@ -364,7 +364,7 @@ function ListEditor({
                         updateRow(sIdx, rIdx, { id: slugify(e.target.value, `row_${rIdx + 1}`) })
                       }
                       placeholder="id"
-                      className="w-24 bg-muted font-mono text-xs"
+                      className="w-full bg-muted font-mono text-base sm:w-24 md:text-xs"
                     />
                   )}
                   <Input
@@ -393,7 +393,7 @@ function ListEditor({
                   maxLength={INTERACTIVE_LIMITS.listRowDescriptionMaxLength}
                   onChange={(e) => updateRow(sIdx, rIdx, { description: e.target.value })}
                   placeholder="Descrição (opcional)"
-                  className="mt-2 bg-muted text-xs"
+                  className="mt-2 bg-muted text-base md:text-xs"
                 />
               </div>
             ))}

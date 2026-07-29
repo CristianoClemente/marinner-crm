@@ -162,7 +162,7 @@ export function ApiKeysSettings() {
               {t('noApiKeys')}
             </p>
             {canEditSettings ? (
-              <p className="text-muted-foreground mt-1 text-xs">
+              <p className="text-muted-foreground mt-1 text-sm">
                 {t.rich('createOneHint', {
                   bold: (chunks: React.ReactNode) => (
                     <span className="text-foreground">{chunks}</span>
@@ -170,7 +170,7 @@ export function ApiKeysSettings() {
                 })}
               </p>
             ) : (
-              <p className="text-muted-foreground mt-1 text-xs">
+              <p className="text-muted-foreground mt-1 text-sm">
                 {t('askAdminHint')}
               </p>
             )}
@@ -438,17 +438,17 @@ function CreateKeyDialog({
                         <span className="text-foreground block font-mono text-xs">
                           {scope}
                         </span>
-                        <span className="text-muted-foreground block text-xs">
+                        <span className="text-muted-foreground block text-sm">
                           {SCOPE_DESCRIPTIONS[scope]}
                         </span>
                       </span>
                     </label>
                   ))}
                 </div>
-                <p className="text-muted-foreground text-xs">
+                <p className="text-muted-foreground text-sm">
                   {t.rich('scopesHint', {
                     code: (chunks: React.ReactNode) => (
-                      <code className="text-[11px]">{chunks}</code>
+                      <code className="text-xs">{chunks}</code>
                     ),
                   })}
                 </p>

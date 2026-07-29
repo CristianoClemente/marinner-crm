@@ -23,7 +23,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { GitBranch, Plus, ChevronDown, Settings } from "lucide-react";
+import {
+  GitBranch,
+  Plus,
+  ChevronDown,
+  Settings,
+  MoreVertical,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useCan } from "@/hooks/use-can";
 import { useAuth } from "@/hooks/use-auth";
@@ -357,75 +363,109 @@ export default function PipelinesPage() {
               </p>
             )}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2">
             {pipelines.length > 0 && (
-              <>
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    className="inline-flex h-9 max-w-56 items-center gap-2 rounded-lg border border-border bg-card px-3 text-sm text-foreground transition-colors hover:bg-muted data-popup-open:bg-muted"
-                  >
-                    <GitBranch className="size-4 shrink-0 text-muted-foreground" />
-                    <span className="min-w-0 truncate font-medium">
-                      {selectedPipeline
-                        ? pipelineLabel(selectedPipeline.name)
-                        : t("selectPipeline")}
-                    </span>
-                    <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="end"
-                    className="w-64 border-border bg-popover text-popover-foreground"
-                  >
-                    {pipelines.map((p) => (
-                      <DropdownMenuItem
-                        key={p.id}
-                        onClick={() => setSelectedPipelineId(p.id)}
-                        className={
-                          p.id === selectedPipelineId
-                            ? "text-primary"
-                            : "text-popover-foreground"
-                        }
-                      >
-                        <GitBranch className="mr-2 size-3.5" />
-                        {pipelineLabel(p.name)}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                {selectedPipeline && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSettingsOpen(true)}
-                    className="h-9 border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-                  >
-                    <Settings className="size-4" />
-                    {t("managePipelines")}
-                  </Button>
-                )}
-              </>
+              <DropdownMenu>
+                {/* `flex-1` no mobile: o seletor é contexto (qual funil), então
+                    mantém o rótulo e ocupa a largura que sobra ao lado das ações. */}
+                <DropdownMenuTrigger
+                  className="inline-flex h-9 min-w-0 flex-1 items-center gap-2 rounded-lg border border-border bg-card px-3 text-sm text-foreground transition-colors hover:bg-muted data-popup-open:bg-muted sm:max-w-56 sm:flex-none"
+                >
+                  <GitBranch className="size-4 shrink-0 text-muted-foreground" />
+                  <span className="min-w-0 truncate font-medium">
+                    {selectedPipeline
+                      ? pipelineLabel(selectedPipeline.name)
+                      : t("selectPipeline")}
+                  </span>
+                  <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="w-64 border-border bg-popover text-popover-foreground"
+                >
+                  {pipelines.map((p) => (
+                    <DropdownMenuItem
+                      key={p.id}
+                      onClick={() => setSelectedPipelineId(p.id)}
+                      className={
+                        p.id === selectedPipelineId
+                          ? "text-primary"
+                          : "text-popover-foreground"
+                      }
+                    >
+                      <GitBranch className="mr-2 size-3.5" />
+                      {pipelineLabel(p.name)}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
-            <GatedButton
-              variant="outline"
-              canAct={canEditSettings}
-              gateReason="create pipelines"
-              onClick={() => setNewPipelineOpen(true)}
-              className="border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-            >
-              <Plus className="size-4" />
-              {t("addPipeline")}
-            </GatedButton>
+
+            {/* "Adicionar funil" e "Adicionar negócio" usam o mesmo ícone `Plus`:
+                sem rótulo os dois seriam indistinguíveis. No mobile só a ação
+                primária (negócio) fica na barra; as secundárias vão para o ⋮. */}
+            <div className="hidden sm:flex sm:items-center sm:gap-2">
+              {pipelines.length > 0 && selectedPipeline && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSettingsOpen(true)}
+                  className="h-9 border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                >
+                  <Settings className="size-4" />
+                  {t("managePipelines")}
+                </Button>
+              )}
+              <GatedButton
+                variant="outline"
+                canAct={canEditSettings}
+                gateReason="create pipelines"
+                onClick={() => setNewPipelineOpen(true)}
+                className="border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                <Plus className="size-4" />
+                {t("addPipeline")}
+              </GatedButton>
+            </div>
+
             <GatedButton
               canAct={canCreateDeals}
               gateReason="create deals"
               disabled={!selectedPipelineId || stages.length === 0}
               onClick={() => handleAddDeal()}
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
+              aria-label={t("addDeal")}
+              className="relative size-9 p-0 bg-primary text-primary-foreground after:absolute after:-inset-1 hover:bg-primary/90 sm:h-8 sm:w-auto sm:px-2.5 sm:after:hidden"
             >
               <Plus className="size-4" />
-              {t("addDeal")}
+              <span className="hidden sm:inline">{t("addDeal")}</span>
             </GatedButton>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                aria-label={t("moreActions")}
+                className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground data-popup-open:bg-muted sm:hidden"
+              >
+                <MoreVertical className="size-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="border-border bg-popover text-popover-foreground"
+              >
+                {selectedPipeline && (
+                  <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
+                    <Settings className="size-4" />
+                    {t("managePipelines")}
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem
+                  disabled={!canEditSettings}
+                  onClick={() => setNewPipelineOpen(true)}
+                >
+                  <Plus className="size-4" />
+                  {t("addPipeline")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 

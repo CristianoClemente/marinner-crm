@@ -276,7 +276,7 @@ export default function BroadcastDetailPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex items-center gap-4">
+        <div className="flex min-w-0 items-center gap-4">
           <Button
             variant="outline"
             size="icon"
@@ -309,7 +309,7 @@ export default function BroadcastDetailPage() {
             because orphaning in-flight Meta messages would leave the
             funnel inconsistent. */}
         {confirmDelete ? (
-          <div className="flex items-center gap-2 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-sm">
+          <div className="flex flex-wrap items-center gap-2 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-sm">
             <span className="text-red-300">{t('deletePrompt')}</span>
             <Button
               variant="outline"
@@ -340,10 +340,11 @@ export default function BroadcastDetailPage() {
                 ? t('cannotDeleteSending')
                 : t('deleteHover')
             }
-            className="border-red-500/30 bg-transparent text-red-400 hover:bg-red-500/10 disabled:opacity-40"
+            aria-label={t('delete')}
+            className="relative size-9 p-0 border-red-500/30 bg-transparent text-red-400 after:absolute after:-inset-1 hover:bg-red-500/10 disabled:opacity-40 sm:h-7 sm:w-auto sm:px-2.5 sm:after:hidden"
           >
             <Trash2 className="h-3.5 w-3.5" />
-            {t('delete')}
+            <span className="hidden sm:inline">{t('delete')}</span>
           </Button>
         )}
       </div>
@@ -451,10 +452,11 @@ export default function BroadcastDetailPage() {
               size="sm"
               onClick={handleExport}
               disabled={recipients.length === 0}
-              className="border-border text-muted-foreground hover:bg-muted"
+              aria-label={t('exportCsv')}
+              className="relative size-9 p-0 border-border text-muted-foreground after:absolute after:-inset-1 hover:bg-muted sm:h-7 sm:w-auto sm:px-2.5 sm:after:hidden"
             >
               <Download className="h-3.5 w-3.5" />
-              {t('exportCsv')}
+              <span className="hidden sm:inline">{t('exportCsv')}</span>
             </Button>
           </div>
         </div>

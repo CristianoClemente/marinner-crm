@@ -283,7 +283,7 @@ export function WhatsAppZapiPanel({
               }}
               className="bg-muted border-border"
             />
-            <p className="text-xs text-muted-foreground">{t('zapiClientTokenHint')}</p>
+            <p className="text-sm text-muted-foreground">{t('zapiClientTokenHint')}</p>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -346,7 +346,7 @@ export function WhatsAppZapiPanel({
               <img
                 src={qrValue}
                 alt="QR Code Z-API"
-                className="size-56 rounded-lg border border-border bg-white p-2"
+                className="w-full max-w-56 rounded-lg border border-border bg-white p-2"
               />
             ) : (
               <p className="text-sm text-muted-foreground">{t('zapiQrEmpty')}</p>
@@ -372,11 +372,19 @@ export function WhatsAppZapiPanel({
               value={webhookUrl}
               className="bg-muted border-border font-mono text-sm"
             />
-            <Button type="button" variant="outline" size="icon" onClick={copyWebhook}>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={copyWebhook}
+              title={t('copyWebhook')}
+              aria-label={t('copyWebhook')}
+              className="relative size-9 shrink-0 after:absolute after:-inset-1 sm:size-8 sm:after:hidden"
+            >
               <Copy className="size-4" />
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground">{t('zapiWebhookAuto')}</p>
+          <p className="text-sm text-muted-foreground">{t('zapiWebhookAuto')}</p>
         </CardContent>
       </Card>
     </div>
@@ -399,7 +407,10 @@ export function ProviderToggle({
         type="button"
         disabled={disabled}
         onClick={() => onChange('meta')}
-        className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+        // Segmentado permanece em duas colunas no mobile — é o que
+        // comunica a escolha entre dois provedores. O `min-h` garante o
+        // alvo de toque e acomoda "API oficial (Meta)" em duas linhas.
+        className={`min-h-11 rounded-md px-2 py-2 text-sm leading-tight font-medium transition-colors sm:min-h-0 sm:px-3 ${
           value === 'meta'
             ? 'bg-background text-foreground shadow-sm'
             : 'text-muted-foreground hover:text-foreground'
@@ -411,7 +422,7 @@ export function ProviderToggle({
         type="button"
         disabled={disabled}
         onClick={() => onChange('zapi')}
-        className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+        className={`min-h-11 rounded-md px-2 py-2 text-sm leading-tight font-medium transition-colors sm:min-h-0 sm:px-3 ${
           value === 'zapi'
             ? 'bg-background text-foreground shadow-sm'
             : 'text-muted-foreground hover:text-foreground'

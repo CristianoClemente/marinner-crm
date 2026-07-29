@@ -437,7 +437,7 @@ export function WhatsAppConfig() {
             setProvider(next);
           }}
         />
-        <p className="mt-2 text-xs text-muted-foreground">{t('providerHint')}</p>
+        <p className="mt-2 text-sm text-muted-foreground">{t('providerHint')}</p>
       </div>
 
       {provider === 'zapi' ? (
@@ -554,7 +554,7 @@ export function WhatsAppConfig() {
                 {t('verifyWithMeta')}
               </Button>
             </div>
-            <AlertDescription className="text-muted-foreground mt-2 text-xs leading-relaxed">
+            <AlertDescription className="text-muted-foreground mt-2 text-sm leading-relaxed">
               {isRegistered ? (
                 <span>
                   {t('subscribedSince', {
@@ -577,7 +577,7 @@ export function WhatsAppConfig() {
             </AlertDescription>
 
             {registrationProbe && (
-              <div className="mt-3 rounded border border-border bg-card/60 px-3 py-2 space-y-1.5 text-[11px]">
+              <div className="mt-3 rounded border border-border bg-card/60 px-3 py-2 space-y-1.5 text-xs sm:text-[11px]">
                 <p className="font-medium text-foreground">
                   {t('diagnosticLastRun')}
                   <span className={registrationProbe.live ? 'text-emerald-400' : 'text-amber-400'}>
@@ -657,7 +657,7 @@ export function WhatsAppConfig() {
                 className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
               />
               {config && !tokenEdited && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   {t('tokenHidden')}
                 </p>
               )}
@@ -671,7 +671,7 @@ export function WhatsAppConfig() {
                 onChange={(e) => setVerifyToken(e.target.value)}
                 className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 {t('webhookVerifyTokenHint')}
               </p>
             </div>
@@ -692,7 +692,7 @@ export function WhatsAppConfig() {
                 }
                 className="bg-muted border-border text-foreground placeholder:text-muted-foreground tracking-widest"
               />
-              <p className="text-xs text-muted-foreground leading-relaxed">
+              <p className="text-sm text-muted-foreground leading-relaxed">
                 {t('pinHint')}
               </p>
             </div>
@@ -720,7 +720,9 @@ export function WhatsAppConfig() {
                   variant="outline"
                   size="icon"
                   onClick={handleCopyWebhookUrl}
-                  className="shrink-0 border-border text-muted-foreground hover:text-foreground hover:bg-muted"
+                  title={t('copyWebhook')}
+                  aria-label={t('copyWebhook')}
+                  className="relative size-9 shrink-0 border-border text-muted-foreground after:absolute after:-inset-1 hover:text-foreground hover:bg-muted sm:size-8 sm:after:hidden"
                 >
                   <Copy className="size-4" />
                 </Button>

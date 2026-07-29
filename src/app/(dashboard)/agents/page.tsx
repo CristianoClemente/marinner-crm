@@ -55,16 +55,25 @@ export default function AgentsPage() {
           onValueChange={(v) => setTab(v as Tab)}
           className="mt-6"
         >
-          <TabsList>
-            <TabsTrigger value="playground">
-              <Sparkles className="mr-1.5 h-4 w-4" /> Playground
+          {/* `w-full`: a lista é `w-fit` com gatilhos `whitespace-nowrap`, e as
+              três abas rotuladas somam ~300px contra os 288px úteis a 320px.
+              No mobile ficam só os ícones e a lista divide a largura em três.
+              `min-h-10` (não `h-10`) porque a altura da lista vem de um
+              group-variant que o Tailwind emite depois das utilidades base e
+              venceria um `h-*` passado aqui. */}
+          <TabsList className="w-full min-h-10 sm:min-h-8">
+            <TabsTrigger value="playground" aria-label="Playground">
+              <Sparkles className="h-4 w-4" />
+              <span className="hidden sm:inline">Playground</span>
             </TabsTrigger>
-            <TabsTrigger value="setup">
-              <Settings2 className="mr-1.5 h-4 w-4" /> Configuração
+            <TabsTrigger value="setup" aria-label="Configuração">
+              <Settings2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Configuração</span>
             </TabsTrigger>
             {canViewUsage && (
-              <TabsTrigger value="usage">
-                <BarChart3 className="mr-1.5 h-4 w-4" /> Uso
+              <TabsTrigger value="usage" aria-label="Uso">
+                <BarChart3 className="h-4 w-4" />
+                <span className="hidden sm:inline">Uso</span>
               </TabsTrigger>
             )}
           </TabsList>

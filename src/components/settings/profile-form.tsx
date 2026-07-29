@@ -255,7 +255,7 @@ export function ProfileForm() {
                   {t('remove')}
                 </Button>
               )}
-              <p className="w-full text-xs text-muted-foreground">
+              <p className="w-full text-sm text-muted-foreground">
                 {t('photoHint')}
               </p>
             </div>
@@ -291,7 +291,7 @@ export function ProfileForm() {
               required
             />
             {emailChangePending && (
-              <p className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+              <p className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
                 <Mail className="mt-0.5 size-3.5 shrink-0" />
                 <span>
                   {t.rich('emailChangeHint', { 

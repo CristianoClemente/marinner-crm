@@ -38,16 +38,12 @@ import { cn } from "@/lib/utils";
 
 const fieldLabelClass =
   "text-xs font-medium text-muted-foreground";
+// `text-base md:text-sm`: abaixo de 16px o Safari no iOS aplica zoom
+// automático ao focar o campo. Mantém 14px a partir de `md`.
 const fieldControlClass =
-  "h-9 w-full rounded-lg border border-border bg-muted px-2.5 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary";
+  "h-9 w-full rounded-lg border border-border bg-muted px-2.5 text-base text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary md:text-sm";
 const fieldInputClass =
-  "h-9 border-border bg-muted text-sm text-foreground";
-const scrollClass =
-  "[scrollbar-width:thin] [scrollbar-color:var(--border)_transparent] " +
-  "[&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent " +
-  "[&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border/40 " +
-  "hover:[&::-webkit-scrollbar-thumb]:bg-border/70";
-
+  "h-9 border-border bg-muted text-base text-foreground md:text-sm";
 interface DealFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -273,12 +269,7 @@ export function DealForm({
             </SheetDescription>
           </SheetHeader>
 
-          <div
-            className={cn(
-              "min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4",
-              scrollClass,
-            )}
-          >
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
             <div className="flex flex-col gap-1.5">
               <Label className={fieldLabelClass}>{t("title")}</Label>
               <Input
@@ -441,7 +432,7 @@ export function DealForm({
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder={t("notesPlaceholder")}
-                className="min-h-24 resize-none border-border bg-muted text-sm text-foreground placeholder:text-muted-foreground"
+                className="min-h-24 resize-none border-border bg-muted text-base text-foreground placeholder:text-muted-foreground md:text-sm"
               />
             </div>
           </div>

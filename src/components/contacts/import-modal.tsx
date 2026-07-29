@@ -383,7 +383,7 @@ export function ImportModal({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="flex max-h-[min(90vh,720px)] flex-col gap-0 overflow-hidden border-border/80 bg-popover p-0 text-popover-foreground sm:max-w-2xl">
-        <div className="shrink-0 space-y-4 px-6 pt-6 pb-5">
+        <div className="shrink-0 space-y-4 px-4 pt-6 pb-5 sm:px-6">
           <DialogHeader className="gap-1.5">
             <DialogTitle className="text-lg text-popover-foreground">
               {t('title')}
@@ -469,7 +469,7 @@ export function ImportModal({
 
         <div
           className={cn(
-            'min-h-0 flex-1 overflow-y-auto px-6',
+            'min-h-0 flex-1 overflow-y-auto px-4 sm:px-6',
             (preview.length > 0 && !result) || result ? 'py-4' : 'py-0'
           )}
         >
@@ -591,7 +591,7 @@ export function ImportModal({
           )}
         </div>
 
-        <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border px-6 py-4">
+        <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border px-4 py-4 sm:px-6">
           <Button
             type="button"
             variant="outline"

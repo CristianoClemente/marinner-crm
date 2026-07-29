@@ -1,0 +1,150 @@
+---
+description: UI responsiva e mobile (320–480px) — modais, slideovers, formulários e área de toque
+globs: src/components/**/*.tsx, src/app/**/*.tsx
+alwaysApply: false
+---
+
+# UI responsiva (mobile-first)
+
+## Campo de formulário: 16px no mobile é obrigatório
+
+O Safari no iOS aplica **zoom automático** ao focar um campo com fonte menor que 16px.
+Os primitivos `Input` e `Textarea` já resolvem isso (`text-base md:text-sm`) — **não
+sobrescreva para menor** sem manter o breakpoint:
+
+```tsx
+// ❌ volta para 14px no mobile → zoom no iOS ao focar
+className="h-9 text-sm"
+
+// ✅ 16px no mobile, 14px a partir de md
+className="h-9 text-base md:text-sm"
+```
+
+Vale igualmente para `<select>` nativo e para campos densos (`text-base md:text-xs`).
+
+## Nunca use `data-[…]:` para largura ou altura em primitivo
+
+`data-[side=right]:w-3/4` compila para `.classe[data-side="right"]` — especificidade
+(0,2,0) — e **vence** o `w-full` (0,1,0) que o consumidor passa, sem o `tailwind-merge`
+conseguir deduplicar (os variants são diferentes). O consumidor fica sem poder ajustar nada.
+
+Coloque posição e tamanho em utilitário simples, escolhido em JS por variante — ver
+`sheetSideClasses` em `src/components/ui/sheet.tsx`. Deixe `data-[…]:` só para animação.
+
+## Modais e slideovers
+
+- Todo container `fixed` centralizado por `translate` precisa de `max-h` + `overflow-y-auto`;
+  sem isso o conteúdo excedente fica **inalcançável**. Use `dvh`, não `vh`, por causa da
+  barra dinâmica dos navegadores mobile: `max-h-[calc(100dvh-2rem)]`.
+- Grid dentro de modal sempre começa em uma coluna: `grid-cols-1 sm:grid-cols-2`.
+  Nunca `grid-cols-2` sem breakpoint — a 320px sobram ~120px por coluna.
+- Largura fixa precisa de fallback fluido: `w-full sm:w-40`, nunca só `w-40`.
+- Linha com vários controles: `flex-wrap`, e `min-w-0` no filho que deve truncar.
+- Padding lateral menor no mobile: `px-4 sm:px-6`.
+- Zero scroll horizontal. `overflow-y-auto` faz o eixo X computar `auto`, então qualquer
+  filho que estoure passa a gerar barra horizontal. Tabela larga é a exceção, e deve ficar
+  contida no próprio `overflow-x-auto`.
+
+## Ações de cabeçalho: ícone no mobile, rótulo no desktop
+
+Botão de ação em cabeçalho de página **não** empilha em largura total no mobile — várias
+faixas de 40px seguidas viram uma parede antes do conteúdo. O padrão da casa é ícone de
+36px alinhado à direita do título, com o rótulo reaparecendo a partir de `sm`:
+
+```tsx
+<Button
+  aria-label={t("addContact")}          // obrigatório: o texto some no mobile
+  className="size-9 p-0 sm:h-8 sm:w-auto sm:px-2.5"
+>
+  <Plus className="size-4" />
+  <span className="hidden sm:inline">{t("addContact")}</span>
+</Button>
+```
+
+O container do título e das ações fica em linha nos dois tamanhos, com `min-w-0` no bloco
+de texto para ele truncar/quebrar em vez de empurrar os ícones:
+
+```tsx
+<div className="flex items-start justify-between gap-3 sm:items-center">
+  <div className="min-w-0"> {/* h1 + subtítulo */} </div>
+  <div className="flex shrink-0 items-center gap-2"> {/* ícones */} </div>
+</div>
+```
+
+Regras que acompanham:
+
+- **Nunca dois ícones iguais na mesma barra.** Se duas ações usariam o mesmo glifo (dois
+  `Plus`, por exemplo), a secundária vai para um menu `⋮` (`DropdownMenu`). Referência:
+  `src/app/(dashboard)/pipelines/page.tsx`.
+- Um `<select>`/dropdown que carrega **contexto** (qual pipeline, qual conta) mantém o
+  rótulo visível — ele não é ação, é estado.
+- **Busca e filtro dividem a mesma linha:** `flex-1` no wrapper da busca e o filtro como
+  ícone. Não empilhe. Referência: `src/components/inbox/conversation-list.tsx`.
+- Contador dentro de botão que virou ícone não cabe na linha — vira selo absoluto no canto
+  e volta a ser inline no desktop:
+  `absolute -top-1 -right-1 … sm:static sm:ml-1`. Exige `relative` no botão.
+
+## Área de toque
+
+Alvo mínimo de 44×44px. Para não alterar a densidade visual do design system, expanda só a
+área clicável com pseudo-elemento — padrão já usado em `radio-group.tsx` e nos botões de
+fechar de `dialog.tsx` / `sheet.tsx`:
+
+```tsx
+className="absolute top-2 right-2 after:absolute after:-inset-2"  // 28px → 44px
+```
+
+O `after:` do Tailwind já injeta `content: var(--tw-content)`, então a caixa existe — mas
+só funciona se o botão for posicionado (`relative`), senão o pseudo se ancora no ancestral
+posicionado mais próximo e a área vai para o lugar errado.
+
+Dimensione a expansão junto com o `gap` do container: um ícone de 36px com `after:-inset-1`
+(4px) chega a 44px e, com `gap-2` (8px), as áreas dos vizinhos encostam sem se sobrepor.
+Expansão maior que metade do `gap` faz um botão roubar o clique do outro. Desligue no
+desktop com `sm:after:hidden`.
+
+Quando o alvo já é largo e só falta altura — item de navegação, aba, controle segmentado —
+o pseudo-elemento não serve: ele invadiria o vizinho de cima. Use `min-h`, que garante o
+mínimo sem disputar com a altura que o `padding` define no desktop:
+
+```tsx
+// ✅ 44px no mobile; no desktop o py-2 volta a mandar
+className="flex items-center px-3 py-2 min-h-11 lg:min-h-0"
+```
+
+`h-11` no lugar de `min-h-11` quebra o caso em que o rótulo quebra em duas linhas, e perde
+para as classes de altura que alguns primitivos aplicam via variante de grupo
+(`group-data-horizontal/tabs:h-8` em `tabs.tsx` vence um `h-10` do consumidor).
+
+## Escala tipográfica: 14px é o piso do texto que se lê
+
+Texto corrido no mobile — dica sob campo, descrição de card, mensagem de erro, subtítulo,
+estado vazio — usa no mínimo `text-sm`. `text-xs` e `text-[11px]` ficam reservados para o
+que se **escaneia**, não se lê: selo, chip, rótulo de métrica, prefixo de chave, data em
+lista densa, valor monoespaçado.
+
+```tsx
+// ❌ dica de campo em 11px
+<p className="text-[11px] text-muted-foreground">{t('nameHint')}</p>
+
+// ✅
+<p className="text-sm text-muted-foreground">{t('nameHint')}</p>
+```
+
+Quando título e subtítulo ficam ambos em 14px, a hierarquia vem do peso e da cor
+(`font-semibold text-foreground` × `text-muted-foreground`), não do tamanho.
+
+## Scroll: uma barra, discreta, global
+
+A barra vive em `src/app/globals.css` (`--scrollbar-thumb` / `--scrollbar-thumb-hover`).
+Não recoloque `scrollbar-width`, `scrollbar-color` nem `::-webkit-scrollbar` em
+componente — as duas sintaxes são mutuamente exclusivas e overrides locais
+fragmentam o visual.
+
+Exceção: esconder de vez em rail horizontal de chips ou chart com snap:
+
+```tsx
+className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+```
+
+`ScrollArea` (`src/components/ui/scroll-area.tsx`) usa as mesmas variáveis.

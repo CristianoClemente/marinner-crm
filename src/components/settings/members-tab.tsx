@@ -460,7 +460,9 @@ export function MembersTab() {
                         size="sm"
                         onClick={() => setRemovingMember(member)}
                         disabled={isBusy}
-                        className="border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20 hover:border-red-500/60 hover:text-red-200"
+                        title={t('remove')}
+                        aria-label={t('remove')}
+                        className="relative size-9 p-0 border-red-500/40 bg-red-500/10 text-red-300 after:absolute after:-inset-1 hover:bg-red-500/20 hover:border-red-500/60 hover:text-red-200 sm:size-7 sm:after:hidden"
                       >
                         <Trash2 className="size-4" />
                       </Button>
@@ -491,7 +493,7 @@ export function MembersTab() {
               front (rather than letting the user discover it by
               looking for a button) keeps it from feeling like a bug. */}
           {invitations.length > 0 ? (
-            <p className="mb-3 text-xs text-muted-foreground">
+            <p className="mb-3 text-sm text-muted-foreground">
               {t('inviteHint')}
             </p>
           ) : null}
@@ -503,7 +505,7 @@ export function MembersTab() {
                 <p className="mt-2 text-sm text-muted-foreground">
                   {t('noPendingTitle')}
                 </p>
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="mt-1 text-sm text-muted-foreground">
                   {t.rich('noPendingDesc', { bold: (chunks) => <strong>{chunks}</strong> })}
                 </p>
               </CardContent>
@@ -518,15 +520,18 @@ export function MembersTab() {
                     return (
                     <li
                       key={inv.id}
-                      className="flex items-center gap-4 px-4 py-3"
+                      // Mesmo empilhamento da lista de membros: com o botão
+                      // "Revogar" na mesma linha sobravam ~130px para o
+                      // rótulo do convite e o selo de papel.
+                      className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:gap-4"
                     >
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-foreground">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span className="truncate text-sm font-medium text-foreground">
                             {inv.label || t('untitledInvite')}
                           </span>
                           <span
-                            className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium ${inviteRoleMeta.className}`}
+                            className={`inline-flex shrink-0 items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium ${inviteRoleMeta.className}`}
                           >
                             <InviteRoleIcon className="size-3" />
                             {tRoles(inv.role)}
@@ -545,7 +550,7 @@ export function MembersTab() {
                         variant="outline"
                         size="sm"
                         onClick={() => handleRevoke(inv)}
-                        className="border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20 hover:border-red-500/60 hover:text-red-200"
+                        className="self-start border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20 hover:border-red-500/60 hover:text-red-200 sm:self-auto"
                       >
                         <MailX className="size-4" />
                         {t('revoke')}

@@ -40,7 +40,9 @@ export function AppearancePanel() {
         <div
           role="radiogroup"
           aria-label="Color mode"
-          className="grid max-w-md grid-cols-2 gap-3"
+          // Empilhado no mobile: com o badge "Ativo" ao lado do ícone e do
+          // rótulo, duas colunas em 288px não caberiam em uma linha.
+          className="grid max-w-md grid-cols-1 gap-3 sm:grid-cols-2"
         >
           {MODES.map((m) => (
             <ModeCard
@@ -169,7 +171,7 @@ function ThemeCard({
       </div>
       <div>
         <div className="text-sm font-semibold text-foreground">{name}</div>
-        <div className="mt-1 text-xs leading-relaxed text-muted-foreground">
+        <div className="mt-1 text-sm leading-relaxed text-muted-foreground">
           {tagline}
         </div>
       </div>
