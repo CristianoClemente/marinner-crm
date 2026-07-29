@@ -83,7 +83,15 @@ describe("getCurrentAccount", () => {
           data: { account_id: "acct-1", account_role: "owner" },
           error: null,
         },
-        accounts: { data: { id: "acct-1", name: "Acme" }, error: null },
+        accounts: {
+          data: {
+            id: "acct-1",
+            name: "Acme",
+            slug: "acme",
+            logo_url: null,
+          },
+          error: null,
+        },
       },
     });
     createClient.mockReturnValue(client);
@@ -94,9 +102,13 @@ describe("getCurrentAccount", () => {
       userId: "user-1",
       accountId: "acct-1",
       role: "owner",
-      account: { id: "acct-1", name: "Acme" },
+      account: {
+        id: "acct-1",
+        name: "Acme",
+        slug: "acme",
+        logo_url: null,
+      },
     });
-
     // Two queries: profiles by user_id, then accounts by id. Neither
     // selects an embedded relationship — the regression guard.
     expect(calls.map((c) => c.table)).toEqual(["profiles", "accounts"]);

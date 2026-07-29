@@ -57,6 +57,13 @@ export interface Account {
   name: string;
   /** auth.users.id of the immutable owner. */
   owner_user_id: string;
+  /**
+   * Subdomínio futuro (Fatia 2). Null até o admin definir.
+   * Único quando preenchido — ver migration 042.
+   */
+  slug: string | null;
+  /** URL pública do logotipo (bucket account-branding). */
+  logo_url: string | null;
   created_at: string;
   updated_at: string;
 }

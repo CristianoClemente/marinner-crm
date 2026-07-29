@@ -43,6 +43,10 @@ interface AccountSummary {
   /** Default deal currency (ISO-4217). DB DEFAULT is BRL (migration 041);
    *  narrowed to DEFAULT_CURRENCY when absent. */
   default_currency: string;
+  /** Subdomínio futuro (Fatia 2). Null até o admin definir. */
+  slug: string | null;
+  /** URL pública do logotipo. */
+  logo_url: string | null;
 }
 
 interface AuthContextValue {
@@ -82,7 +86,7 @@ interface AuthContextValue {
   accountId: string | null;
   /** Role within that account. Null while loading. */
   accountRole: AccountRole | null;
-  /** Lightweight account meta — id + name + default_currency. Null while loading. */
+  /** Lightweight account meta — id + name + marca + default_currency. Null while loading. */
   account: AccountSummary | null;
   /** Account default deal currency. Falls back to DEFAULT_CURRENCY
    *  while loading or when no account is resolved, so callers can use
@@ -169,8 +173,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (data.account_id) {
           const { data: account, error: accountErr } = await supabase
             .from("accounts")
-            // default_currency added in migration 021; DEFAULT BRL since 041.
-            .select("id, name, default_currency")
+            // default_currency: 021; slug/logo_url: 042; DEFAULT BRL since 041.
+            .select("id, name, default_currency, slug, logo_url")
             .eq("id", data.account_id)
             .maybeSingle();
           if (accountErr) {
@@ -185,6 +189,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               id: account.id,
               name: account.name,
               default_currency: account.default_currency ?? DEFAULT_CURRENCY,
+              slug: account.slug ?? null,
+              logo_url: account.logo_url ?? null,
             };
           }
         }

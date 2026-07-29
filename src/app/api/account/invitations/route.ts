@@ -32,7 +32,7 @@ import {
   rateLimitResponse,
   RATE_LIMITS,
 } from "@/lib/rate-limit";
-import { getApexUrl } from "@/lib/domain";
+import { getApexUrl, getTenantUrl } from "@/lib/domain";
 
 // Resolve the base URL we publish invite links under.
 //
@@ -240,7 +240,12 @@ export async function POST(request: Request) {
         invitation: data,
         // Plaintext payload — visible to the admin exactly once.
         token,
-        url: inviteUrl(token, getBaseUrl(request)),
+        url: inviteUrl(
+          token,
+          ctx.account.slug
+            ? getTenantUrl(ctx.account.slug)
+            : getBaseUrl(request),
+        ),
         expiresInDays: expiryDays,
       },
       { status: 201 },

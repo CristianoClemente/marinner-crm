@@ -1,83 +1,132 @@
 "use client";
 
-import { Check, Moon, Palette, SunMoon, Sun } from "lucide-react";
+import { Check, Palette, SunMoon } from "lucide-react";
 
 import { useTheme } from "@/hooks/use-theme";
 import { MODES, THEMES, type Mode, type ThemeId } from "@/lib/themes";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
+import { BrandingPanel } from "./branding-panel";
 import { SettingsPanelHead } from "./settings-panel-head";
 
 /**
- * Appearance panel — light/dark mode + accent-color picker.
+ * Aparência + marca da escola.
  *
- * Two independent controls: a mode toggle (light / dark) and the
- * accent grid. Either applies + persists immediately. No save button:
- * each change is a single attribute swap on <html>, there's nothing
- * to roll back.
- *
- * Persistence: localStorage only (device-scoped). The boot script in
- * layout.tsx replays both choices before first paint on subsequent
- * loads.
+ * 1. Marca (conta): nome, logo, slug — admin+, persistido no banco.
+ * 2. Tema do dispositivo: modo + cor de destaque — localStorage.
  */
 export function AppearancePanel() {
   const { theme, setTheme, mode, setMode } = useTheme();
   const t = useTranslations("Settings.appearance");
 
+  const activeTheme = THEMES.find((item) => item.id === theme) ?? THEMES[0];
+
   return (
     <section className="max-w-3xl animate-in fade-in-50 duration-200">
-      <SettingsPanelHead
-        title={t("title")}
-        description={t("description")}
-      />
+      <SettingsPanelHead title={t("title")} description={t("description")} />
 
-      <div className="space-y-4">
-        <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-          <SunMoon className="size-4 text-muted-foreground" />
-          {t("mode")}
-        </h3>
+      <div className="space-y-8">
+        <BrandingPanel />
 
-        <div
-          role="radiogroup"
-          aria-label="Color mode"
-          // Empilhado no mobile: com o badge "Ativo" ao lado do ícone e do
-          // rótulo, duas colunas em 288px não caberiam em uma linha.
-          className="grid max-w-md grid-cols-1 gap-3 sm:grid-cols-2"
-        >
-          {MODES.map((m) => (
-            <ModeCard
-              key={m}
-              mode={m}
-              isActive={m === mode}
-              onPick={() => setMode(m)}
-            />
-          ))}
-        </div>
-      </div>
+        <section className="space-y-3">
+          <SectionHead icon={<SunMoon className="size-4" />} title={t("mode")}>
+            {t("modeHint")}
+          </SectionHead>
 
-      <div className="mt-8 space-y-4">
-        <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-          <Palette className="size-4 text-muted-foreground" />
-          {t("accentColor")}
-        </h3>
+          <div
+            role="radiogroup"
+            aria-label={t("mode")}
+            className="grid max-w-md grid-cols-2 gap-3"
+          >
+            {MODES.map((m) => (
+              <ModeCard
+                key={m}
+                mode={m}
+                isActive={m === mode}
+                onPick={() => setMode(m)}
+              />
+            ))}
+          </div>
+        </section>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {THEMES.map((tObj) => (
-            <ThemeCard
-              key={tObj.id}
-              id={tObj.id}
-              name={tObj.name}
-              tagline={tObj.tagline}
-              swatch={tObj.swatch}
-              isActive={tObj.id === theme}
-              onPick={() => setTheme(tObj.id)}
-            />
-          ))}
-        </div>
+        <section className="space-y-3">
+          <SectionHead icon={<Palette className="size-4" />} title={t("accentColor")}>
+            {t("accentHint")}
+          </SectionHead>
+
+          <div
+            role="radiogroup"
+            aria-label={t("accentColor")}
+            className="flex flex-wrap gap-3"
+          >
+            {THEMES.map((item) => (
+              <SwatchButton
+                key={item.id}
+                id={item.id}
+                name={item.name}
+                swatch={item.swatch}
+                isActive={item.id === theme}
+                onPick={() => setTheme(item.id)}
+              />
+            ))}
+          </div>
+
+          <div
+            aria-live="polite"
+            className="rounded-lg border border-border bg-card px-4 py-3"
+          >
+            <div className="text-sm font-semibold text-foreground">
+              {activeTheme.name}
+            </div>
+            <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">
+              {activeTheme.tagline}
+            </p>
+          </div>
+        </section>
       </div>
     </section>
   );
 }
+
+function SectionHead({
+  icon,
+  title,
+  children,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+        <span className="text-muted-foreground" aria-hidden>
+          {icon}
+        </span>
+        {title}
+      </h3>
+      <p className="mt-1 text-sm text-muted-foreground">{children}</p>
+    </div>
+  );
+}
+
+/**
+ * Superfícies fixas por modo. Cor crua é intencional aqui: o cartão
+ * precisa mostrar o modo *oposto* ao que está ativo, então não pode
+ * herdar os tokens de `html[data-mode]`. Valores espelham globals.css.
+ */
+const MODE_SURFACES: Record<Mode, { bg: string; card: string; line: string }> = {
+  light: {
+    bg: "oklch(0.99 0.002 260)",
+    card: "oklch(1 0 0)",
+    line: "oklch(0.9 0.004 260)",
+  },
+  dark: {
+    bg: "oklch(0.13 0.01 260)",
+    card: "oklch(0.18 0.01 260)",
+    line: "oklch(0.3 0.01 260)",
+  },
+};
 
 function ModeCard({
   mode,
@@ -89,52 +138,80 @@ function ModeCard({
   onPick: () => void;
 }) {
   const t = useTranslations("Settings.appearance");
-  const isLight = mode === "light";
-  const Icon = isLight ? Sun : Moon;
+  const label = mode === "light" ? t("modeLight") : t("modeDark");
+  const surfaces = MODE_SURFACES[mode];
+
   return (
     <button
       type="button"
       role="radio"
       onClick={onPick}
       aria-checked={isActive}
-      aria-label={t("useMode", { mode })}
+      aria-label={t("useMode", { mode: label })}
       className={cn(
-        "flex items-center gap-3 rounded-lg border bg-card p-4 text-left transition-colors",
+        "group overflow-hidden rounded-xl border bg-card text-left transition-colors",
         isActive
-          ? "border-primary/60 ring-2 ring-primary/40"
-          : "border-border hover:border-border hover:bg-muted/40",
+          ? "border-primary ring-2 ring-primary/30"
+          : "border-border hover:border-primary/40",
       )}
     >
+      {/* Miniatura da UI no modo correspondente. */}
       <span
         aria-hidden
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-foreground"
+        className="flex h-16 items-stretch gap-1.5 p-2"
+        style={{ background: surfaces.bg }}
       >
-        <Icon className="h-4 w-4" />
-      </span>
-      <span className="flex-1 text-sm font-semibold capitalize text-foreground">
-        {mode}
-      </span>
-      {isActive && (
-        <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-medium text-primary">
-          <Check className="h-3 w-3" />
-          {t("active")}
+        <span
+          className="w-1/4 rounded-sm"
+          style={{ background: surfaces.card }}
+        />
+        <span className="flex flex-1 flex-col justify-center gap-1.5 rounded-sm p-2"
+          style={{ background: surfaces.card }}
+        >
+          <span
+            className="block h-1.5 w-2/3 rounded-full"
+            style={{ background: "var(--primary)" }}
+          />
+          <span
+            className="block h-1.5 w-full rounded-full"
+            style={{ background: surfaces.line }}
+          />
+          <span
+            className="block h-1.5 w-4/5 rounded-full"
+            style={{ background: surfaces.line }}
+          />
         </span>
-      )}
+      </span>
+
+      <span className="flex min-h-11 items-center justify-between gap-2 border-t border-border px-3 py-2">
+        <span className="text-sm font-medium text-foreground">{label}</span>
+        {isActive ? (
+          <span
+            className="flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground"
+            aria-hidden
+          >
+            <Check className="size-3" />
+          </span>
+        ) : (
+          <span
+            className="size-5 rounded-full border border-border"
+            aria-hidden
+          />
+        )}
+      </span>
     </button>
   );
 }
 
-function ThemeCard({
+function SwatchButton({
   id,
   name,
-  tagline,
   swatch,
   isActive,
   onPick,
 }: {
   id: ThemeId;
   name: string;
-  tagline: string;
   swatch: string;
   isActive: boolean;
   onPick: () => void;
@@ -143,48 +220,25 @@ function ThemeCard({
   return (
     <button
       type="button"
+      role="radio"
       onClick={onPick}
-      aria-pressed={isActive}
+      aria-checked={isActive}
       aria-label={t("useTheme", { name })}
+      title={name}
       className={cn(
-        "flex flex-col gap-3 rounded-lg border bg-card p-4 text-left transition-colors",
-        isActive
-          ? "border-primary/60 ring-2 ring-primary/40"
-          : "border-border hover:border-border hover:bg-muted/40",
+        "relative flex size-11 items-center justify-center rounded-full transition-transform sm:size-10",
+        "ring-offset-2 ring-offset-background hover:scale-105",
+        isActive ? "ring-2 ring-primary" : "ring-1 ring-border",
       )}
+      style={{ background: swatch }}
     >
-      <div className="flex items-center justify-between">
-        <span
+      {isActive && (
+        <Check
+          className="size-4 text-primary-foreground drop-shadow-sm"
           aria-hidden
-          className="h-8 w-8 shrink-0 rounded-full"
-          style={{
-            background: swatch,
-            boxShadow: "inset 0 0 0 1px oklch(1 0 0 / 0.15)",
-          }}
         />
-        {isActive && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-medium text-primary">
-            <Check className="h-3 w-3" />
-            {t("active")}
-          </span>
-        )}
-      </div>
-      <div>
-        <div className="text-sm font-semibold text-foreground">{name}</div>
-        <div className="mt-1 text-sm leading-relaxed text-muted-foreground">
-          {tagline}
-        </div>
-      </div>
-      <div
-        className="mt-1 flex h-2 overflow-hidden rounded-full"
-        aria-hidden
-      >
-        <span className="flex-1" style={{ background: swatch }} />
-        <span className="w-3 bg-muted-foreground/60" />
-        <span className="w-3 bg-muted" />
-        <span className="w-3 bg-card" />
-      </div>
-      <span className="sr-only">Theme id: {id}</span>
+      )}
+      <span className="sr-only">{id}</span>
     </button>
   );
 }

@@ -1,17 +1,32 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { LoginForm } from "@/components/auth/login-form";
+import { DEFAULT_FAVICON_SRC } from "@/lib/brand";
+import { getRequestTenant } from "@/lib/tenant/request";
 
-// `useSearchParams` in LoginForm opts the tree out of static prerendering
-// unless it sits under a Suspense boundary. Translations are resolved on
-// the server and passed as plain props so the client form never needs
-// NextIntlClientProvider context (avoids the SSR bailout error).
+export async function generateMetadata(): Promise<Metadata> {
+  const tenant = await getRequestTenant();
+  const icon = tenant?.logoUrl || DEFAULT_FAVICON_SRC;
+  return {
+    title: tenant ? `Entrar — ${tenant.name}` : undefined,
+    icons: {
+      icon: [{ url: icon, type: icon.endsWith(".svg") ? "image/svg+xml" : undefined }],
+    },
+  };
+}
+
 export default async function LoginPage() {
   const t = await getTranslations("LoginPage");
+  const tenant = await getRequestTenant();
+  const brand = tenant
+    ? { name: tenant.name, logoUrl: tenant.logoUrl }
+    : null;
 
   return (
     <Suspense fallback={null}>
       <LoginForm
+        brand={brand}
         labels={{
           titleAccept: t("titleAccept"),
           titleWelcome: t("titleWelcome"),

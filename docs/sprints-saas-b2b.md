@@ -50,23 +50,23 @@ S01 → S02 → S03 → S04 → S05 → S06 → S07 → S08 → S09 → S10 → 
 
 ## Sprint S01 — Marca Marinner na superfície ✅
 
-**Objetivo:** usuário só vê “Marinner”, nunca “wacrm”, nas telas e metadados.
+**Objetivo:** usuário só vê “Marinner” nas telas e metadados.
 
 **Escopo**
 - [`src/app/layout.tsx`](../src/app/layout.tsx): `title` / `description`
 - `messages/pt-BR.json` (e demais locales se ainda usados na UI): strings com nome do produto
 - Sidebar, login, signup, e-mails transacionais (se templates no repo)
-- Favicon / `app/icon` se ainda for genérico wacrm
+- Favicon / `app/icon` se ainda for genérico
 
 **Fora de escopo**
-- Renomear package npm `wacrm` (opcional; não bloqueia)
+- (nenhum — package npm alinhado a `marinner-crm`)
 
 **Critérios de aceite**
 - [x] `/login` e `/dashboard` exibem Marinner
 - [x] Aba do browser: título Marinner
-- [x] Busca no `src/` por “wacrm” na UI do usuário = zero (comentários/código internos ok)
+- [x] Sem menções legadas ao nome antigo do fork na UI
 
-**Feito:** `src/lib/brand.ts` (`APP_NAME` / `NEXT_PUBLIC_APP_NAME`); i18n pt-BR/en/ko; signup; convites; erro WhatsApp; fallback de invite → `app.marinner.com.br`. Mantidos prefixos API `wacrm_live_` e headers `X-Wacrm-*` (contrato interno).
+**Feito:** `src/lib/brand.ts` (`APP_NAME` / `NEXT_PUBLIC_APP_NAME`); i18n pt-BR; signup; convites; erro WhatsApp; fallback de invite → `app.marinner.com.br`. Prefixos API `marinner_live_` e headers `X-Marinner-*`.
 
 **Estimativa:** 1–2 dias  
 **Dependências:** nenhuma

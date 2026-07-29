@@ -62,7 +62,7 @@
  *
  *   1. MODE   (light / dark)  → neutral surfaces. Selected with
  *      `document.documentElement.dataset.mode`. Defaults to dark.
- *   2. ACCENT (violet / …)    → the primary color only. Selected
+ *   2. ACCENT (orange / …)    → the primary color only. Selected
  *      with `document.documentElement.dataset.theme`.
  *
  * The two compose: any accent works in either mode. Neutral
@@ -72,7 +72,7 @@
  * --sidebar-ring) live in the ACCENT blocks. They set disjoint
  * variables, so cascade order between them doesn't matter.
  *
- * `:root` carries the dark-mode + violet defaults so a visitor
+ * `:root` carries the dark-mode + orange defaults so a visitor
  * renders correctly before JS runs; the boot script in
  * layout.tsx replays the saved mode + accent before first paint.
  *
@@ -158,7 +158,22 @@ html[data-mode="light"] {
 
 /* ---- ACCENT: primary color ---- */
 
+/* Laranja é o padrão — espelha o logotipo Marinner (#ea580c). */
 :root,
+html[data-theme="orange"] {
+  --primary: oklch(0.646 0.222 41);
+  --primary-foreground: oklch(0.985 0 0);
+  --primary-hover: oklch(0.71 0.2 41);
+  --primary-soft: oklch(0.646 0.222 41 / 0.12);
+  --primary-soft-2: oklch(0.646 0.222 41 / 0.22);
+  --ring: oklch(0.646 0.222 41);
+  --chart-1: oklch(0.646 0.222 41);
+  --chart-2: oklch(0.74 0.17 65);
+  --sidebar-primary: oklch(0.646 0.222 41);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-ring: oklch(0.646 0.222 41);
+}
+
 html[data-theme="violet"] {
   --primary: oklch(0.526 0.247 293);
   --primary-foreground: oklch(0.985 0 0);
@@ -214,6 +229,20 @@ html[data-theme="amber"] {
   --sidebar-ring: oklch(0.745 0.16 65);
 }
 
+html[data-theme="yellow"] {
+  --primary: oklch(0.795 0.184 86);
+  --primary-foreground: oklch(0.2 0.04 86);
+  --primary-hover: oklch(0.85 0.17 86);
+  --primary-soft: oklch(0.795 0.184 86 / 0.12);
+  --primary-soft-2: oklch(0.795 0.184 86 / 0.22);
+  --ring: oklch(0.795 0.184 86);
+  --chart-1: oklch(0.795 0.184 86);
+  --chart-2: oklch(0.75 0.16 65);
+  --sidebar-primary: oklch(0.795 0.184 86);
+  --sidebar-primary-foreground: oklch(0.2 0.04 86);
+  --sidebar-ring: oklch(0.795 0.184 86);
+}
+
 html[data-theme="rose"] {
   --primary: oklch(0.645 0.22 16);
   --primary-foreground: oklch(0.985 0 0);
@@ -226,6 +255,90 @@ html[data-theme="rose"] {
   --sidebar-primary: oklch(0.645 0.22 16);
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-ring: oklch(0.645 0.22 16);
+}
+
+html[data-theme="fuchsia"] {
+  --primary: oklch(0.62 0.26 322);
+  --primary-foreground: oklch(0.985 0 0);
+  --primary-hover: oklch(0.69 0.24 322);
+  --primary-soft: oklch(0.62 0.26 322 / 0.12);
+  --primary-soft-2: oklch(0.62 0.26 322 / 0.22);
+  --ring: oklch(0.62 0.26 322);
+  --chart-1: oklch(0.62 0.26 322);
+  --chart-2: oklch(0.68 0.22 350);
+  --sidebar-primary: oklch(0.62 0.26 322);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-ring: oklch(0.62 0.26 322);
+}
+
+html[data-theme="indigo"] {
+  --primary: oklch(0.545 0.23 277);
+  --primary-foreground: oklch(0.985 0 0);
+  --primary-hover: oklch(0.62 0.21 277);
+  --primary-soft: oklch(0.545 0.23 277 / 0.12);
+  --primary-soft-2: oklch(0.545 0.23 277 / 0.22);
+  --ring: oklch(0.545 0.23 277);
+  --chart-1: oklch(0.545 0.23 277);
+  --chart-2: oklch(0.65 0.18 260);
+  --sidebar-primary: oklch(0.545 0.23 277);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-ring: oklch(0.545 0.23 277);
+}
+
+html[data-theme="cyan"] {
+  --primary: oklch(0.715 0.143 215);
+  --primary-foreground: oklch(0.18 0.03 215);
+  --primary-hover: oklch(0.77 0.13 215);
+  --primary-soft: oklch(0.715 0.143 215 / 0.12);
+  --primary-soft-2: oklch(0.715 0.143 215 / 0.22);
+  --ring: oklch(0.715 0.143 215);
+  --chart-1: oklch(0.715 0.143 215);
+  --chart-2: oklch(0.68 0.14 245);
+  --sidebar-primary: oklch(0.715 0.143 215);
+  --sidebar-primary-foreground: oklch(0.18 0.03 215);
+  --sidebar-ring: oklch(0.715 0.143 215);
+}
+
+html[data-theme="teal"] {
+  --primary: oklch(0.704 0.14 182);
+  --primary-foreground: oklch(0.17 0.03 182);
+  --primary-hover: oklch(0.76 0.13 182);
+  --primary-soft: oklch(0.704 0.14 182 / 0.12);
+  --primary-soft-2: oklch(0.704 0.14 182 / 0.22);
+  --ring: oklch(0.704 0.14 182);
+  --chart-1: oklch(0.704 0.14 182);
+  --chart-2: oklch(0.68 0.14 200);
+  --sidebar-primary: oklch(0.704 0.14 182);
+  --sidebar-primary-foreground: oklch(0.17 0.03 182);
+  --sidebar-ring: oklch(0.704 0.14 182);
+}
+
+html[data-theme="lime"] {
+  --primary: oklch(0.768 0.194 130);
+  --primary-foreground: oklch(0.18 0.04 130);
+  --primary-hover: oklch(0.82 0.18 130);
+  --primary-soft: oklch(0.768 0.194 130 / 0.12);
+  --primary-soft-2: oklch(0.768 0.194 130 / 0.22);
+  --ring: oklch(0.768 0.194 130);
+  --chart-1: oklch(0.768 0.194 130);
+  --chart-2: oklch(0.72 0.17 155);
+  --sidebar-primary: oklch(0.768 0.194 130);
+  --sidebar-primary-foreground: oklch(0.18 0.04 130);
+  --sidebar-ring: oklch(0.768 0.194 130);
+}
+
+html[data-theme="slate"] {
+  --primary: oklch(0.554 0.046 257);
+  --primary-foreground: oklch(0.985 0 0);
+  --primary-hover: oklch(0.63 0.04 257);
+  --primary-soft: oklch(0.554 0.046 257 / 0.14);
+  --primary-soft-2: oklch(0.554 0.046 257 / 0.24);
+  --ring: oklch(0.554 0.046 257);
+  --chart-1: oklch(0.554 0.046 257);
+  --chart-2: oklch(0.66 0.04 257);
+  --sidebar-primary: oklch(0.554 0.046 257);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-ring: oklch(0.554 0.046 257);
 }
 
 @layer base {

@@ -2,18 +2,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 // --- Scenario knobs the mock reads -----------------------------------------
-// `mockUser`         — what getUser() resolves to (a refreshed session ⇒ user,
-//                      or null for the logged-out path).
-// `refreshedCookies` — cookies Supabase writes via setAll() during getUser(),
-//                      i.e. the freshly *rotated* auth token. The whole point
-//                      of the test is that these must survive onto whatever
-//                      response the middleware returns — including redirects.
 let mockUser: { id: string } | null = null;
 let refreshedCookies: Array<{
   name: string;
   value: string;
   options: Record<string, unknown>;
 }> = [];
+let mockProfileAccountId: string | null = null;
+let mockAccountSlug: string | null = null;
+
+vi.mock("@/lib/tenant/lookup", () => ({
+  lookupTenantBySlug: vi.fn(async () => null),
+}));
 
 vi.mock("@supabase/ssr", () => ({
   createServerClient: (
@@ -24,25 +24,48 @@ vi.mock("@supabase/ssr", () => ({
     },
   ) => ({
     auth: {
-      // Mirrors real auth-js: an expired access token is transparently
-      // refreshed inside getUser(), which rotates the refresh token and
-      // pushes the new cookies through setAll() before resolving.
       getUser: async () => {
         if (refreshedCookies.length) opts.cookies.setAll(refreshedCookies);
         return { data: { user: mockUser } };
       },
     },
+    from: (table: string) => ({
+      select: () => ({
+        eq: () => ({
+          maybeSingle: async () => {
+            if (table === "profiles") {
+              return {
+                data: mockProfileAccountId
+                  ? { account_id: mockProfileAccountId }
+                  : null,
+                error: null,
+              };
+            }
+            if (table === "accounts") {
+              return {
+                data: mockAccountSlug ? { slug: mockAccountSlug } : null,
+                error: null,
+              };
+            }
+            return { data: null, error: null };
+          },
+        }),
+      }),
+    }),
   }),
 }));
 
-// Imported after the mock is registered.
 const { middleware } = await import("./middleware");
 
 beforeEach(() => {
   process.env.NEXT_PUBLIC_SUPABASE_URL = "https://test.supabase.co";
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key";
+  process.env.DOMAIN_BASE = "marinner.com.br";
+  process.env.NEXT_PUBLIC_SITE_URL = "https://app.marinner.com.br";
   mockUser = null;
   refreshedCookies = [];
+  mockProfileAccountId = null;
+  mockAccountSlug = null;
 });
 
 afterEach(() => vi.clearAllMocks());
@@ -59,26 +82,20 @@ describe("middleware — refreshed auth cookies survive redirects", () => {
     refreshedCookies = [ROTATED];
 
     const res = await middleware(
-      new NextRequest("https://app.test/login"),
+      new NextRequest("https://app.marinner.com.br/login"),
     );
 
-    // Redirect to /dashboard…
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toContain("/dashboard");
-    // …and the rotated cookie MUST ride along, otherwise the browser keeps
-    // replaying the now-consumed refresh token and the session wedges until
-    // the user manually clears cookies.
     expect(res.cookies.get(ROTATED.name)?.value).toBe(ROTATED.value);
   });
 
   it("carries the rotated token when redirecting an unauth user to /login", async () => {
     mockUser = null;
-    // Even on the logged-out path getUser() may emit cookie writes (e.g.
-    // clearing a dead session); those must not be dropped on the redirect.
     refreshedCookies = [{ ...ROTATED, value: "cleared" }];
 
     const res = await middleware(
-      new NextRequest("https://app.test/dashboard"),
+      new NextRequest("https://app.marinner.com.br/dashboard"),
     );
 
     expect(res.status).toBe(307);
@@ -91,7 +108,7 @@ describe("middleware — refreshed auth cookies survive redirects", () => {
     refreshedCookies = [ROTATED];
 
     const res = await middleware(
-      new NextRequest("https://app.test/login?invite=abc123"),
+      new NextRequest("https://app.marinner.com.br/login?invite=abc123"),
     );
 
     expect(res.headers.get("location")).toContain("/join/abc123");
@@ -103,11 +120,26 @@ describe("middleware — refreshed auth cookies survive redirects", () => {
     refreshedCookies = [ROTATED];
 
     const res = await middleware(
-      new NextRequest("https://app.test/dashboard"),
+      new NextRequest("https://app.marinner.com.br/dashboard"),
     );
 
-    // No redirect — the normal NextResponse.next() already carries cookies.
     expect(res.headers.get("location")).toBeNull();
+    expect(res.cookies.get(ROTATED.name)?.value).toBe(ROTATED.value);
+  });
+
+  it("no apex com slug redireciona login para o tenant", async () => {
+    mockUser = { id: "user-1" };
+    refreshedCookies = [ROTATED];
+    mockProfileAccountId = "acct-1";
+    mockAccountSlug = "escola";
+
+    const res = await middleware(
+      new NextRequest("https://app.marinner.com.br/login"),
+    );
+
+    expect(res.headers.get("location")).toBe(
+      "https://escola.marinner.com.br/dashboard",
+    );
     expect(res.cookies.get(ROTATED.name)?.value).toBe(ROTATED.value);
   });
 });

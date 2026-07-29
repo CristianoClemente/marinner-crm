@@ -16,7 +16,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { MessageSquare, UsersRound } from "lucide-react";
+import { UsersRound } from "lucide-react";
+import { DEFAULT_LOGO_SRC } from "@/lib/brand";
+import { getTenantUrl } from "@/lib/domain";
+import type { AuthBrand } from "@/components/auth/auth-brand";
 
 export type LoginLabels = {
   titleAccept: string;
@@ -34,17 +37,25 @@ export type LoginLabels = {
   createAccount: string;
 };
 
-export function LoginForm({ labels }: { labels: LoginLabels }) {
+export function LoginForm({
+  labels,
+  brand,
+}: {
+  labels: LoginLabels;
+  brand?: AuthBrand | null;
+}) {
   const searchParams = useSearchParams();
-  // Forwarded from `/join/<token>` when the visitor already has an
-  // account. After a successful sign-in we send them to the join
-  // page to accept rather than to /dashboard.
   const inviteToken = searchParams.get("invite");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const logoSrc = brand?.logoUrl || DEFAULT_LOGO_SRC;
+  const welcomeDesc = brand
+    ? `Entre na conta de ${brand.name}`
+    : labels.descWelcome;
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,36 +74,61 @@ export function LoginForm({ labels }: { labels: LoginLabels }) {
       return;
     }
 
-    // Full-page navigation (not router.push) so the browser issues a
-    // fresh top-level request that carries the just-written Supabase
-    // auth cookies to the middleware gating /dashboard. A soft
-    // client-side navigation can reach the protected route before the
-    // server observes the new session, so the middleware bounces it
-    // back to /login — which looks like the page "just refreshing"
-    // instead of signing in (issue #365). Mirrors the deliberate full
-    // reload the invite-accept flow already uses in join/[token].
-    const destination = inviteToken
-      ? `/join/${encodeURIComponent(inviteToken)}`
-      : "/dashboard";
-    window.location.href = destination;
+    if (inviteToken) {
+      window.location.href = `/join/${encodeURIComponent(inviteToken)}`;
+      return;
+    }
+
+    // Já no tenant do Host → dashboard relativo.
+    // No apex → se a account tem slug, vai para o subdomínio.
+    if (brand) {
+      window.location.href = "/dashboard";
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/account");
+      if (res.ok) {
+        const body = (await res.json()) as {
+          account?: { slug?: string | null };
+        };
+        const slug = body.account?.slug;
+        if (slug) {
+          window.location.href = getTenantUrl(slug, "/dashboard");
+          return;
+        }
+      }
+    } catch {
+      // fallback abaixo
+    }
+
+    window.location.href = "/dashboard";
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md border-border bg-card">
         <CardHeader className="items-center text-center">
-          <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+          <div className="mb-2 flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl bg-primary/10 p-1.5">
             {inviteToken ? (
               <UsersRound className="h-6 w-6 text-primary" />
             ) : (
-              <MessageSquare className="h-6 w-6 text-primary" />
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={logoSrc}
+                alt=""
+                className="size-full object-contain"
+              />
             )}
           </div>
+          {brand && !inviteToken ? (
+            <p className="text-sm font-medium text-foreground">{brand.name}</p>
+          ) : null}
           <CardTitle className="text-xl text-foreground">
             {inviteToken ? labels.titleAccept : labels.titleWelcome}
           </CardTitle>
           <CardDescription className="text-muted-foreground">
-            {inviteToken ? labels.descAccept : labels.descWelcome}
+            {inviteToken ? labels.descAccept : welcomeDesc}
           </CardDescription>
         </CardHeader>
         <CardContent>

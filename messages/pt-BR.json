@@ -1652,12 +1652,11 @@
       "overview": "Visão geral",
       "profile": "Seu perfil",
       "security": "Login e segurança",
-      "appearance": "Aparência",
+      "appearance": "Aparência e marca",
       "whatsapp": "WhatsApp",
       "templates": "Modelos",
       "quick-replies": "Respostas rápidas",
       "fields": "Etiquetas",
-      "deals": "Negócios e moeda",
       "members": "Membros da equipe",
       "api": "Chaves de API"
     },
@@ -1719,13 +1718,42 @@
       "signOutFailed": "Falha ao sair: {message}"
     },
     "appearance": {
-      "title": "Aparência",
-      "description": "Defina o modo e a cor de destaque usados no app. Salvos neste dispositivo — experimente, muda ao vivo.",
+      "title": "Aparência e marca",
+      "description": "Identidade da escola neste workspace e preferências visuais deste dispositivo.",
       "mode": "Modo",
+      "modeHint": "Vale só neste dispositivo — muda ao vivo, sem salvar.",
+      "modeLight": "Claro",
+      "modeDark": "Escuro",
       "useMode": "Usar modo {mode}",
       "active": "Ativo",
       "accentColor": "Cor de destaque",
+      "accentHint": "Cor dos botões, links e destaques do app.",
       "useTheme": "Usar tema {name}"
+    },
+    "branding": {
+      "title": "Marca da escola",
+      "description": "Nome, logotipo e endereço (subdomínio) que identificam sua escola. Com o subdomínio ativo, login e favicon usam essa marca.",
+      "loading": "Carregando…",
+      "logo": "Logotipo",
+      "logoHint": "PNG, JPG, WebP ou GIF. Até 2 MB. Aparece na barra lateral e como favicon da aba.",
+      "uploadLogo": "Enviar logo",
+      "removeLogo": "Remover",
+      "name": "Nome da escola",
+      "nameRequired": "Informe o nome da escola",
+      "slug": "Slug (subdomínio)",
+      "slugPlaceholder": "escola-nautica",
+      "slugHint": "Apenas letras minúsculas, números e hífens. Será o endereço da escola.",
+      "slugReserved": "Este slug é reservado pelo sistema",
+      "slugTooShort": "O slug precisa ter pelo menos 3 caracteres",
+      "slugTooLong": "O slug deve ter no máximo 48 caracteres",
+      "slugInvalid": "Formato de slug inválido",
+      "save": "Salvar marca",
+      "saving": "Salvando…",
+      "saved": "Marca atualizada",
+      "saveFailed": "Não foi possível salvar a marca",
+      "unsupportedImage": "Formato de imagem não suportado",
+      "imageTooLarge": "A imagem deve ter no máximo 2 MB",
+      "adminOnly": "Somente administradores podem alterar a marca da escola."
     },
     "security": {
       "title": "Login e segurança",
@@ -1768,14 +1796,6 @@
       "newKeyDesc": "Nomeie-a de acordo com a integração que a usará e conceda apenas os escopos necessários.",
       "done": "Concluído",
       "networkError": "Não foi possível conectar ao servidor"
-    },
-    "deals": {
-      "title": "Negócios e moeda",
-      "description": "Novos negócios e totais de funil usam Real (BRL). Negócios antigos mantêm a moeda com que foram salvos.",
-      "defaultCurrency": "Moeda do workspace",
-      "defaultCurrencyDesc": "O Marinner CRM usa Real brasileiro para novos valores.",
-      "lockedValue": "Valores em Real ({code})",
-      "lockedHint": "Negócios criados antes desta padronização podem ainda exibir a moeda original."
     },
     "quickReplies": {
       "title": "Respostas rápidas",

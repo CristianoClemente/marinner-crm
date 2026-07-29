@@ -29,6 +29,7 @@ import {
   Zap,
 } from "lucide-react";
 import type { AccountRole } from "@/lib/auth/roles";
+import { DEFAULT_LOGO_SRC } from "@/lib/brand";
 import {
   Avatar,
   AvatarFallback,
@@ -224,21 +225,33 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
           <Link
             href="/dashboard"
             className={cn(
-              "flex items-center gap-2",
+              "flex min-w-0 items-center gap-2",
               rail && "justify-center",
             )}
-            title={t("title")}
+            title={account?.name || t("title")}
           >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <MessageSquare className="h-4 w-4" />
-            </div>
+            {account?.logo_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={account.logo_url}
+                alt=""
+                className="h-8 w-8 shrink-0 rounded-lg bg-muted object-contain"
+              />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={DEFAULT_LOGO_SRC}
+                alt=""
+                className="h-8 w-8 shrink-0 rounded-lg object-contain"
+              />
+            )}
             <span
               className={cn(
-                "text-sm font-semibold text-foreground",
+                "truncate text-sm font-semibold text-foreground",
                 rail && "lg:hidden",
               )}
             >
-              {t("title")}
+              {account?.name || t("title")}
             </span>
           </Link>
 

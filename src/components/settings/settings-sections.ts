@@ -1,5 +1,4 @@
 import {
-  Coins,
   FileText,
   KeyRound,
   LayoutGrid,
@@ -30,7 +29,6 @@ export const SETTINGS_SECTIONS = [
   'templates',
   'quick-replies',
   'fields',
-  'deals',
   'members',
   'api',
 ] as const;
@@ -56,7 +54,6 @@ export const SECTION_META: Record<SettingsSection, SectionMeta> = {
   templates: { id: 'templates', label: 'Templates', icon: FileText, group: 'workspace' },
   'quick-replies': { id: 'quick-replies', label: 'Quick replies', icon: Zap, group: 'workspace' },
   fields: { id: 'fields', label: 'Tags', icon: Tags, group: 'workspace' },
-  deals: { id: 'deals', label: 'Deals & currency', icon: Coins, group: 'workspace' },
   members: { id: 'members', label: 'Team members', icon: UsersRound, group: 'workspace' },
   api: { id: 'api', label: 'API keys', icon: KeyRound, group: 'workspace' },
 };
@@ -74,7 +71,8 @@ function isSection(value: string | null): value is SettingsSection {
 /**
  * Resolve a raw `?tab=` value to a section. Legacy tabs from the old
  * flat layout collapse onto their new home (Tags / Custom fields → the
- * "Tags" section). Anything unknown falls back to the Overview landing.
+ * "Tags" section; Negócios e moeda saiu quando o produto travou em BRL).
+ * Anything unknown falls back to the Overview landing.
  */
 export function resolveSection(raw: string | null): SettingsSection {
   if (raw === 'tags' || raw === 'custom-fields') return 'fields';

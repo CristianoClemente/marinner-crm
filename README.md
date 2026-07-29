@@ -1,4 +1,4 @@
-# wacrm — CRM Template for WhatsApp
+# Marinner — CRM para WhatsApp
 
 > Self-hostable CRM template for WhatsApp® — shared inbox, contacts,
 > sales pipelines, broadcasts, and no-code automations. Fork it, brand
@@ -11,14 +11,14 @@
 </p>
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-violet.svg)](./LICENSE)
-[![CI](https://github.com/ArnasDon/wacrm/actions/workflows/ci.yml/badge.svg)](https://github.com/ArnasDon/wacrm/actions/workflows/ci.yml)
+[![CI](https://github.com/CristianoClemente/marinner-crm/actions/workflows/ci.yml/badge.svg)](https://github.com/CristianoClemente/marinner-crm/actions/workflows/ci.yml)
 [![Next.js 16](https://img.shields.io/badge/Next.js-16-black?logo=nextdotjs)](https://nextjs.org)
 [![Supabase](https://img.shields.io/badge/Supabase-Postgres%20%2B%20Auth-3ecf8e?logo=supabase)](https://supabase.com)
-[![Stars](https://img.shields.io/github/stars/ArnasDon/wacrm?style=social)](https://github.com/ArnasDon/wacrm/stargazers)
+[![Stars](https://img.shields.io/github/stars/CristianoClemente/marinner-crm?style=social)](https://github.com/CristianoClemente/marinner-crm/stargazers)
 
 The marketing site and self-host docs live in a separate repo:
-[ArnasDon/wacrm-site](https://github.com/ArnasDon/wacrm-site)
-([wacrm.tech](https://wacrm.tech)). This repo is the product —
+[CristianoClemente/marinner-crm-site](https://github.com/CristianoClemente/marinner-crm-site)
+([marinner.com.br](https://marinner.com.br)). This repo is the product —
 clone or fork it to run your own CRM.
 
 ## What you get out of the box
@@ -79,9 +79,9 @@ in an afternoon and make yours.
 ## Quick start
 
 ```bash
-# Fork on GitHub first: https://github.com/ArnasDon/wacrm → Fork
-git clone https://github.com/<your-username>/wacrm.git
-cd wacrm
+# Fork on GitHub first: https://github.com/CristianoClemente/marinner-crm → Fork
+git clone https://github.com/<your-username>/marinner.git
+cd marinner
 npm install
 cp .env.local.example .env.local   # fill in Supabase + Meta creds
 npm run dev
@@ -98,12 +98,12 @@ Open <http://localhost:3000>. You'll be redirected to `/login` (or
   </a>
 </p>
 <p align="center">
-  <a href="https://wacrm.tech/docs/deployment-hostinger">
-    <img src="https://img.shields.io/badge/Step--by--step_guide-wacrm.tech%2Fdocs-111?style=for-the-badge" alt="Step-by-step guide" height="44">
+  <a href="https://marinner.com.br/docs/deployment-hostinger">
+    <img src="https://img.shields.io/badge/Step--by--step_guide-marinner.com.br%2Fdocs-111?style=for-the-badge" alt="Step-by-step guide" height="44">
   </a>
 </p>
 
-**wacrm is built to run on [Hostinger](https://www.hostinger.com/web-apps-hosting).**
+**marinner is built to run on [Hostinger](https://www.hostinger.com/web-apps-hosting).**
 It's the path we test, document, and recommend — and the fastest way
 to get a production-grade CRM live without owning a VPS or a
 Kubernetes cluster.
@@ -130,9 +130,9 @@ Kubernetes cluster.
 4. Push to `main`. Hostinger builds and serves it. Done.
 
 Full walkthrough with screenshots:
-**[wacrm.tech/docs/deployment-hostinger](https://wacrm.tech/docs/deployment-hostinger)**.
+**[marinner.com.br/docs/deployment-hostinger](https://marinner.com.br/docs/deployment-hostinger)**.
 
-> _Note: wacrm is MIT-licensed and runs anywhere Node.js does
+> _Note: marinner is MIT-licensed and runs anywhere Node.js does
 > (Vercel, Railway, your own VPS). Hostinger is recommended, not
 > required._
 
@@ -140,17 +140,17 @@ Full walkthrough with screenshots:
 
 Full self-host documentation — Supabase migrations, WhatsApp Business
 API config, and production deploy — lives at
-**[wacrm.tech/docs](https://wacrm.tech/docs)**
-(source: [ArnasDon/wacrm-site](https://github.com/ArnasDon/wacrm-site)).
+**[marinner.com.br/docs](https://marinner.com.br/docs)**
+(source: [CristianoClemente/marinner-crm-site](https://github.com/CristianoClemente/marinner-crm-site)).
 
 Key pages:
-- [Getting started](https://wacrm.tech/docs/getting-started)
-- [Supabase setup](https://wacrm.tech/docs/supabase-setup)
-- [WhatsApp setup](https://wacrm.tech/docs/whatsapp-setup)
-- [Environment variables](https://wacrm.tech/docs/environment-variables)
-- [Deploy on Hostinger](https://wacrm.tech/docs/deployment-hostinger)
-- [Architecture](https://wacrm.tech/docs/architecture)
-- [Troubleshooting](https://wacrm.tech/docs/troubleshooting)
+- [Getting started](https://marinner.com.br/docs/getting-started)
+- [Supabase setup](https://marinner.com.br/docs/supabase-setup)
+- [WhatsApp setup](https://marinner.com.br/docs/whatsapp-setup)
+- [Environment variables](https://marinner.com.br/docs/environment-variables)
+- [Deploy on Hostinger](https://marinner.com.br/docs/deployment-hostinger)
+- [Architecture](https://marinner.com.br/docs/architecture)
+- [Troubleshooting](https://marinner.com.br/docs/troubleshooting)
 
 ### Marinner SaaS (este fork)
 

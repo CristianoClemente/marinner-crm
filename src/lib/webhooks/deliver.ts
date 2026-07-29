@@ -115,9 +115,9 @@ async function deliverOne(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Wacrm-Event': event,
-        'X-Wacrm-Webhook-Id': row.id,
-        'X-Wacrm-Signature': buildSignatureHeader(payload, secret, tsSeconds),
+        'X-Marinner-Event': event,
+        'X-Marinner-Webhook-Id': row.id,
+        'X-Marinner-Signature': buildSignatureHeader(payload, secret, tsSeconds),
       },
       body: payload,
       // Do NOT follow redirects — a public URL could 3xx-bounce to an

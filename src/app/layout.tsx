@@ -14,7 +14,7 @@ import {
   STORAGE_KEY,
   THEME_IDS,
 } from "@/lib/themes";
-import { APP_NAME } from "@/lib/brand";
+import { APP_NAME, DEFAULT_FAVICON_SRC } from "@/lib/brand";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -32,7 +32,8 @@ export const metadata: Metadata = {
     follow: false,
   },
   icons: {
-    icon: [{ url: "/icon" }],
+    // Reforço explícito; `src/app/icon.svg` também injeta via convenção.
+    icon: [{ url: DEFAULT_FAVICON_SRC, type: "image/svg+xml" }],
   },
   formatDetection: {
     email: false,

@@ -4,9 +4,11 @@
 
 **Goal:** Fazer o front e os defaults do banco tratarem pt-BR e BRL como o único padrão do produto, com helpers centralizados e sem seletor multi-moeda / dicionários en-ko.
 
-**Architecture:** `src/lib/format.ts` é a fonte de `DEFAULT_LOCALE` e formatadores de data/número. `src/lib/currency.ts` importa o locale, formata BRL (híbrido de centavos), lista só BRL, e ainda formata moedas legadas. UI de Configurações → Negócios fica informativa. Migration 041 só altera DEFAULT das colunas.
+**Architecture:** `src/lib/format.ts` é a fonte de `DEFAULT_LOCALE` e formatadores de data/número. `src/lib/currency.ts` importa o locale, formata BRL (híbrido de centavos), lista só BRL, e ainda formata moedas legadas. Aba Configurações → Negócios removida (sem nada configurável). Migration 041 só altera DEFAULT das colunas.
 
 **Tech Stack:** Next.js 16, TypeScript, next-intl, Vitest, Supabase migrations, Intl API.
+
+**Status:** Concluído (2026-07-29). Commits: `448a2fa` (spec), `4bcded2` (implementação); follow-up remove aba Negócios.
 
 ## Global Constraints
 
@@ -26,8 +28,9 @@
 | `src/lib/currency.test.ts` | Ajustar expectativas |
 | `supabase/migrations/041_default_currency_brl.sql` | DEFAULT BRL |
 | `src/i18n/request.ts` | Locale fixo pt-BR |
-| `src/components/settings/deals-settings.tsx` | Painel informativo |
-| `messages/pt-BR.json` | Copy do painel Negócios |
+| ~~`src/components/settings/deals-settings.tsx`~~ | Removido — aba Negócios saiu do rail |
+| `src/components/settings/settings-sections.ts` | Sem seção `deals` |
+| `messages/pt-BR.json` | Sem chaves `Settings.deals` |
 | Vários componentes | Trocar `toLocale*` por helpers |
 | Remover | `messages/en.json`, `messages/ko.json` |
 
@@ -41,7 +44,7 @@
 
 **Produces:** `DEFAULT_LOCALE`, `formatDate`, `formatDateTime`, `formatNumber`
 
-- [ ] **Step 1: Escrever testes que falham**
+- [x] **Step 1: Escrever testes que falham**
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -73,12 +76,12 @@ describe("format", () => {
 });
 ```
 
-- [ ] **Step 2: Rodar e ver falha**
+- [x] **Step 2: Rodar e ver falha**
 
 Run: `npx vitest run src/lib/format.test.ts`
 Expected: FAIL (módulo inexistente)
 
-- [ ] **Step 3: Implementar**
+- [x] **Step 3: Implementar**
 
 ```ts
 export const DEFAULT_LOCALE = "pt-BR";
@@ -111,11 +114,11 @@ export function formatNumber(
 }
 ```
 
-- [ ] **Step 4: Rodar testes — PASS**
+- [x] **Step 4: Rodar testes — PASS**
 
 Run: `npx vitest run src/lib/format.test.ts`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib/format.ts src/lib/format.test.ts
@@ -132,20 +135,16 @@ git commit -m "feat: helpers de formatacao pt-BR"
 
 **Consumes:** `DEFAULT_LOCALE` de `@/lib/format`
 
-- [ ] **Step 1: Atualizar testes** para BRL default, híbrido (1234 → sem `,00`; 1234.5 → com fração), `CURRENCIES` só BRL, short com `R$`
-
-- [ ] **Step 2: Rodar — falha nas expectativas antigas USD**
-
-- [ ] **Step 3: Reescrever `currency.ts`**
+- [x] **Step 1: Atualizar testes** para BRL default, híbrido (1234 → sem `,00`; 1234.5 → com fração), `CURRENCIES` só BRL, short com `R$`
+- [x] **Step 2: Rodar — falha nas expectativas antigas USD**
+- [x] **Step 3: Reescrever `currency.ts`**
   - Importar `DEFAULT_LOCALE`
   - `CURRENCIES = [{ code: "BRL", label: "Real", symbol: "R$" }]`
   - `formatCurrency`: `minimumFractionDigits: 0`, `maximumFractionDigits: 2`
   - `currencySymbol(code)`: lookup em CURRENCIES; senão `Intl` `formatToParts` (legado); senão `` `${code} ` ``
   - Comentários em pt-BR alinhados ao spec
-
-- [ ] **Step 4: Testes PASS**
-
-- [ ] **Step 5: Commit** `fix(currency): BRL unico e centavos hibridos`
+- [x] **Step 4: Testes PASS**
+- [x] **Step 5: Commit** `fix(currency): BRL unico e centavos hibridos`
 
 ---
 
@@ -165,23 +164,24 @@ ALTER TABLE deals
   ALTER COLUMN currency SET DEFAULT 'BRL';
 ```
 
-- [ ] **Step 1: Criar arquivo**
-- [ ] **Step 2: Commit** `chore(db): default BRL em accounts e deals`
+- [x] **Step 1: Criar arquivo**
+- [x] **Step 2: Commit** `chore(db): default BRL em accounts e deals`
 
 ---
 
-### Task 4: UI Negócios informativa + fallbacks USD + overview
+### Task 4: UI Negócios + fallbacks USD + overview
 
 **Files:**
-- Modify: `src/components/settings/deals-settings.tsx` — remover select/save; texto fixo Real (BRL)
-- Modify: `messages/pt-BR.json` — chaves `Settings.deals` para copy informativa
+- Delete: `src/components/settings/deals-settings.tsx` — aba removida (nada configurável)
+- Modify: `src/components/settings/settings-sections.ts` — tirar `deals` do rail / SECTION_META
+- Modify: `src/app/(dashboard)/settings/page.tsx` — sem painel `deals` / hint BRL
+- Modify: `src/components/settings/settings-overview.tsx` — sem tile Negócios
+- Modify: `messages/pt-BR.json` — remover `Settings.sections.deals` e `Settings.deals`
 - Modify: `src/lib/automations/engine.ts` — `'USD'` → `DEFAULT_CURRENCY`
 - Modify: `src/hooks/use-auth.tsx` — comentários USD → BRL
-- Modify: `src/app/(dashboard)/settings/page.tsx` — hint `deals: 'BRL'`
-- Modify: `src/components/settings/settings-overview.tsx` — subtítulo fixo Real/BRL
 
-- [ ] **Step 1–4: Implementar e typecheck parcial**
-- [ ] **Step 5: Commit** `feat(settings): moeda BRL informativa sem seletor`
+- [x] **Step 1–4: Implementar e typecheck parcial**
+- [x] **Step 5: Commit** (incluído em `4bcded2`; remoção da aba em follow-up)
 
 ---
 
@@ -189,10 +189,10 @@ ALTER TABLE deals
 
 **Files:** todos os arquivos listados no grep de `toLocaleString('pt-BR')` / `toLocaleDateString('pt-BR')` em `src/` (dashboard, broadcasts, contacts, settings, inbox, pipelines, join, etc.)
 
-- [ ] Trocar datas → `formatDate` / `formatDateTime`
-- [ ] Trocar números → `formatNumber`
-- [ ] `contact-sidebar` deal value: preferir `formatCurrency` se for valor monetário
-- [ ] Commit: `refactor: centraliza formatacao de datas e numeros`
+- [x] Trocar datas → `formatDate` / `formatDateTime`
+- [x] Trocar números → `formatNumber`
+- [x] `contact-sidebar` deal value: preferir `formatCurrency` se for valor monetário
+- [x] Commit: `refactor: centraliza formatacao de datas e numeros`
 
 ---
 
@@ -204,7 +204,7 @@ ALTER TABLE deals
 - Modify: `.env.local.example` — remover ou comentar `NEXT_PUBLIC_APP_LOCALE`
 - Grep: garantir zero imports dos dicionários removidos
 
-- [ ] Commit: `chore(i18n): remove en/ko e fixa locale pt-BR`
+- [x] Commit: `chore(i18n): remove en/ko e fixa locale pt-BR`
 
 ---
 
@@ -214,21 +214,21 @@ ALTER TABLE deals
 - Modify: `AGENTS.md` e `.cursor/rules/geral.mdc` — padrão pt-BR + BRL
 - Run: `npx tsc --noEmit`, `npx vitest run src/lib/format.test.ts src/lib/currency.test.ts`, `npx eslint` nos paths tocados
 
-- [ ] Commit: `docs: padrao do produto pt-BR e BRL`
-- [ ] Push se o usuário pedir
+- [x] Commit: `docs: padrao do produto pt-BR e BRL`
+- [x] Push se o usuário pedir
 
 ---
 
 ## Spec coverage
 
-| Requisito | Task |
-|-----------|------|
-| `DEFAULT_LOCALE` + helpers | 1 |
-| currency BRL + híbrido + lista só BRL | 2 |
-| Migration DEFAULT | 3 |
-| UI sem seletor + fallbacks | 4 |
-| Zero toLocale solto | 5 |
-| Remover en/ko | 6 |
-| AGENTS / regras | 7 |
-| Histórico preservado | 2+3 (sem UPDATE) |
-| WhatsApp template lang intacto | (não tocado) |
+| Requisito | Task | Status |
+|-----------|------|--------|
+| `DEFAULT_LOCALE` + helpers | 1 | ✅ |
+| currency BRL + híbrido + lista só BRL | 2 | ✅ |
+| Migration DEFAULT | 3 | ✅ |
+| UI sem seletor + fallbacks (aba removida) | 4 | ✅ |
+| Zero toLocale solto | 5 | ✅ |
+| Remover en/ko | 6 | ✅ |
+| AGENTS / regras | 7 | ✅ |
+| Histórico preservado | 2+3 (sem UPDATE) | ✅ |
+| WhatsApp template lang intacto | (não tocado) | ✅ |

@@ -74,13 +74,13 @@ flowchart TB
 
 ## Fase 0 — Fundação Marinner (branding de produto)
 
-**Objetivo:** o produto deixa de se apresentar como “wacrm” na UI.
+**Objetivo:** o produto se apresenta como **Marinner** na UI.
 
 - Trocar títulos/metadata/toasts de marca para **Marinner** ([`src/app/layout.tsx`](../src/app/layout.tsx), `messages/pt-BR.json`, e-mails se houver)
 - `NEXT_PUBLIC_APP_NAME=Marinner`, `DOMAIN_BASE=marinner.com.br` (e local `localhost`)
 - Documentar URLs: apex `app.` vs tenants `slug.` → **[`docs/dominio-e-urls.md`](./dominio-e-urls.md)** (S02)
 - Helpers: [`src/lib/domain.ts`](../src/lib/domain.ts), [`src/lib/brand.ts`](../src/lib/brand.ts)
-- Manter package name interno `wacrm` se quiser (código); **usuário só vê Marinner**
+- Package npm: `marinner-crm`; **usuário só vê Marinner**
 
 **Done when:** login/dashboard/e-mails dizem Marinner; locale PT-BR já ok; env de domínio documentado.
 

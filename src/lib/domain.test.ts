@@ -1,9 +1,12 @@
 import { describe, expect, it, afterEach } from "vitest";
 import {
   getApexUrl,
+  getAuthCookieDomain,
+  getAuthCookieOptions,
   getDomainBase,
   getTenantUrl,
   isReservedSubdomain,
+  parseHost,
 } from "./domain";
 
 const ORIGINAL = {
@@ -44,5 +47,69 @@ describe("domain helpers", () => {
     expect(isReservedSubdomain("app")).toBe(true);
     expect(isReservedSubdomain("www")).toBe(true);
     expect(isReservedSubdomain("escola")).toBe(false);
+  });
+});
+
+describe("parseHost", () => {
+  it("trata localhost e 127.0.0.1 como apex", () => {
+    process.env.DOMAIN_BASE = "localhost";
+    expect(parseHost("localhost")).toEqual({ kind: "apex" });
+    expect(parseHost("localhost:3000")).toEqual({ kind: "apex" });
+    expect(parseHost("127.0.0.1:3000")).toEqual({ kind: "apex" });
+  });
+
+  it("extrai slug em *.localhost", () => {
+    process.env.DOMAIN_BASE = "localhost";
+    expect(parseHost("escola.localhost:3000")).toEqual({
+      kind: "tenant",
+      slug: "escola",
+    });
+    expect(parseHost("app.localhost")).toEqual({ kind: "apex" });
+    expect(parseHost("www.localhost")).toEqual({ kind: "www" });
+    expect(parseHost("admin.localhost")).toEqual({
+      kind: "reserved",
+      sub: "admin",
+    });
+  });
+
+  it("extrai slug em produção", () => {
+    process.env.DOMAIN_BASE = "marinner.com.br";
+    expect(parseHost("escola.marinner.com.br")).toEqual({
+      kind: "tenant",
+      slug: "escola",
+    });
+    expect(parseHost("app.marinner.com.br")).toEqual({ kind: "apex" });
+    expect(parseHost("www.marinner.com.br")).toEqual({ kind: "www" });
+    expect(parseHost("api.marinner.com.br")).toEqual({
+      kind: "reserved",
+      sub: "api",
+    });
+    expect(parseHost("marinner.com.br")).toEqual({ kind: "apex" });
+  });
+
+  it("host fora do DOMAIN_BASE vira apex (não inventa slug)", () => {
+    process.env.DOMAIN_BASE = "marinner.com.br";
+    expect(parseHost("evil.example.com")).toEqual({ kind: "apex" });
+  });
+});
+
+describe("getAuthCookieDomain / getAuthCookieOptions", () => {
+  it("usa .localhost em desenvolvimento local", () => {
+    process.env.DOMAIN_BASE = "localhost";
+    expect(getAuthCookieDomain()).toBe(".localhost");
+  });
+
+  it("usa .DOMAIN_BASE em produção", () => {
+    process.env.DOMAIN_BASE = "marinner.com.br";
+    expect(getAuthCookieDomain()).toBe(".marinner.com.br");
+  });
+
+  it("monta options com sameSite lax", () => {
+    process.env.DOMAIN_BASE = "marinner.com.br";
+    const opts = getAuthCookieOptions();
+    expect(opts.domain).toBe(".marinner.com.br");
+    expect(opts.path).toBe("/");
+    expect(opts.sameSite).toBe("lax");
+    expect(typeof opts.secure).toBe("boolean");
   });
 });

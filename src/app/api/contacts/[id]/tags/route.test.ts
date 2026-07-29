@@ -35,7 +35,12 @@ const context = {
   accountId: 'account-1',
   userId: 'user-1',
   role: 'agent',
-  account: { id: 'account-1', name: 'Acme' },
+  account: {
+    id: 'account-1',
+    name: 'Acme',
+    slug: null,
+    logo_url: null,
+  },
 };
 
 function request(method: 'POST' | 'DELETE', body: unknown) {

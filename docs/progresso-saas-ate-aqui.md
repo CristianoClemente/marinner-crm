@@ -1,6 +1,6 @@
 # Progresso — Marinner SaaS (até a Sprint S02)
 
-Documento de acompanhamento do trabalho feito neste repositório (`marinner-crm` / fork wacrm), da preparação do ambiente até as sprints SaaS iniciais.
+Documento de acompanhamento do trabalho feito neste repositório (`marinner-crm`), da preparação do ambiente até as sprints SaaS iniciais.
 
 **Última atualização:** 21/07/2026  
 **Branch de trabalho:** `develop`  
@@ -144,7 +144,7 @@ Documento de acompanhamento do trabalho feito neste repositório (`marinner-crm`
 
 ### 5. Sprint S01 — Marca Marinner na superfície ✅
 
-**Objetivo:** usuário só vê Marinner, nunca wacrm, na UI.
+**Objetivo:** usuário só vê Marinner na UI.
 
 **Feito**
 - `src/lib/brand.ts` (`APP_NAME` / `NEXT_PUBLIC_APP_NAME`)
@@ -156,8 +156,8 @@ Documento de acompanhamento do trabalho feito neste repositório (`marinner-crm`
 **Banco de dados:** **NÃO**
 
 **Pontos críticos**
-- **Não** renomear prefixo `wacrm_live_` nem headers `X-Wacrm-*` (quebra API/clientes).
-- Package npm pode continuar `wacrm`; marca visual é independente.
+- Prefixos API `marinner_live_` e headers `X-Marinner-*` alinhados à marca.
+- Package npm: `marinner-crm`.
 
 **Falhas e resoluções**  
 Nenhuma falha bloqueante nesta sprint.

@@ -1,4 +1,4 @@
-# Perguntas — SaaS B2B (Marinner / wacrm)
+# Perguntas — SaaS B2B (Marinner)
 
 Use este documento para marcar as escolhas. Com as respostas, montamos o plano técnico faseado.
 
@@ -96,11 +96,11 @@ Pense em: *“No primeiro mês de clientes pagantes, o boleto/PIX precisa sair s
 
 - [X] **Marinner como marca do SaaS** DEFAULT
 
-  **Exemplo:** login em `app.marinner.com.br`, título “Marinner”, e-mails “Equipe Marinner”. O produto deixa de se apresentar como wacrm.
+  **Exemplo:** login em `app.marinner.com.br`, título “Marinner”, e-mails “Equipe Marinner”.
 
-- [ ] **Manter wacrm / outra marca**
+- [ ] **Outra marca**
 
-  **Exemplo:** continua “wacrm” ou vira “OutroNome CRM”; Marinner fica só como empresa dona do código.
+  **Exemplo:** vira “OutroNome CRM”; Marinner fica só como empresa dona do código.
 
 - [X] **White-label por cliente** (logo/cores por empresa)
 
