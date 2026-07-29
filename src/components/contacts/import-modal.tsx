@@ -469,7 +469,7 @@ export function ImportModal({
 
         <div
           className={cn(
-            'min-h-0 flex-1 overflow-y-auto px-4 sm:px-6',
+            'min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-4 sm:px-6',
             (preview.length > 0 && !result) || result ? 'py-4' : 'py-0'
           )}
         >

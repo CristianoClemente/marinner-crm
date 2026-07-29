@@ -247,7 +247,7 @@ export function ContactForm({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-4 py-4">
+          <div className="min-h-0 flex-1 space-y-6 overflow-x-hidden overflow-y-auto overscroll-contain px-4 py-4">
             {/* Contato principal */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-3">
               <div className="min-w-0 space-y-1.5">

@@ -41,9 +41,43 @@ Coloque posição e tamanho em utilitário simples, escolhido em JS por variante
 - Largura fixa precisa de fallback fluido: `w-full sm:w-40`, nunca só `w-40`.
 - Linha com vários controles: `flex-wrap`, e `min-w-0` no filho que deve truncar.
 - Padding lateral menor no mobile: `px-4 sm:px-6`.
-- Zero scroll horizontal. `overflow-y-auto` faz o eixo X computar `auto`, então qualquer
-  filho que estoure passa a gerar barra horizontal. Tabela larga é a exceção, e deve ficar
-  contida no próprio `overflow-x-auto`.
+
+### Zero arrasto horizontal no mobile
+
+A especificação CSS promove o eixo `visible` para `auto` quando o outro eixo rola. Declarar
+só `overflow-y-auto` torna o X `auto` em silêncio — qualquer filho que estoure **1px**
+(input, chip, botão do rodapé) faz o container virar rolável na horizontal. No desktop
+passa despercebido; no celular, tocar e arrastar de lado mexe o formulário inteiro.
+Esse não é um comportamento aceitável.
+
+**Primitivos** (`dialog.tsx` / `sheet.tsx`) já resolvem a casca:
+
+| Componente | Classe obrigatória | Por quê |
+| --- | --- | --- |
+| `DialogContent` | `overflow-x-hidden overflow-y-auto overscroll-contain` | trava o X sem matar o Y; contém o overscroll |
+| `SheetContent` | `overflow-hidden overscroll-contain` | o painel em si **nunca** rola — quem rola é o corpo interno |
+
+**Corpo rolável interno** (form de contato, deal, abas do detalhe, import CSV, pickers,
+config de nó do flow, etc.) — mesmo idioma:
+
+```tsx
+// ❌ X vira auto → formulário arrastável de lado no celular
+className="min-h-0 flex-1 overflow-y-auto px-4 py-4"
+
+// ✅
+className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-4 py-4"
+```
+
+Regras que acompanham:
+
+- **Não use `touch-action: pan-y` no ancestral do modal.** Ele é herdado pelos
+  descendentes e mata scroll horizontal **legítimo** (ex.: tabela de preview do CSV em
+  `import-modal.tsx`, que tem o próprio `overflow-x-auto` interno).
+- Tabela larga é a única exceção de scroll X — e deve viver no **próprio**
+  `overflow-x-auto` interno, nunca no corpo do formulário.
+- `overscroll-contain` evita que o gesto no fim do formulário encadeie para a página atrás.
+- Ao criar um modal/slideover novo com corpo rolável, copie o padrão acima. Não reinventar
+  com `overflow-auto` solto nem omitir o `overflow-x-hidden`.
 
 ## Ações de cabeçalho: ícone no mobile, rótulo no desktop
 

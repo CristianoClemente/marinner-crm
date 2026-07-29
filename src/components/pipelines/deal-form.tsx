@@ -269,7 +269,7 @@ export function DealForm({
             </SheetDescription>
           </SheetHeader>
 
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
+          <div className="min-h-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto overscroll-contain px-5 py-4">
             <div className="flex flex-col gap-1.5">
               <Label className={fieldLabelClass}>{t("title")}</Label>
               <Input

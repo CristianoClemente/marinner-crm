@@ -56,7 +56,13 @@ function DialogContent({
           // `max-h` + `overflow-y-auto`: sem eles um diálogo mais alto que a
           // tela vazava para fora do viewport e, sendo `fixed` e centralizado
           // por `translate`, o conteúdo excedente ficava inalcançável.
-          "fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100dvh-2rem)] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto overscroll-contain rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          //
+          // `overflow-x-hidden` é obrigatório junto do `overflow-y-auto`: a
+          // especificação promove o eixo `visible` para `auto` quando o outro
+          // eixo rola, então qualquer filho que estoure um pixel torna o
+          // diálogo arrastável na horizontal — no celular isso fazia o
+          // formulário deslizar de lado ao tocar e arrastar a tela.
+          "fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100dvh-2rem)] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-x-hidden overflow-y-auto overscroll-contain rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className
         )}
         {...props}

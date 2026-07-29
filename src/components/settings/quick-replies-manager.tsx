@@ -244,7 +244,7 @@ export function QuickRepliesManager() {
             </DialogTitle>
           </DialogHeader>
           {draft && (
-            <div className="max-h-[70dvh] space-y-3 overflow-y-auto">
+            <div className="max-h-[70dvh] space-y-3 overflow-x-hidden overflow-y-auto overscroll-contain">
               <div>
                 <label className="mb-1 block text-sm text-muted-foreground">
                   {t("name")}
