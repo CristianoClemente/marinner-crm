@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { assertCronAuthorized } from "@/lib/cron/auth";
 import { supabaseAdmin } from "@/lib/flows/admin-client";
 import { runChatMediaGc } from "@/lib/storage/chat-media-gc";
 
@@ -7,20 +8,11 @@ export const runtime = "nodejs";
 
 /**
  * GC de mídia de conversa expirada (retenção 180d).
- * Auth: header `x-cron-secret` = AUTOMATION_CRON_SECRET.
+ * Auth: `x-cron-secret` ou `Authorization: Bearer` (Vercel Cron).
  */
 async function handle(request: Request) {
-  const expected = process.env.AUTOMATION_CRON_SECRET;
-  if (!expected) {
-    return NextResponse.json(
-      { error: "cron não configurado" },
-      { status: 503 },
-    );
-  }
-  const supplied = request.headers.get("x-cron-secret") ?? "";
-  if (supplied !== expected) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const denied = assertCronAuthorized(request);
+  if (denied) return denied;
 
   try {
     const result = await runChatMediaGc(supabaseAdmin());

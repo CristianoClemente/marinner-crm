@@ -39,172 +39,105 @@
 | PATCH | `/api/account/storage-packages/[id]` | admin+ `{ status: "canceled" }` |
 | GET/POST | `/api/storage/cron` | `x-cron-secret` |
 
-## Agendar o cron (passo a passo)
+## Agendar o cron na Vercel (passo a passo)
 
-O endpoint **não roda sozinho**. Algo externo precisa chamar a URL 1×/dia com o secret.
+O app está na **Vercel**. O projeto já inclui `vercel.json` com um cron diário:
 
-Endpoints que usam o **mesmo** `AUTOMATION_CRON_SECRET`:
+```json
+{ "crons": [{ "path": "/api/cron/daily", "schedule": "0 6 * * *" }] }
+```
 
-| Rota | Função |
-|------|--------|
-| `/api/automations/cron` | Retoma waits de automações |
-| `/api/flows/cron` | Limpa runs de flow travados |
-| `/api/storage/cron` | Apaga mídia de conversa expirada (180d) |
+`0 6 * * *` = **06:00 UTC** (≈ 03:00 BRT). Um único job cobre automations + flows + storage (limite do plano Hobby: 1 cron/dia).
 
-**MCP:** não há MCP da Hostinger. Dá para agendar via **Cloudflare Workers Cron Trigger** (MCP Cloudflare) ou cron do painel / GitHub Actions (abaixo).
+### 1. Gerar o secret
 
----
-
-### 1. Criar o secret (uma vez)
-
-No servidor **e** no `.env.local`:
-
-```bash
-# PowerShell
+```powershell
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-Cole no `.env.local` e no painel do host (produção):
+### 2. Colar nas Environment Variables da Vercel
+
+Project → **Settings → Environment Variables** (Production + Preview se quiser):
+
+| Name | Value |
+|------|--------|
+| `CRON_SECRET` | o hex gerado |
+| `AUTOMATION_CRON_SECRET` | **o mesmo** hex |
+
+A Vercel envia `Authorization: Bearer $CRON_SECRET` nos Cron Jobs.  
+`AUTOMATION_CRON_SECRET` cobre curl/manual e os endpoints individuais.
+
+Também no `.env.local` para testar local:
 
 ```env
-AUTOMATION_CRON_SECRET=<cole-o-hex-aqui>
+CRON_SECRET=<mesmo>
+AUTOMATION_CRON_SECRET=<mesmo>
 ```
 
-Reinicie o app depois de salvar. **Não** cole o valor no chat.
+### 3. Deploy
 
----
+Faça deploy da branch que tem o `vercel.json` (push / Promote).  
+Em **Settings → Cron Jobs** (ou Deployments → projeto) confira o job `/api/cron/daily`.
 
-### 2. Confirmar a URL pública do app
+### 4. Testar
 
-Use a URL de produção (não `localhost`), ex.:
+**No dashboard:** Cron Jobs → Run / aguardar próxima execução → Logs.
 
-```text
-https://app.marinner.com.br/api/storage/cron
-```
-
-(Teste local só com `curl` no seu PC apontando para `http://localhost:3000`.)
-
----
-
-### 3. Teste manual (antes de agendar)
+**Manual (produção):**
 
 ```bash
-curl -i -X POST "https://SEU_DOMINIO/api/storage/cron" ^
+curl -i -X GET "https://SEU_PROJETO.vercel.app/api/cron/daily" ^
+  -H "Authorization: Bearer SEU_SECRET"
+```
+
+Ou com o header legado:
+
+```bash
+curl -i -X POST "https://SEU_PROJETO.vercel.app/api/storage/cron" ^
   -H "x-cron-secret: SEU_SECRET"
 ```
 
-Respostas esperadas:
-
 | Status | Significado |
 |--------|-------------|
-| `200` + `{ "ok": true, "scanned": … }` | OK |
-| `401` | Secret errado |
-| `503` | `AUTOMATION_CRON_SECRET` não está no env do servidor |
+| `200` | OK |
+| `401` | Secret errado / não bate com env |
+| `503` | Nenhum de `CRON_SECRET` / `AUTOMATION_CRON_SECRET` no env |
 
-Sugestão: no mesmo script, pingue também automations e flows:
+### 5. Checklist Vercel
 
-```bash
-curl -s -X POST "https://SEU_DOMINIO/api/automations/cron" -H "x-cron-secret: SEU_SECRET"
-curl -s -X POST "https://SEU_DOMINIO/api/flows/cron" -H "x-cron-secret: SEU_SECRET"
-curl -s -X POST "https://SEU_DOMINIO/api/storage/cron" -H "x-cron-secret: SEU_SECRET"
-```
+- [ ] `CRON_SECRET` + `AUTOMATION_CRON_SECRET` iguais na Production  
+- [ ] Redeploy depois de salvar env  
+- [ ] `vercel.json` no deploy  
+- [ ] Teste `curl` / Run now retorna 200  
+- [ ] Logs do `/api/cron/daily` mostram os três `results`
 
----
+### Endpoints (referência)
 
-### 4A — Hostinger (painel do site) — recomendado se o app já está lá
+| Rota | Função |
+|------|--------|
+| `/api/cron/daily` | Orquestra os três (use este no Vercel Cron) |
+| `/api/automations/cron` | Retoma waits |
+| `/api/flows/cron` | Limpa runs travados |
+| `/api/storage/cron` | GC mídia 180d |
 
-1. hPanel → seu site / Websites → **Cron Jobs** (ou Advanced → Cron Jobs).
-2. **Common Settings** / schedule: `0 3 * * *` (todo dia 03:00 — fuso do servidor; ajuste se for UTC/BRT).
-3. Command (Linux):
-
-```bash
-curl -s -X POST "https://SEU_DOMINIO/api/storage/cron" -H "x-cron-secret: SEU_SECRET"
-```
-
-Ou os três endpoints numa linha:
-
-```bash
-S=SEU_SECRET; B=https://SEU_DOMINIO; curl -s -X POST "$B/api/automations/cron" -H "x-cron-secret: $S"; curl -s -X POST "$B/api/flows/cron" -H "x-cron-secret: $S"; curl -s -X POST "$B/api/storage/cron" -H "x-cron-secret: $S"
-```
-
-4. Salve. No dia seguinte confira o log do cron / resposta 200.
-
-> Em alguns planos Hostinger o comando usa o caminho completo do `curl` (`/usr/bin/curl`). Se falhar, use esse path.
+> **Plano Pro:** se quiser frequência maior (ex. flows a cada hora), dá para acrescentar mais entradas em `vercel.json`. No Hobby mantenha só o daily.
 
 ---
 
-### 4B — Cloudflare Worker + Cron Trigger (via MCP / Dashboard)
+### Alternativas (se não usar Vercel Cron)
 
-Útil se o domínio já está na Cloudflare e você quer o agendador fora da Hostinger.
+- curl + GitHub Actions — ver histórico do doc  
+- Cloudflare Worker Cron — MCP Cloudflare  
 
-1. Crie um Worker (Dashboard → Workers & Pages → Create) **ou** peça ao agente com MCP Cloudflare para criar o script.
-2. Código mínimo do Worker:
-
-```js
-export default {
-  async scheduled(event, env, ctx) {
-    const base = env.APP_BASE_URL.replace(/\/+$/, "");
-    const headers = { "x-cron-secret": env.CRON_SECRET };
-    for (const path of [
-      "/api/automations/cron",
-      "/api/flows/cron",
-      "/api/storage/cron",
-    ]) {
-      await fetch(`${base}${path}`, { method: "POST", headers });
-    }
-  },
-};
-```
-
-3. Variables / Secrets do Worker:
-   - `APP_BASE_URL` = `https://app.seudominio.com`
-   - `CRON_SECRET` = mesmo valor de `AUTOMATION_CRON_SECRET`
-4. Triggers → **Add Cron Trigger** → `0 6 * * *` (06:00 UTC ≈ 03:00 BRT).
-5. Deploy. Em Workers → Logs, confira a execução.
-
-Com MCP Cloudflare o agente pode listar/atualizar schedules em  
-`/accounts/{id}/workers/scripts/{name}/schedules` — mas o secret deve ir só como **Secret** do Worker (não no chat).
-
----
-
-### 4C — GitHub Actions (alternativa)
-
-`.github/workflows/storage-cron.yml`:
-
-```yaml
-name: storage-cron
-on:
-  schedule:
-    - cron: "0 6 * * *"   # 06:00 UTC
-  workflow_dispatch:
-jobs:
-  ping:
-    runs-on: ubuntu-latest
-    steps:
-      - run: |
-          curl -fsS -X POST "${{ secrets.APP_BASE_URL }}/api/storage/cron" \
-            -H "x-cron-secret: ${{ secrets.AUTOMATION_CRON_SECRET }}"
-```
-
-Secrets do repo: `APP_BASE_URL`, `AUTOMATION_CRON_SECRET`.
-
----
-
-### Checklist
-
-- [ ] `AUTOMATION_CRON_SECRET` no `.env.local` e na produção  
-- [ ] Teste `curl` retorna 200  
-- [ ] Job diário configurado (Hostinger **ou** Worker **ou** Actions)  
-- [ ] (Opcional) mesmos pings para `/api/automations/cron` e `/api/flows/cron`
-
-O GC processa até **50** objetos por execução — se houver backlog, o próximo ping continua.
+O GC de storage processa até **50** objetos por execução.
 
 ## Env opcional
 
 ```env
 CHAT_MEDIA_RETENTION_DAYS=180
 CHAT_MEDIA_BASE_QUOTA_BYTES=5368709120
-AUTOMATION_CRON_SECRET=...
+CRON_SECRET=...
+AUTOMATION_CRON_SECRET=...   # mesmo valor
 STORAGE_DRIVER=r2
 ```
 
