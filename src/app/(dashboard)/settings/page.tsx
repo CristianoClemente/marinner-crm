@@ -16,6 +16,7 @@ import { QuickRepliesManager } from '@/components/settings/quick-replies-manager
 import { FieldsAndTagsPanel } from '@/components/settings/fields-and-tags-panel';
 import { MembersTab } from '@/components/settings/members-tab';
 import { ApiKeysSettings } from '@/components/settings/api-keys-settings';
+import { StoragePanel } from '@/components/settings/storage-panel';
 import {
   resolveSection,
   type SettingsSection,
@@ -75,6 +76,7 @@ function SettingsPageInner() {
     'quick-replies': <QuickRepliesManager />,
     fields: <FieldsAndTagsPanel />,
     members: <MembersTab />,
+    storage: <StoragePanel />,
     api: <ApiKeysSettings />,
   };
 

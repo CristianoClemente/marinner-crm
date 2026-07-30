@@ -1,8 +1,10 @@
 # Design: Retenção e quota de mídia de conversas (R2)
 
 **Data:** 2026-07-30  
-**Status:** aprovado (aguardando plano)  
+**Status:** implementado  
 **Abordagem:** 1 — catálogo de objetos + cron  
+**Plano:** `docs/superpowers/plans/2026-07-30-chat-media-retention-quota.md`  
+**Ops:** `docs/chat-media-retention.md`  
 **Depende de:** `docs/superpowers/specs/2026-07-30-r2-storage-migration-design.md`
 
 ## Decisões

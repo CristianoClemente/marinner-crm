@@ -396,6 +396,8 @@ Quando quiser **implementar** no código (não só configurar a conta):
 2. Implementar `src/lib/storage/r2.ts` + adapter em `upload-media`.
 3. Feature flag e smoke: branding → inbox → flows.
 
+**Retenção / quota de conversas:** ver `docs/chat-media-retention.md` e a spec `docs/superpowers/specs/2026-07-30-chat-media-retention-quota-design.md` (180 dias, 5 GB, pacotes admin, cron `/api/storage/cron`).
+
 ---
 
 ## Referências

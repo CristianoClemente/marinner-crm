@@ -11,6 +11,7 @@ import {
   SendMessageError,
 } from '@/lib/whatsapp/send-message'
 import { findOrCreateConversationForContact } from '@/lib/whatsapp/find-or-create-conversation'
+import { linkChatMediaToMessage } from '@/lib/storage/chat-media-registry'
 
 // The dashboard's outbound-send endpoint. It owns auth, per-user rate
 // limiting, and the two ways the UI targets a thread — an existing
@@ -72,6 +73,7 @@ export async function POST(request: Request) {
       content_text,
       media_url,
       filename,
+      media_path,
       template_name,
       template_language,
       template_params,
@@ -187,6 +189,20 @@ export async function POST(request: Request) {
         replyToMessageId: reply_to_message_id,
         senderId: user.id,
       })
+
+      if (
+        typeof media_path === 'string' &&
+        media_path.trim() &&
+        result.messageId
+      ) {
+        await linkChatMediaToMessage(supabase, {
+          accountId,
+          r2Key: media_path.trim().replace(/^\/+/, ''),
+          messageId: result.messageId,
+        }).catch((linkErr) => {
+          console.error('[whatsapp/send] link chat media:', linkErr)
+        })
+      }
 
       return NextResponse.json({
         success: true,

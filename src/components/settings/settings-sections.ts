@@ -1,5 +1,6 @@
 import {
   FileText,
+  HardDrive,
   KeyRound,
   LayoutGrid,
   Palette,
@@ -30,6 +31,7 @@ export const SETTINGS_SECTIONS = [
   'quick-replies',
   'fields',
   'members',
+  'storage',
   'api',
 ] as const;
 
@@ -55,6 +57,7 @@ export const SECTION_META: Record<SettingsSection, SectionMeta> = {
   'quick-replies': { id: 'quick-replies', label: 'Quick replies', icon: Zap, group: 'workspace' },
   fields: { id: 'fields', label: 'Tags', icon: Tags, group: 'workspace' },
   members: { id: 'members', label: 'Team members', icon: UsersRound, group: 'workspace' },
+  storage: { id: 'storage', label: 'Storage', icon: HardDrive, group: 'workspace' },
   api: { id: 'api', label: 'API keys', icon: KeyRound, group: 'workspace' },
 };
 

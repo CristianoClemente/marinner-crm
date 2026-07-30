@@ -11,6 +11,7 @@ import {
   type LogicalBucket,
 } from "@/lib/storage/bucket-map";
 import { deleteR2Object } from "@/lib/storage/r2";
+import { markChatMediaDeletedByKey } from "@/lib/storage/chat-media-registry";
 
 export const runtime = "nodejs";
 
@@ -64,8 +65,6 @@ export async function DELETE(request: Request) {
     }
 
     if (storageDriver() === "r2") {
-      // Paths legados do Supabase (sem prefixo R2) não existem no R2 —
-      // ignore com sucesso para GC de drafts mistos.
       const looksR2 =
         path.startsWith("chat/") ||
         path.startsWith("flow/") ||
@@ -76,6 +75,15 @@ export async function DELETE(request: Request) {
       }
       const target = resolveR2Target(logicalBucket);
       await deleteR2Object({ bucket: target.r2Bucket, key: path });
+      if (logicalBucket === "chat-media") {
+        await markChatMediaDeletedByKey(
+          ctx.supabase,
+          ctx.accountId,
+          path,
+        ).catch((err) => {
+          console.error("[storage/object] mark deleted:", err);
+        });
+      }
       return NextResponse.json({ ok: true });
     }
 
@@ -86,6 +94,13 @@ export async function DELETE(request: Request) {
       return NextResponse.json(
         { error: error.message || "Falha ao remover arquivo." },
         { status: 500 },
+      );
+    }
+    if (logicalBucket === "chat-media") {
+      await markChatMediaDeletedByKey(ctx.supabase, ctx.accountId, path).catch(
+        (err) => {
+          console.error("[storage/object] mark deleted:", err);
+        },
       );
     }
     return NextResponse.json({ ok: true });

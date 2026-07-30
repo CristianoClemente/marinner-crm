@@ -10,6 +10,10 @@ import {
   storageDriver,
   supabaseBucketFor,
 } from "@/lib/storage/bucket-map";
+import {
+  assertChatQuotaAvailable,
+  registerChatMediaObject,
+} from "@/lib/storage/chat-media-registry";
 import { MEDIA_MAX_BYTES } from "@/lib/storage/media-path";
 import { putR2Object } from "@/lib/storage/r2";
 
@@ -37,10 +41,7 @@ export async function POST(request: Request) {
     }
 
     if (file.size <= 0) {
-      return NextResponse.json(
-        { error: "Arquivo vazio." },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Arquivo vazio." }, { status: 400 });
     }
 
     if (file.size > MEDIA_MAX_BYTES) {
@@ -53,6 +54,27 @@ export async function POST(request: Request) {
     const ctx = await requireRole(minRoleForBucket(logicalBucket));
     const contentType = file.type || "application/octet-stream";
     const bytes = Buffer.from(await file.arrayBuffer());
+
+    if (logicalBucket === "chat-media") {
+      try {
+        await assertChatQuotaAvailable(ctx.supabase, ctx.accountId, file.size);
+      } catch (quotaErr) {
+        const status =
+          quotaErr instanceof Error &&
+          typeof (quotaErr as Error & { status?: number }).status === "number"
+            ? (quotaErr as Error & { status: number }).status
+            : 413;
+        return NextResponse.json(
+          {
+            error:
+              quotaErr instanceof Error
+                ? quotaErr.message
+                : "Limite de armazenamento atingido.",
+          },
+          { status },
+        );
+      }
+    }
 
     if (storageDriver() === "r2") {
       const target = resolveR2Target(logicalBucket);
@@ -69,7 +91,20 @@ export async function POST(request: Request) {
         contentType,
         publicBaseUrl: target.publicBaseUrl,
       });
-      return NextResponse.json(result);
+
+      let objectId: string | undefined;
+      if (logicalBucket === "chat-media") {
+        const registered = await registerChatMediaObject(ctx.supabase, {
+          accountId: ctx.accountId,
+          r2Key: result.path,
+          publicUrl: result.publicUrl,
+          bytes: file.size,
+          contentType,
+        });
+        objectId = registered.id;
+      }
+
+      return NextResponse.json({ ...result, objectId });
     }
 
     const sbBucket = supabaseBucketFor(logicalBucket);
@@ -99,7 +134,19 @@ export async function POST(request: Request) {
       data: { publicUrl },
     } = ctx.supabase.storage.from(sbBucket).getPublicUrl(path);
 
-    return NextResponse.json({ publicUrl, path });
+    let objectId: string | undefined;
+    if (logicalBucket === "chat-media") {
+      const registered = await registerChatMediaObject(ctx.supabase, {
+        accountId: ctx.accountId,
+        r2Key: path,
+        publicUrl,
+        bytes: file.size,
+        contentType,
+      });
+      objectId = registered.id;
+    }
+
+    return NextResponse.json({ publicUrl, path, objectId });
   } catch (err) {
     return toErrorResponse(err);
   }

@@ -543,6 +543,7 @@ export function MessageThread({
             conversation_id: conversation.id,
             message_type: payload.kind,
             media_url: payload.mediaUrl,
+            media_path: payload.path,
             content_text: contentText,
             filename: payload.filename,
             reply_to_message_id: payload.replyToId,
