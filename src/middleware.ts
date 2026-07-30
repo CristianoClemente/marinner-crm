@@ -26,6 +26,13 @@ const PROTECTED_PATHS = [
   "/settings",
   "/agents",
   "/flows",
+  "/catalog",
+  "/pos",
+  "/class-locations",
+  "/equipment",
+  "/instructors",
+  "/my-availability",
+  "/notifications",
 ] as const;
 
 const AUTH_PATHS = ["/login", "/signup", "/forgot-password"] as const;

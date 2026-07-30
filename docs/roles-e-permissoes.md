@@ -2,7 +2,7 @@
 
 Documento de referência do modelo de acesso da conta (multi-usuário).  
 Fonte canônica de capabilities no código: `src/lib/auth/roles.ts`.  
-Espelho no banco: enum `account_role_enum` + helper `is_account_member()` (migration `017_account_sharing.sql`).
+Espelho no banco: enum `account_role_enum` + helper `is_account_member()` (migrations `017`, ranks instructor em `049`/`050`).
 
 ---
 
@@ -20,8 +20,11 @@ Espelho no banco: enum `account_role_enum` + helper `is_account_member()` (migra
 | `admin`  | 3    | Configurações + gestão de membros           |
 | `agent`  | 2    | Operação (inbox, contatos, deals, flows…)   |
 | `viewer` | 1    | Somente leitura                             |
+| `instructor` | 0 | Domínio de aulas; **não** passa gates viewer+ do CRM |
 
 Não existe role `manager`. “Agent” também aparece como `sender_type` de mensagem (`customer` | `agent` | `bot`) — **não** é o role da conta.
+
+`instructor` foi adicionado nas migrations `049` + `050` (enum e ranks em `is_account_member`).
 
 ---
 
@@ -62,7 +65,7 @@ Não existe role `manager`. “Agent” também aparece como `sender_type` de me
 ### `account_invitations`
 - `account_id`, `token_hash`, `role` (CHECK: **não** pode ser `owner`)
 - Expiry / metadados de aceite
-- Roles convidáveis: `admin` | `agent` | `viewer`
+- Roles convidáveis: `admin` | `agent` | `viewer` | `instructor`
 
 ### Signup (`handle_new_user`)
 Todo signup cria uma conta pessoal + profile com **`account_role = 'owner'`**.  
@@ -74,14 +77,17 @@ Ao aceitar convite, o usuário **sai** dessa conta pessoal (se vazia) e entra na
 
 Predicados em `src/lib/auth/roles.ts` — **usar sempre estes**, nunca comparar strings de role soltas.
 
-| Capability | Predicado | owner | admin | agent | viewer |
-|------------|-----------|:-----:|:-----:|:-----:|:------:|
-| Ler dados da conta | membro (`viewer+`) | ✓ | ✓ | ✓ | ✓ |
-| Operação (enviar msg, CRUD contatos/deals/broadcasts/automations/flows) | `canSendMessages` → `agent+` | ✓ | ✓ | ✓ | ✗ |
-| Editar settings (WhatsApp, templates, tags, pipelines, AI config, API keys…) | `canEditSettings` → `admin+` | ✓ | ✓ | ✗ | ✗ |
-| Gerenciar membros / convites / mudar roles | `canManageMembers` → `admin+` | ✓ | ✓ | ✗ | ✗ |
-| Transferir ownership | `canTransferOwnership` | ✓ | ✗ | ✗ | ✗ |
-| Deletar conta | `canDeleteAccount` | ✓ | ✗ | ✗ | ✗ |
+| Capability | Predicado | owner | admin | agent | viewer | instructor |
+|------------|-----------|:-----:|:-----:|:-----:|:------:|:----------:|
+| Ler dados operacionais do CRM | membro (`viewer+`) | ✓ | ✓ | ✓ | ✓ | ✗ |
+| Operação (enviar msg, CRUD contatos/deals/broadcasts/automations/flows) | `canSendMessages` → `agent+` | ✓ | ✓ | ✓ | ✗ | ✗ |
+| Editar settings (WhatsApp, templates, tags, pipelines, AI config, API keys…) | `canEditSettings` → `admin+` | ✓ | ✓ | ✗ | ✗ | ✗ |
+| Gerenciar membros / convites / mudar roles | `canManageMembers` → `admin+` | ✓ | ✓ | ✗ | ✗ | ✗ |
+| Transferir ownership | `canTransferOwnership` | ✓ | ✗ | ✗ | ✗ | ✗ |
+| Deletar conta | `canDeleteAccount` | ✓ | ✗ | ✗ | ✗ | ✗ |
+| Disponibilidade / perfil de aulas (self) | `isInstructorRole` + APIs `/me` | ✗* | ✗* | ✗* | ✗ | ✓ |
+
+\*Admin+ gerencia fichas de instrutores via módulo admin; o predicado `isInstructorRole` é só para o login de domínio.
 
 `useCan` mapeia:
 
@@ -146,8 +152,10 @@ Enquanto `profileLoading`, `useCan` e `RequireRole` falham fechados (`false` / n
 Função `SECURITY DEFINER` que compara ranks:
 
 ```
-owner=4 ≥ admin=3 ≥ agent=2 ≥ viewer=1
+owner=4 ≥ admin=3 ≥ agent=2 ≥ viewer=1 ≥ instructor=0
 ```
+
+Default de `min_role` é `viewer`, então **instructor não passa** policies CRM que usam `is_account_member(account_id)` sem min explícito.
 
 Padrão geral:
 
@@ -156,7 +164,9 @@ Padrão geral:
 | **Operacional** (contacts, conversations, messages, deals, broadcasts, automations, flows, contact_notes, contact_tags…) | `viewer+` | `agent+` |
 | **Settings** (tags, whatsapp_config, message_templates, pipelines, api_keys write, ai_configs, invitations…) | `viewer+` | `admin+` |
 | **Logs / runs** | `viewer+` | em geral só `service_role` |
-| **profiles** | membros da conta | UPDATE só da própria linha; trigger 034 impede mudança de `account_role`/`account_id` pelo client |
+| **profiles** | próprios + membros `viewer+` | UPDATE só da própria linha; trigger 034 impede mudança de `account_role`/`account_id` pelo client |
+| **accounts** SELECT | qualquer membro (`instructor+`, rank ≥ 0) | migration `052` — necessário para `getCurrentAccount` do instructor |
+| **instructors*** | admin+; instructor só a própria ficha / weekly / unavailability | Locais N:N: admin escreve, instructor lê |
 
 Storage (`flow-media`, `chat-media`): costuma exigir membership da conta, sem distinção fina admin/agent nas policies de upload.
 
@@ -175,7 +185,9 @@ Storage (`flow-media`, `chat-media`): costuma exigir membership da conta, sem di
 | Tags (catálogo) | todos | `admin+` | |
 | WhatsApp config / templates | todos | `admin+` | UI de settings ainda fraca em gates |
 | Quick replies | todos | `agent+` (RLS) | Vivem em Settings — inconsistência UX |
-| Membros / convites | admin+ vê gestão | `admin+` | |
+| Membros / convites | admin+ vê gestão | `admin+` | Inclui role `instructor` |
+| Instrutores (ficha) | `admin+` | `admin+` | Soft delete → `inactive` |
+| Disponibilidade (self) | próprio instructor | próprio instructor | `/my-availability`, APIs `/api/instructors/me/*` |
 | API keys (mint) | admin+ | `admin+` | Scopes da chave ≠ role do usuário |
 | AI config / knowledge | admin+ edita | `admin+` | |
 | Transfer ownership | — | `owner` | API/RPC prontos; UI incompleta |
@@ -185,7 +197,7 @@ Storage (`flow-media`, `chat-media`): costuma exigir membership da conta, sem di
 
 ## 7. Convites e onboarding
 
-1. **Admin+** cria convite: `POST /api/account/invitations` com role ∈ `{admin, agent, viewer}`.
+1. **Admin+** cria convite: `POST /api/account/invitations` com role ∈ `{admin, agent, viewer, instructor}`.
 2. Token plaintext exibido **uma vez**; no banco fica `token_hash`.
 3. Link `/join/[token]` → `peek_invitation` (anon/authenticated).
 4. Se o convidado ainda não tem conta: signup cria conta pessoal owner.
@@ -232,13 +244,14 @@ Evitar `role === 'admin'` espalhado — quebra owner e diverge do SQL.
 ## 10. Gaps e inconsistências conhecidos
 
 1. **`profiles.role` legado** ainda existe; auth usa só `account_role`.
-2. **Middleware** não cobre `/flows`, `/agents`, `/notifications`.
+2. **Middleware** não cobria várias rotas do dashboard; a lista inclui agora `/catalog`, `/pos`, `/class-locations`, `/equipment`, `/instructors`, `/my-availability`, `/notifications` (além das originais). Revalidar se faltar path novo.
 3. **Várias rotas WhatsApp** checam só `getUser()` e delegam ao RLS — viewer autenticado pode bater na API e falhar só no Postgres (sem 403 tipado cedo).
 4. **Settings UI** nem sempre esconde seções admin-only (rail/comentários `adminOnly` incompletos).
 5. **`canDeleteAccount`** sem superfície de UI.
 6. **Transfer ownership**: backend ok; Members tab ainda indica UI futura.
 7. **Quick replies** = operacional (`agent+`) dentro de Settings (percebido como admin).
-8. **Sidebar** mostra os mesmos links para todos os roles; o bloqueio é por ação/RLS, não por menu.
+8. **Sidebar** CRM operacional é igual para owner/admin/agent/viewer; **instructor** tem nav mínima (`/my-availability` + settings) e redirect no `DashboardShell` se abrir URL operacional.
+9. **Vínculo instructor ↔ user** após convite é **manual** (`POST …/link-user`); auto-link no redeem fica fora desta fatia.
 
 ---
 

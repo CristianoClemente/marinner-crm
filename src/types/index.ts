@@ -667,3 +667,285 @@ export interface QuickReply {
   created_at: string;
   updated_at: string;
 }
+
+// ============================================================
+// Catálogo / estoque / PDV (migration 043)
+// ============================================================
+
+export type CatalogItemKind = 'product' | 'service';
+
+export type StockMovementReason =
+  | 'sale'
+  | 'adjustment_in'
+  | 'adjustment_out'
+  | 'correction'
+  | 'initial'
+  | 'sale_refund';
+
+export type PaymentMethod = 'cash' | 'pix' | 'card' | 'other';
+
+export type DiscountType = 'none' | 'fixed' | 'percent';
+
+export type SaleStatus = 'confirmed' | 'partially_refunded' | 'cancelled';
+
+export interface CatalogItem {
+  id: string;
+  account_id: string;
+  kind: CatalogItemKind;
+  name: string;
+  description?: string | null;
+  sku?: string | null;
+  unit_price: number;
+  stock_qty: number;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StockMovement {
+  id: string;
+  account_id: string;
+  catalog_item_id: string;
+  qty: number;
+  reason: StockMovementReason;
+  note?: string | null;
+  sale_id?: string | null;
+  refund_id?: string | null;
+  created_by: string;
+  created_at: string;
+}
+
+export interface Sale {
+  id: string;
+  account_id: string;
+  /** Número sequencial na conta (texto do inteiro; UI usa formatSaleCode). */
+  code: string;
+  status: SaleStatus;
+  contact_id?: string | null;
+  payment_method: PaymentMethod;
+  subtotal: number;
+  discount_type: DiscountType;
+  discount_value: number;
+  discount_amount: number;
+  total: number;
+  sold_by: string;
+  created_at: string;
+  items?: SaleItem[];
+  refunds?: SaleRefund[];
+  contact?: Contact | null;
+}
+
+export interface SaleItem {
+  id: string;
+  sale_id: string;
+  catalog_item_id: string;
+  kind: CatalogItemKind;
+  name: string;
+  unit_price: number;
+  qty: number;
+  line_total: number;
+  /** Preenchido no GET detalhe / UI de estorno. */
+  qty_refunded?: number;
+  qty_remaining?: number;
+}
+
+export interface SaleRefund {
+  id: string;
+  account_id: string;
+  sale_id: string;
+  refunded_by: string;
+  note?: string | null;
+  subtotal_refunded: number;
+  discount_refunded: number;
+  total_refunded: number;
+  created_at: string;
+  items?: SaleRefundItem[];
+}
+
+export interface SaleRefundItem {
+  id: string;
+  refund_id: string;
+  sale_item_id: string;
+  catalog_item_id: string;
+  qty: number;
+  unit_price: number;
+  line_total: number;
+}
+
+// ============================================================
+// Locais de aula (migration 047)
+// ============================================================
+
+export type ClassLocationStatus = "active" | "inactive";
+
+export type ClassLocationCostType =
+  | "monthly_fee"
+  | "per_class"
+  | "per_day"
+  | "per_student";
+
+export interface ClassLocation {
+  id: string;
+  account_id: string;
+  name: string;
+  endereco?: string | null;
+  numero?: string | null;
+  complemento?: string | null;
+  bairro?: string | null;
+  cidade?: string | null;
+  estado?: string | null;
+  cep?: string | null;
+  status: ClassLocationStatus;
+  has_expense: boolean;
+  expense_type?: ClassLocationCostType | null;
+  expense_amount?: number | null;
+  created_at: string;
+  updated_at: string;
+  bonus_rules?: ClassLocationBonusRule[];
+}
+
+export interface ClassLocationBonusRule {
+  id: string;
+  account_id: string;
+  location_id: string;
+  bonus_type: ClassLocationCostType;
+  bonus_amount: number;
+  starts_on: string;
+  ends_on?: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// ============================================================
+// Equipamentos / frota (migration 048)
+// ============================================================
+
+export type EquipmentKind = "vehicle" | "vessel";
+export type EquipmentSubtype = "car" | "motorcycle" | "jet_ski" | "boat";
+export type EngineCycle = "2t" | "4t";
+export type EquipmentFuel =
+  | "gasoline"
+  | "ethanol"
+  | "flex"
+  | "diesel"
+  | "electric";
+export type MeterUnit = "km" | "hours";
+export type EquipmentStatus =
+  | "active"
+  | "in_maintenance"
+  | "inactive"
+  | "decommissioned";
+export type MaintenanceKind = "preventive" | "corrective";
+export type MaintenanceStatus =
+  | "scheduled"
+  | "in_progress"
+  | "completed"
+  | "cancelled";
+
+export interface Equipment {
+  id: string;
+  account_id: string;
+  name: string;
+  kind: EquipmentKind;
+  subtype: EquipmentSubtype;
+  brand: string;
+  model: string;
+  engine_cycle?: EngineCycle | null;
+  fuel: EquipmentFuel;
+  meter_value: number;
+  meter_unit: MeterUnit;
+  document_expires_on: string;
+  plate_or_registration: string;
+  dpem_expires_on?: string | null;
+  dpem_protocol?: string | null;
+  status: EquipmentStatus;
+  created_at: string;
+  updated_at: string;
+  maintenances?: EquipmentMaintenance[];
+  /** Preenchido na listagem: próxima next_due_on ativa. */
+  next_maintenance_due_on?: string | null;
+}
+
+export interface EquipmentMaintenance {
+  id: string;
+  account_id: string;
+  equipment_id: string;
+  kind: MaintenanceKind;
+  performed_on: string;
+  description: string;
+  meter_value_at?: number | null;
+  cost?: number | null;
+  vendor?: string | null;
+  next_due_on?: string | null;
+  status: MaintenanceStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+// ============================================================
+// Instrutores (migration 051)
+// ============================================================
+
+export type ChaCategory =
+  | "mta"
+  | "ara"
+  | "mtr"
+  | "cpa"
+  | "mta_ara"
+  | "mta_mtr"
+  | "mta_cpa";
+
+export type InstructorStatus = "active" | "inactive";
+
+export interface Instructor {
+  id: string;
+  account_id: string;
+  user_id?: string | null;
+  full_name: string;
+  phone: string;
+  birth_date: string;
+  cha_number: string;
+  cha_category: ChaCategory;
+  cha_expires_on: string;
+  status: InstructorStatus;
+  pix_key: string;
+  created_at: string;
+  updated_at: string;
+  locations?: InstructorLocation[];
+  weekly?: InstructorWeeklyAvailability[];
+  unavailability?: InstructorUnavailability[];
+  /** Preenchido na listagem admin. */
+  locations_count?: number;
+}
+
+export interface InstructorLocation {
+  id: string;
+  account_id: string;
+  instructor_id: string;
+  location_id: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InstructorWeeklyAvailability {
+  id: string;
+  account_id: string;
+  instructor_id: string;
+  /** 0=domingo … 6=sábado */
+  weekday: number;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InstructorUnavailability {
+  id: string;
+  account_id: string;
+  instructor_id: string;
+  on_date: string;
+  reason?: string | null;
+  created_at: string;
+  updated_at: string;
+}

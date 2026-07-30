@@ -10,24 +10,27 @@ import {
   canViewOnly,
   hasMinRole,
   isAccountRole,
+  isInstructorRole,
   roleRank,
 } from "./roles";
 
 describe("roleRank", () => {
-  it("orders owner > admin > agent > viewer", () => {
+  it("orders owner > admin > agent > viewer > instructor", () => {
     expect(roleRank("owner")).toBeGreaterThan(roleRank("admin"));
     expect(roleRank("admin")).toBeGreaterThan(roleRank("agent"));
     expect(roleRank("agent")).toBeGreaterThan(roleRank("viewer"));
+    expect(roleRank("viewer")).toBeGreaterThan(roleRank("instructor"));
   });
 
   it("matches the SQL helper's numeric mapping", () => {
     // Keep these in lockstep with `is_account_member`'s CASE expression
-    // in supabase/migrations/017_account_sharing.sql — any change here
-    // means the SQL helper needs the same change.
+    // in supabase/migrations/017 + 049 — any change here means the SQL
+    // helper needs the same change.
     expect(roleRank("owner")).toBe(4);
     expect(roleRank("admin")).toBe(3);
     expect(roleRank("agent")).toBe(2);
     expect(roleRank("viewer")).toBe(1);
+    expect(roleRank("instructor")).toBe(0);
   });
 });
 
@@ -36,12 +39,16 @@ describe("hasMinRole", () => {
     expect(hasMinRole("owner", "viewer")).toBe(true);
     expect(hasMinRole("admin", "agent")).toBe(true);
     expect(hasMinRole("agent", "agent")).toBe(true);
+    expect(hasMinRole("instructor", "instructor")).toBe(true);
   });
 
   it("returns false when role is below the threshold", () => {
     expect(hasMinRole("viewer", "agent")).toBe(false);
     expect(hasMinRole("agent", "admin")).toBe(false);
     expect(hasMinRole("admin", "owner")).toBe(false);
+    // Rank 0: instructor must NOT pass viewer+ CRM gates.
+    expect(hasMinRole("instructor", "viewer")).toBe(false);
+    expect(hasMinRole("instructor", "agent")).toBe(false);
   });
 
   // The full matrix — useful as a regression net if anyone reshuffles
@@ -51,18 +58,27 @@ describe("hasMinRole", () => {
     ["owner", "admin", true],
     ["owner", "agent", true],
     ["owner", "viewer", true],
+    ["owner", "instructor", true],
     ["admin", "owner", false],
     ["admin", "admin", true],
     ["admin", "agent", true],
     ["admin", "viewer", true],
+    ["admin", "instructor", true],
     ["agent", "owner", false],
     ["agent", "admin", false],
     ["agent", "agent", true],
     ["agent", "viewer", true],
+    ["agent", "instructor", true],
     ["viewer", "owner", false],
     ["viewer", "admin", false],
     ["viewer", "agent", false],
     ["viewer", "viewer", true],
+    ["viewer", "instructor", true],
+    ["instructor", "owner", false],
+    ["instructor", "admin", false],
+    ["instructor", "agent", false],
+    ["instructor", "viewer", false],
+    ["instructor", "instructor", true],
   ])("%s vs min %s → %s", (role, min, expected) => {
     expect(hasMinRole(role, min)).toBe(expected);
   });
@@ -91,6 +107,7 @@ describe("capability predicates", () => {
     expect(canManageMembers("admin")).toBe(true);
     expect(canManageMembers("agent")).toBe(false);
     expect(canManageMembers("viewer")).toBe(false);
+    expect(canManageMembers("instructor")).toBe(false);
   });
 
   it("canEditSettings: admin+ only", () => {
@@ -98,6 +115,7 @@ describe("capability predicates", () => {
     expect(canEditSettings("admin")).toBe(true);
     expect(canEditSettings("agent")).toBe(false);
     expect(canEditSettings("viewer")).toBe(false);
+    expect(canEditSettings("instructor")).toBe(false);
   });
 
   it("canSendMessages: agent+ only", () => {
@@ -105,6 +123,7 @@ describe("capability predicates", () => {
     expect(canSendMessages("admin")).toBe(true);
     expect(canSendMessages("agent")).toBe(true);
     expect(canSendMessages("viewer")).toBe(false);
+    expect(canSendMessages("instructor")).toBe(false);
   });
 
   it("canViewOnly: viewer only", () => {
@@ -112,6 +131,13 @@ describe("capability predicates", () => {
     expect(canViewOnly("admin")).toBe(false);
     expect(canViewOnly("agent")).toBe(false);
     expect(canViewOnly("viewer")).toBe(true);
+    expect(canViewOnly("instructor")).toBe(false);
+  });
+
+  it("isInstructorRole: instructor only", () => {
+    expect(isInstructorRole("instructor")).toBe(true);
+    expect(isInstructorRole("viewer")).toBe(false);
+    expect(isInstructorRole("agent")).toBe(false);
   });
 
   it("canDeleteAccount: owner only", () => {
@@ -119,6 +145,7 @@ describe("capability predicates", () => {
     expect(canDeleteAccount("admin")).toBe(false);
     expect(canDeleteAccount("agent")).toBe(false);
     expect(canDeleteAccount("viewer")).toBe(false);
+    expect(canDeleteAccount("instructor")).toBe(false);
   });
 
   it("canTransferOwnership: owner only", () => {
@@ -126,5 +153,6 @@ describe("capability predicates", () => {
     expect(canTransferOwnership("admin")).toBe(false);
     expect(canTransferOwnership("agent")).toBe(false);
     expect(canTransferOwnership("viewer")).toBe(false);
+    expect(canTransferOwnership("instructor")).toBe(false);
   });
 });

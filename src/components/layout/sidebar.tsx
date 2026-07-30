@@ -10,16 +10,22 @@ import { useUnreadNotifications } from "@/hooks/use-unread-notifications";
 import {
   Bell,
   Bot,
+  CalendarDays,
   Crown,
   GitBranch,
+  GraduationCap,
   LayoutDashboard,
   LogOut,
+  MapPin,
   MessageSquare,
+  Package,
   PanelLeft,
   PanelLeftClose,
   Radio,
   Settings,
   Shield,
+  Ship,
+  ShoppingCart,
   User,
   UserCog,
   Users,
@@ -29,6 +35,7 @@ import {
   Zap,
 } from "lucide-react";
 import type { AccountRole } from "@/lib/auth/roles";
+import { hasMinRole, isInstructorRole } from "@/lib/auth/roles";
 import { DEFAULT_LOGO_SRC } from "@/lib/brand";
 import {
   Avatar,
@@ -77,6 +84,11 @@ const ROLE_CHIP: Record<
     labelKey: "roleViewer",
     className: "border-border bg-card text-muted-foreground",
   },
+  instructor: {
+    icon: GraduationCap,
+    labelKey: "roleInstructor",
+    className: "border-border bg-card text-muted-foreground",
+  },
 };
 
 interface NavItem {
@@ -92,10 +104,20 @@ const navItems: NavItem[] = [
   { href: "/notifications", labelKey: "notifications", icon: Bell },
   { href: "/contacts", labelKey: "contacts", icon: Users },
   { href: "/pipelines", labelKey: "pipelines", icon: GitBranch },
+  { href: "/catalog", labelKey: "catalog", icon: Package },
+  { href: "/class-locations", labelKey: "classLocations", icon: MapPin },
+  { href: "/equipment", labelKey: "equipment", icon: Ship },
+  { href: "/instructors", labelKey: "instructors", icon: GraduationCap },
+  { href: "/pos", labelKey: "pos", icon: ShoppingCart },
   { href: "/broadcasts", labelKey: "broadcasts", icon: Radio },
   { href: "/automations", labelKey: "automations", icon: Zap },
   { href: "/flows", labelKey: "flows", icon: Workflow, beta: true },
   { href: "/agents", labelKey: "aiAgents", icon: Bot },
+];
+
+/** Nav mínima do role instructor (domínio de aulas, sem CRM operacional). */
+const instructorNavItems: NavItem[] = [
+  { href: "/my-availability", labelKey: "myAvailability", icon: CalendarDays },
 ];
 
 const bottomNavItems = [
@@ -189,6 +211,15 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
   // No mobile o drawer sempre mostra labels; collapse só vale em lg+.
   const rail = collapseReady && collapsed;
 
+  const primaryNav =
+    accountRole && isInstructorRole(accountRole)
+      ? instructorNavItems
+      : navItems.filter(
+          (item) =>
+            item.href !== "/instructors" ||
+            (accountRole != null && hasMinRole(accountRole, "admin")),
+        );
+
   return (
     <TooltipProvider delay={300}>
       <button
@@ -281,7 +312,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
 
         <nav className="flex-1 overflow-y-auto px-2 py-4 lg:px-3">
           <ul className="flex flex-col gap-1">
-            {navItems.map((item) => {
+            {primaryNav.map((item) => {
               const isActive =
                 pathname === item.href ||
                 (item.href !== "/dashboard" && pathname.startsWith(item.href));

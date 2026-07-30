@@ -88,7 +88,7 @@ interface Member {
 
 interface Invitation {
   id: string;
-  role: 'admin' | 'agent' | 'viewer';
+  role: 'admin' | 'agent' | 'viewer' | 'instructor';
   label: string | null;
   created_at: string;
   expires_at: string;
@@ -99,6 +99,7 @@ const EDITABLE_ROLES: { value: AccountRole }[] = [
   { value: 'admin' },
   { value: 'agent' },
   { value: 'viewer' },
+  { value: 'instructor' },
 ];
 
 // Per-role chip metadata (icon / label / colour) lives in the shared

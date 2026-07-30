@@ -1,7 +1,7 @@
 # Design: Estorno de vendas no PDV (Fatia 2)
 
 **Data:** 2026-07-29  
-**Status:** aprovado (aguardando implementação)  
+**Status:** implementado (código + migration 046 aplicada)  
 **Abordagem:** A — `sale_refunds` + `sale_refund_items` + status na venda  
 **Base:** Fatia 1 catálogo/estoque/PDV + desconto/código (`045`)
 

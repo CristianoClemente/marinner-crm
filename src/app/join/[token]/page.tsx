@@ -57,7 +57,7 @@ import { createClient } from '@/lib/supabase/client';
 interface PeekOk {
   ok: true;
   account_name: string;
-  role: 'admin' | 'agent' | 'viewer';
+  role: 'admin' | 'agent' | 'viewer' | 'instructor';
   expires_at: string;
 }
 interface PeekFail {
@@ -70,6 +70,7 @@ const ROLE_LABEL: Record<PeekOk['role'], string> = {
   admin: 'Administrador',
   agent: 'Agente',
   viewer: 'Visualizador',
+  instructor: 'Instrutor',
 };
 
 const FAIL_COPY: Record<PeekFail['reason'], { title: string; body: string }> = {

@@ -1,7 +1,7 @@
 # Design: Tabela no catálogo + desconto e código de venda no PDV
 
 **Data:** 2026-07-29  
-**Status:** aprovado (aguardando implementação)  
+**Status:** implementado (código + migration 045 aplicada)  
 **Abordagem:** A — extensão mínima da Fatia 1 (sem impressão de cupom)  
 **Base:** `2026-07-29-catalog-pos-stock-design.md` (já implementada)
 

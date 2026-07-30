@@ -100,6 +100,8 @@ interface AuthContextValue {
   isAgent: boolean;
   /** True if `accountRole === 'viewer'`. */
   isViewer: boolean;
+  /** True if `accountRole === 'instructor'`. */
+  isInstructor: boolean;
   /** True if the caller can manage members (admin+). */
   canManageMembers: boolean;
   /** True if the caller can edit account-wide settings (admin+). */
@@ -332,6 +334,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAdmin: role === "admin",
       isAgent: role === "agent",
       isViewer: role === "viewer",
+      isInstructor: role === "instructor",
       canManageMembers: role ? canManageMembersFor(role) : false,
       canEditSettings: role ? canEditSettingsFor(role) : false,
       canSendMessages: role ? canSendMessagesFor(role) : false,
@@ -385,6 +388,7 @@ export function useAuth(): AuthContextValue {
       isAdmin: false,
       isAgent: false,
       isViewer: false,
+      isInstructor: false,
       canManageMembers: false,
       canEditSettings: false,
       canSendMessages: false,

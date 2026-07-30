@@ -1,24 +1,13 @@
-// ============================================================
-// Account role helpers — pure, unit-testable, no I/O.
-//
-// Mirrors the `account_role_enum` Postgres type from migration
-// 017_account_sharing.sql. The hierarchy is intentionally a flat
-// ordinal (owner=4 … viewer=1) — it matches the same CASE
-// expression the `is_account_member(account_id, min_role)` SQL
-// helper uses, so server-side TypeScript guards and database-side
-// RLS speak the same language.
-//
-// Predicates (`canManageMembers`, `canEditSettings`, …) are the
-// single source of truth for "what can this role do?" — both
-// API route guards and UI gates should call them rather than
-// open-coding their own role checks. That keeps role-policy
-// changes a one-file diff.
-// ============================================================
-
-export type AccountRole = "owner" | "admin" | "agent" | "viewer";
+export type AccountRole =
+  | "owner"
+  | "admin"
+  | "agent"
+  | "viewer"
+  | "instructor";
 
 /** Ordered list of every valid role, lowest privilege first. */
 export const ACCOUNT_ROLES: readonly AccountRole[] = [
+  "instructor",
   "viewer",
   "agent",
   "admin",
@@ -28,6 +17,9 @@ export const ACCOUNT_ROLES: readonly AccountRole[] = [
 /**
  * Numeric rank of a role. Higher = more privileged. Mirrors the
  * CASE expression in `is_account_member` so JS/SQL stay aligned.
+ *
+ * `instructor` is rank 0 so it does NOT pass `viewer+` RLS gates on
+ * operational CRM tables — only dedicated instructor policies apply.
  */
 export function roleRank(role: AccountRole): number {
   switch (role) {
@@ -39,6 +31,8 @@ export function roleRank(role: AccountRole): number {
       return 2;
     case "viewer":
       return 1;
+    case "instructor":
+      return 0;
   }
 }
 
@@ -58,12 +52,15 @@ export function isAccountRole(value: unknown): value is AccountRole {
   );
 }
 
+/** Roles that may be assigned via invitation (not owner). */
+export type InviteableRole = Exclude<AccountRole, "owner">;
+
+export function isInviteableRole(value: unknown): value is InviteableRole {
+  return isAccountRole(value) && value !== "owner";
+}
+
 // ============================================================
 // Capability predicates
-//
-// Every UI gate and API route guard should call one of these
-// instead of comparing role strings inline. Adding a capability
-// = one new predicate here + one call site change per consumer.
 // ============================================================
 
 /** Owner / admin: invite, remove, change roles. */
@@ -83,7 +80,7 @@ export function canEditSettings(role: AccountRole): boolean {
 /**
  * Owner / admin / agent: write operational data — send messages,
  * create contacts, move deals, run broadcasts, edit automations.
- * Viewers are read-only.
+ * Viewers are read-only. Instructors are domain-scoped (rank 0).
  */
 export function canSendMessages(role: AccountRole): boolean {
   return hasMinRole(role, "agent");
@@ -96,6 +93,11 @@ export function canSendMessages(role: AccountRole): boolean {
  */
 export function canViewOnly(role: AccountRole): boolean {
   return role === "viewer";
+}
+
+/** Domain role: availability / own instructor profile only. */
+export function isInstructorRole(role: AccountRole): boolean {
+  return role === "instructor";
 }
 
 /** Owner only: irreversible destructive operations. */

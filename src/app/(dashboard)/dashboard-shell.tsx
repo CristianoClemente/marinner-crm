@@ -1,8 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
+import { isInstructorRole } from "@/lib/auth/roles";
+import {
+  INSTRUCTOR_HOME,
+  isInstructorAllowedPath,
+} from "@/lib/auth/instructor-routes";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { PresenceHeartbeat } from "@/components/presence/presence-heartbeat";
@@ -13,8 +18,9 @@ import { AccountFavicon } from "@/components/layout/account-favicon";
 // client components can't export Next's metadata object.
 
 function DashboardShellInner({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading, profileLoading, accountRole } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   // Sidebar drawer state — only used on mobile. On lg+ the sidebar is
   // always visible and this stays at `false` (ignored by the component).
@@ -26,6 +32,15 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
       router.push("/login");
     }
   }, [user, loading, router]);
+
+  // Instructor (rank 0): só domínio de disponibilidade (+ settings).
+  useEffect(() => {
+    if (loading || profileLoading || !user || !accountRole) return;
+    if (!isInstructorRole(accountRole)) return;
+    if (!isInstructorAllowedPath(pathname)) {
+      router.replace(INSTRUCTOR_HOME);
+    }
+  }, [loading, profileLoading, user, accountRole, pathname, router]);
 
   if (loading) {
     return (
@@ -39,6 +54,20 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) return null;
+
+  // Evita flash de página operacional enquanto redireciona instructor.
+  if (
+    !profileLoading &&
+    accountRole &&
+    isInstructorRole(accountRole) &&
+    !isInstructorAllowedPath(pathname)
+  ) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
