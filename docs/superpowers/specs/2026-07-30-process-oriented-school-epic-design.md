@@ -14,16 +14,16 @@ Ciclo de negócio (exemplo operacional):
 ```text
 Contato (lead)
   → torna-se aluno (mesmo registro)
-  → entra em processo(s) de habilitação
-  → documentação / pagamento / aula prática / curso / prova
-  → aprovado → habilitado → fim do ciclo daquele processo
+  → entra em um ou mais processos em paralelo
+       (ex.: habilitação + despachante)
+  → cada processo sobe suas etapas até conclusão
 ```
 
 ## Decisões de contexto (fechadas)
 
 | Tema | Decisão |
 |------|---------|
-| Processos por contato | **Vários em paralelo** |
+| Processos por contato | **Vários em paralelo** (ex.: habilitação **e** despachante ao mesmo tempo) |
 | Aluno | Mesmo `contacts` (sem tabela `students`) |
 | Etapas | **Genéricas**, configuráveis por escola |
 | Tipagem de etapa | **Não** nesta fase; comportamento especial nas fatias (docs, aula…) |
@@ -36,8 +36,16 @@ Contato (lead)
 
 ### Por que funil ≠ processo (escala)
 
-Funil mede **venda**; processo mede **execução escolar**. Separar permite multi-CHA no mesmo contato, papéis distintos (agent vs operação vs instrutor) e automações com gatilhos claros — sem misturar “ganhou” com “aguardando documentação”.
+Funil mede **venda**; processo mede **execução operacional** (escola / serviços). São ciclos com donos, prazos e evidências diferentes — misturar no mesmo kanban confunde “fechou a venda” com “está na documentação” ou “aguardando Marina”.
 
+**Processo (e vários em paralelo)** é o eixo certo porque o mesmo aluno frequentemente vive **mais de um serviço ao mesmo tempo**, por exemplo:
+
+- processo de **habilitação** (docs → aula → prova → CHA), **e**
+- processo de **despachante** (protocolo, taxas, acompanhamento junto ao órgão),
+
+sem um bloquear o outro. Templates distintos (ligados a produtos do catálogo) isolam etapas, responsáveis e métricas; o contato permanece único.
+
+Separar funil × processo ainda permite: papéis claros (comercial vs operação vs instrutor), automações com gatilhos por domínio (`process.*` vs deal), e crescimento para novos serviços (renovação, outro CHA, despachante) sem redesenhar o CRM.
 ## Fatias do epic
 
 | # | Fatia | Entrega | Spec |
