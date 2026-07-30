@@ -3,7 +3,7 @@
 **Data:** 2026-07-30  
 **Status:** aprovado (mapa do epic — aguardando specs por fatia)  
 **Abordagem:** 1 — motor de processo + templates  
-**Próximo:** detalhar fatia 1 (motor) em spec própria
+**Próximo:** plano + implementação da fatia 1 (`2026-07-30-process-engine-slice1-design.md`)
 
 ## Norte do produto
 
@@ -55,7 +55,7 @@ Separar funil × processo ainda permite: papéis claros (comercial vs operação
 | #   | Fatia             | Entrega                                           | Spec     |
 | --- | ----------------- | ------------------------------------------------- | -------- |
 | 0   | Mapa (este doc)   | Vocabulário, entidades, eventos, ordem            | ✅        |
-| 1   | Motor de processo | Templates, etapas, processos, avanço, listagem    | pendente |
+| 1   | Motor de processo | Templates, etapas, processos, avanço, listagem    | ✅ `2026-07-30-process-engine-slice1-design.md` |
 | 2   | Documentação      | Checklist + upload R2 no processo                 | pendente |
 | 3   | Pagamento         | Vínculo PDV/venda/parcelas ao processo            | pendente |
 | 4   | Aula prática      | Agenda (instrutor, local, equipamento) + avanço   | pendente |
