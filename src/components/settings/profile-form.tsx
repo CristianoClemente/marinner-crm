@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Loader2, Upload, Trash2, Mail, CircleAlert } from 'lucide-react';
 
 import { createClient } from '@/lib/supabase/client';
+import { uploadAccountMedia } from '@/lib/storage/upload-media';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -119,23 +120,22 @@ export function ProfileForm() {
 
       // Upload a newly-staged image, if any.
       if (pendingAvatar) {
-        const ext =
-          pendingAvatar.name.split('.').pop()?.toLowerCase() || 'png';
-        const path = `${user.id}/avatar-${Date.now()}.${ext}`;
-        const { error: uploadError } = await supabase.storage
-          .from('avatars')
-          .upload(path, pendingAvatar, {
-            cacheControl: '3600',
-            upsert: true,
-            contentType: pendingAvatar.type,
-          });
-        if (uploadError) {
-          throw new Error(t('uploadFailed', { message: uploadError.message }));
+        try {
+          const { publicUrl } = await uploadAccountMedia(
+            'avatars',
+            pendingAvatar,
+          );
+          nextAvatarUrl = publicUrl;
+        } catch (uploadErr) {
+          throw new Error(
+            t('uploadFailed', {
+              message:
+                uploadErr instanceof Error
+                  ? uploadErr.message
+                  : String(uploadErr),
+            }),
+          );
         }
-        const {
-          data: { publicUrl },
-        } = supabase.storage.from('avatars').getPublicUrl(path);
-        nextAvatarUrl = publicUrl;
       } else if (removeAvatar) {
         nextAvatarUrl = null;
       }

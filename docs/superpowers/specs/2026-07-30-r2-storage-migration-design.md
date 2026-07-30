@@ -1,8 +1,9 @@
 # Design: Migração Supabase Storage → Cloudflare R2
 
 **Data:** 2026-07-30  
-**Status:** aprovado (aguardando plano)  
+**Status:** implementado  
 **Abordagem:** 1 — adapter fino + rota autenticada  
+**Plano:** `docs/superpowers/plans/2026-07-30-r2-storage-migration.md`  
 **Guia ops:** `docs/cloudflare-r2-storage.md`
 
 ## Decisões
@@ -78,8 +79,8 @@ R2_REGION=auto
 R2_BUCKET_MEDIA=marinner-media
 R2_BUCKET_BRANDING=marinner-branding
 R2_BUCKET_MEDIA_DEV=marinner-media-dev
-R2_PUBLIC_BASE_URL_MEDIA=https://pub-….r2.dev
-R2_PUBLIC_BASE_URL_BRANDING=https://pub-….r2.dev
+R2_PUBLIC_BASE_URL_MEDIA=
+R2_PUBLIC_BASE_URL_BRANDING=
 ```
 
 `R2_PUBLIC_BASE_URL` (legado de um único valor) pode servir de fallback só para MEDIA; branding exige a URL dedicada.
