@@ -5,6 +5,8 @@ import { useTranslations } from "next-intl";
 import {
   AlertCircle,
   GraduationCap,
+  Link2,
+  Mail,
   MoreVertical,
   Pencil,
   Plus,
@@ -16,7 +18,8 @@ import {
 import { toast } from "sonner";
 
 import { useCan } from "@/hooks/use-can";
-import type { Instructor, InstructorStatus } from "@/types";
+import { formatDate } from "@/lib/format";
+import type { ChaCategory, Instructor, InstructorStatus } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +29,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -38,6 +42,11 @@ import {
 } from "@/components/ui/table";
 import { ChaBadge } from "@/components/instructors/cha-badge";
 import { InstructorForm } from "@/components/instructors/instructor-form";
+import {
+  createInstructorInvite,
+  InviteResultDialog,
+  LinkMemberDialog,
+} from "@/components/instructors/instructor-access-dialogs";
 import { cn } from "@/lib/utils";
 
 type StatusFilter = "all" | InstructorStatus;
@@ -53,6 +62,10 @@ export default function InstructorsPage() {
   const [status, setStatus] = useState<StatusFilter>("all");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Instructor | null>(null);
+  const [linkTarget, setLinkTarget] = useState<Instructor | null>(null);
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+  const [inviteName, setInviteName] = useState("");
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
@@ -91,6 +104,14 @@ export default function InstructorsPage() {
     [items, status],
   );
 
+  function labelStatus(s: InstructorStatus) {
+    return s === "active" ? t("statusActive") : t("statusInactive");
+  }
+
+  function labelChaCategory(c: ChaCategory) {
+    return t(`chaCategory.${c}`);
+  }
+
   function openCreate() {
     setEditing(null);
     setFormOpen(true);
@@ -113,6 +134,30 @@ export default function InstructorsPage() {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("deactivateError"));
     }
+  }
+
+  async function sendInvite(item: Instructor) {
+    if (item.user_id) {
+      toast.error(t("alreadyLinkedToast"));
+      return;
+    }
+    try {
+      const url = await createInstructorInvite(item.id);
+      setInviteName(item.full_name);
+      setInviteUrl(url);
+      setInviteOpen(true);
+      toast.success(t("form.inviteCreated"));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("form.inviteError"));
+    }
+  }
+
+  function openLink(item: Instructor) {
+    if (item.user_id) {
+      toast.error(t("alreadyLinkedToast"));
+      return;
+    }
+    setLinkTarget(item);
   }
 
   return (
@@ -215,10 +260,16 @@ export default function InstructorsPage() {
                 <TableHead className="text-muted-foreground hidden md:table-cell">
                   {t("colCha")}
                 </TableHead>
+                <TableHead className="text-muted-foreground hidden md:table-cell">
+                  {t("colChaCategory")}
+                </TableHead>
+                <TableHead className="text-muted-foreground hidden lg:table-cell">
+                  {t("colChaExpires")}
+                </TableHead>
                 <TableHead className="text-muted-foreground hidden sm:table-cell">
                   {t("colStatus")}
                 </TableHead>
-                <TableHead className="text-muted-foreground hidden lg:table-cell">
+                <TableHead className="text-muted-foreground hidden xl:table-cell">
                   {t("colLogin")}
                 </TableHead>
                 <TableHead className="text-muted-foreground hidden xl:table-cell text-right">
@@ -236,10 +287,16 @@ export default function InstructorsPage() {
                   <TableCell className="hidden md:table-cell">
                     <span className="block h-3 w-20 animate-pulse rounded bg-muted" />
                   </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    <span className="block h-3 w-16 animate-pulse rounded bg-muted" />
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell">
+                    <span className="block h-3 w-20 animate-pulse rounded bg-muted" />
+                  </TableCell>
                   <TableCell className="hidden sm:table-cell">
                     <span className="block h-3 w-14 animate-pulse rounded bg-muted" />
                   </TableCell>
-                  <TableCell className="hidden lg:table-cell">
+                  <TableCell className="hidden xl:table-cell">
                     <span className="block h-3 w-16 animate-pulse rounded bg-muted" />
                   </TableCell>
                   <TableCell className="hidden xl:table-cell">
@@ -297,10 +354,16 @@ export default function InstructorsPage() {
                 <TableHead className="text-muted-foreground hidden md:table-cell">
                   {t("colCha")}
                 </TableHead>
+                <TableHead className="text-muted-foreground hidden md:table-cell">
+                  {t("colChaCategory")}
+                </TableHead>
+                <TableHead className="text-muted-foreground hidden lg:table-cell">
+                  {t("colChaExpires")}
+                </TableHead>
                 <TableHead className="text-muted-foreground hidden sm:table-cell">
                   {t("colStatus")}
                 </TableHead>
-                <TableHead className="text-muted-foreground hidden lg:table-cell">
+                <TableHead className="text-muted-foreground hidden xl:table-cell">
                   {t("colLogin")}
                 </TableHead>
                 <TableHead className="text-muted-foreground hidden xl:table-cell text-right">
@@ -322,7 +385,7 @@ export default function InstructorsPage() {
                     <span className="block max-w-[12rem] truncate text-sm font-medium text-foreground">
                       {item.full_name}
                     </span>
-                    <div className="mt-1 flex flex-wrap gap-1">
+                    <div className="mt-1 flex flex-wrap gap-1 lg:hidden">
                       <ChaBadge
                         expiresOn={item.cha_expires_on}
                         today={today}
@@ -332,14 +395,28 @@ export default function InstructorsPage() {
                   <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
                     {item.cha_number}
                   </TableCell>
+                  <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+                    {labelChaCategory(item.cha_category)}
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-sm tabular-nums text-muted-foreground">
+                        {formatDate(item.cha_expires_on)}
+                      </span>
+                      <div className="hidden lg:flex">
+                        <ChaBadge
+                          expiresOn={item.cha_expires_on}
+                          today={today}
+                        />
+                      </div>
+                    </div>
+                  </TableCell>
                   <TableCell className="hidden sm:table-cell">
                     <Badge variant="outline" className="text-[10px]">
-                      {item.status === "active"
-                        ? t("statusActive")
-                        : t("statusInactive")}
+                      {labelStatus(item.status)}
                     </Badge>
                   </TableCell>
-                  <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
+                  <TableCell className="hidden xl:table-cell text-sm text-muted-foreground">
                     {item.user_id ? t("loginYes") : t("loginNo")}
                   </TableCell>
                   <TableCell className="hidden xl:table-cell text-right text-sm tabular-nums text-muted-foreground">
@@ -365,12 +442,31 @@ export default function InstructorsPage() {
                             <Pencil className="size-4" />
                             {t("edit")}
                           </DropdownMenuItem>
+                          {!item.user_id && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={() => void sendInvite(item)}
+                              >
+                                <Mail className="size-4" />
+                                {t("sendInvite")}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => openLink(item)}
+                              >
+                                <Link2 className="size-4" />
+                                {t("linkMember")}
+                              </DropdownMenuItem>
+                            </>
+                          )}
                           {item.status === "active" && (
-                            <DropdownMenuItem
-                              onClick={() => void deactivate(item)}
-                            >
-                              {t("deactivate")}
-                            </DropdownMenuItem>
+                            <>
+                              <DropdownMenuSeparator className="bg-border" />
+                              <DropdownMenuItem
+                                onClick={() => void deactivate(item)}
+                              >
+                                {t("deactivate")}
+                              </DropdownMenuItem>
+                            </>
                           )}
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -388,6 +484,23 @@ export default function InstructorsPage() {
         onOpenChange={setFormOpen}
         instructor={editing}
         onSaved={() => void load()}
+      />
+      <InviteResultDialog
+        open={inviteOpen}
+        onOpenChange={(open) => {
+          setInviteOpen(open);
+          if (!open) setInviteUrl(null);
+        }}
+        url={inviteUrl}
+        instructorName={inviteName}
+      />
+      <LinkMemberDialog
+        open={!!linkTarget}
+        onOpenChange={(open) => {
+          if (!open) setLinkTarget(null);
+        }}
+        instructor={linkTarget}
+        onLinked={() => void load()}
       />
     </div>
   );
