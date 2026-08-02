@@ -157,7 +157,10 @@ export function createZapiProvider(
         await throwZapiError(response, `Z-API status error: ${response.status}`)
       }
       const data = (await response.json()) as ZapiStatusResponse
-      const connected = Boolean(data.connected)
+      // Algumas instâncias ficam `connected: true` com o celular offline
+      // (`smartphoneConnected: false`) — nesse caso ainda precisamos do QR.
+      const connected =
+        Boolean(data.connected) && data.smartphoneConnected !== false
       const detailParts: string[] = []
       if (data.error) detailParts.push(data.error)
       if (data.smartphoneConnected === false) {

@@ -949,3 +949,36 @@ export interface InstructorUnavailability {
   created_at: string;
   updated_at: string;
 }
+
+// ============================================================
+// Processos / enrollment (migration 054)
+// ============================================================
+
+export type {
+  ProcessStatus,
+  ProcessDomainEventType,
+  ProcessTemplate,
+  ProcessTemplateStage,
+  EnrollmentProcess,
+  ProcessStageHistory,
+  ProcessTemplateStageInput,
+  ProcessFieldType,
+  ProcessTemplateStageField,
+  ProcessFieldValueRow,
+  ProcessFieldsSummary,
+  ProcessTemplateStageFieldInput,
+} from "@/lib/processes/types";
+
+export type {
+  ProcessClassStatus,
+  ProcessClass,
+  ProcessClassEnrollment,
+} from "@/lib/classes/types";
+
+export type {
+  AgendaEventKind,
+  AgendaEventStatus,
+  AgendaColorKey,
+  AgendaAssignee,
+  AgendaEvent,
+} from "@/lib/agenda/types";

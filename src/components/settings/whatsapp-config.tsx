@@ -21,8 +21,8 @@ import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { SettingsPanelHead } from './settings-panel-head';
+import { SettingsChip, StatusDot } from './settings-chip';
 import {
   Accordion,
   AccordionItem,
@@ -423,7 +423,7 @@ export function WhatsAppConfig() {
         }
       />
 
-      <div className="mb-6 max-w-md">
+      <div className="mb-6 max-w-lg">
         <ProviderToggle
           value={provider}
           onChange={(next) => {
@@ -438,7 +438,9 @@ export function WhatsAppConfig() {
             setProvider(next);
           }}
         />
-        <p className="mt-2 text-sm text-muted-foreground">{t('providerHint')}</p>
+        <p className="mt-2 text-xs text-muted-foreground">
+          {provider === 'zapi' ? t('providerHintZapi') : t('providerHint')}
+        </p>
       </div>
 
       {provider === 'zapi' ? (
@@ -455,97 +457,89 @@ export function WhatsAppConfig() {
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
       {/* Main config form */}
       <div className="space-y-6">
-        {/* Corrupted-token reset banner */}
+        {/* Corrupted-token reset */}
         {showResetBanner && (
-          <Alert className="bg-amber-950/40 border-amber-600/40">
+          <div className="rounded-xl bg-amber-500/10 p-4 ring-1 ring-amber-500/30">
             <div className="flex items-start gap-3">
-              <AlertTriangle className="size-5 text-amber-400 mt-0.5 shrink-0" />
-              <div className="flex-1">
-                <AlertTitle className="text-amber-200 mb-1">
-                  Stored token can&apos;t be decrypted
-                </AlertTitle>
-                <AlertDescription className="text-amber-100/80 text-sm">
-                  {statusMessage}
-                </AlertDescription>
+              <AlertTriangle className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <p className="text-sm font-medium text-foreground">
+                  {t('tokenCorrupted')}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {statusMessage || t('tokenCorruptedDesc')}
+                </p>
                 <Button
                   onClick={handleReset}
                   disabled={resetting}
                   size="sm"
-                  className="mt-3 bg-amber-600 hover:bg-amber-700 text-white"
+                  variant="outline"
                 >
                   {resetting ? (
-                    <>
-                      <Loader2 className="size-4 animate-spin" />
-                      {t('resetting')}
-                    </>
+                    <Loader2 className="size-4 animate-spin" />
                   ) : (
-                    <>
-                      <RotateCcw className="size-4" />
-                      {t('resetConfig')}
-                    </>
+                    <RotateCcw className="size-4" />
                   )}
+                  {t('resetConfig')}
                 </Button>
               </div>
             </div>
-          </Alert>
+          </div>
         )}
 
-        {/* Connection Status */}
-        <Alert className="bg-card border-border">
-          <div className="flex items-center gap-2">
-            {connectionStatus === 'connected' ? (
-              <CheckCircle2 className="size-4 text-primary" />
-            ) : (
-              <XCircle className="size-4 text-red-500" />
-            )}
-            <AlertTitle className="text-foreground mb-0">
-              {connectionStatus === 'connected' ? t('credentialsValid') : t('notConnected')}
-            </AlertTitle>
+        {/* Status unificado: credenciais + registro */}
+        <div className="space-y-3 rounded-xl bg-card p-4 ring-1 ring-foreground/10">
+          <div className="flex flex-wrap items-center gap-2">
+            <SettingsChip
+              variant={
+                connectionStatus === 'connected' ? 'ok' : 'muted'
+              }
+            >
+              <StatusDot
+                tone={connectionStatus === 'connected' ? 'ok' : 'muted'}
+              />
+              {connectionStatus === 'connected'
+                ? t('credentialsValid')
+                : t('notConnected')}
+            </SettingsChip>
+            {config ? (
+              <SettingsChip variant={isRegistered ? 'ok' : 'warn'}>
+                {isRegistered ? t('registered') : t('notRegistered')}
+              </SettingsChip>
+            ) : null}
           </div>
-          <AlertDescription className="text-muted-foreground">
+          <p className="max-w-[56ch] text-sm text-muted-foreground">
             {connectionStatus === 'connected'
               ? t('connectedDesc')
-              : statusMessage ||
-                t('notConnectedDesc')}
-          </AlertDescription>
-        </Alert>
+              : statusMessage || t('notConnectedDesc')}
+          </p>
 
-        {/* Registration Status — the "is it actually live?" check.
-            Credentials being valid is necessary but not sufficient;
-            without a successful /register call the number won't
-            receive inbound events. Surface this dimension separately
-            so users don't trust a misleading green banner. */}
-        {config && (
-          <Alert
-            className={
-              isRegistered
-                ? 'bg-emerald-950/30 border-emerald-700/50'
-                : 'bg-amber-950/30 border-amber-700/50'
-            }
-          >
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <div className="flex items-center gap-2">
+          {config ? (
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
+              <p className="min-w-0 flex-1 text-xs text-muted-foreground">
                 {isRegistered ? (
-                  <CheckCircle2 className="size-4 text-emerald-400" />
+                  t('subscribedSince', {
+                    date: config.registered_at
+                      ? formatDateTime(config.registered_at)
+                      : t('unknownDate'),
+                  })
+                ) : lastRegistrationError ? (
+                  <>
+                    {t('lastAttemptFailed')}{' '}
+                    <span className="text-destructive">
+                      &quot;{lastRegistrationError}&quot;
+                    </span>
+                    . {t('retryHint')}
+                  </>
                 ) : (
-                  <AlertTriangle className="size-4 text-amber-400" />
+                  t('noRegistrationHint')
                 )}
-                <AlertTitle
-                  className={
-                    'mb-0 ' + (isRegistered ? 'text-emerald-200' : 'text-amber-200')
-                  }
-                >
-                  {isRegistered
-                    ? t('registered')
-                    : t('notRegistered')}
-                </AlertTitle>
-              </div>
+              </p>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleVerifyRegistration}
                 disabled={verifyingRegistration}
-                className="border-border bg-transparent text-foreground hover:bg-muted h-7"
               >
                 {verifyingRegistration ? (
                   <Loader2 className="size-3.5 animate-spin" />
@@ -555,61 +549,46 @@ export function WhatsAppConfig() {
                 {t('verifyWithMeta')}
               </Button>
             </div>
-            <AlertDescription className="text-muted-foreground mt-2 text-sm leading-relaxed">
-              {isRegistered ? (
-                <span>
-                  {t('subscribedSince', {
-                    date: config.registered_at
-                      ? formatDateTime(config.registered_at)
-                      : t('unknownDate'),
-                  })}
-                </span>
-              ) : lastRegistrationError ? (
-                <>
-                  {t('lastAttemptFailed')}
-                  <span className="text-red-300">
-                    &quot;{lastRegistrationError}&quot;
-                  </span>
-                  . {t('retryHint')}
-                </>
-              ) : (
-                <>{t('noRegistrationHint')}</>
-              )}
-            </AlertDescription>
+          ) : null}
 
-            {registrationProbe && (
-              <div className="mt-3 rounded border border-border bg-card/60 px-3 py-2 space-y-1.5 text-xs sm:text-[11px]">
-                <p className="font-medium text-foreground">
-                  {t('diagnosticLastRun')}
-                  <span className={registrationProbe.live ? 'text-emerald-400' : 'text-amber-400'}>
-                    {registrationProbe.live ? t('live') : t('notLive')}
-                  </span>
-                </p>
-                <ul className="space-y-0.5 text-muted-foreground">
-                  {Object.entries(registrationProbe.checks).map(([k, v]) => (
-                    <li key={k} className="flex items-center gap-1.5">
-                      {v === true ? (
-                        <CheckCircle2 className="size-3 text-emerald-400 shrink-0" />
-                      ) : v === false ? (
-                        <XCircle className="size-3 text-red-400 shrink-0" />
-                      ) : (
-                        <span className="size-3 rounded-full border border-border shrink-0" />
-                      )}
-                      <code className="text-muted-foreground">{k}</code>
-                    </li>
+          {registrationProbe ? (
+            <div className="rounded-lg bg-muted/50 px-3 py-2 text-xs">
+              <p className="font-medium text-foreground">
+                {t('diagnosticLastRun')}{' '}
+                <span
+                  className={
+                    registrationProbe.live
+                      ? 'text-emerald-600 dark:text-emerald-400'
+                      : 'text-amber-600 dark:text-amber-400'
+                  }
+                >
+                  {registrationProbe.live ? t('live') : t('notLive')}
+                </span>
+              </p>
+              <ul className="mt-1.5 space-y-0.5 text-muted-foreground">
+                {Object.entries(registrationProbe.checks).map(([k, v]) => (
+                  <li key={k} className="flex items-center gap-1.5">
+                    {v === true ? (
+                      <CheckCircle2 className="size-3 shrink-0 text-emerald-500" />
+                    ) : v === false ? (
+                      <XCircle className="size-3 shrink-0 text-destructive" />
+                    ) : (
+                      <span className="size-3 shrink-0 rounded-full border border-border" />
+                    )}
+                    <code>{k}</code>
+                  </li>
+                ))}
+              </ul>
+              {(registrationProbe.errors ?? []).length > 0 ? (
+                <ul className="mt-1 space-y-0.5 text-destructive">
+                  {registrationProbe.errors?.map((e, i) => (
+                    <li key={i}>• {e}</li>
                   ))}
                 </ul>
-                {(registrationProbe.errors ?? []).length > 0 && (
-                  <ul className="pt-1 space-y-0.5 text-red-300">
-                    {registrationProbe.errors?.map((e, i) => (
-                      <li key={i}>• {e}</li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            )}
-          </Alert>
-        )}
+              ) : null}
+            </div>
+          ) : null}
+        </div>
 
         {/* API Credentials */}
         <Card>

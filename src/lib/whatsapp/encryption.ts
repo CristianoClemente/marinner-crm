@@ -34,11 +34,36 @@ const GCM_IV_LENGTH = 12
 const CBC_IV_LENGTH = 16
 const AUTH_TAG_LENGTH = 16
 
+/** Mensagem estável quando GCM/CBC falha (chave errada ou ciphertext corrompido). */
+export const TOKEN_DECRYPT_FAILED_MESSAGE =
+  'Token do WhatsApp não pode ser descriptografado (ENCRYPTION_KEY mudou ou token corrompido). Em Configurações → WhatsApp, redefina a configuração e salve o token de novo.'
+
+function encryptionKeyBuffer(): Buffer {
+  if (!ENCRYPTION_KEY || !/^[0-9a-fA-F]{64}$/.test(ENCRYPTION_KEY)) {
+    throw new Error(
+      'ENCRYPTION_KEY inválida — use 64 caracteres hexadecimais no ambiente.',
+    )
+  }
+  return Buffer.from(ENCRYPTION_KEY, 'hex')
+}
+
+function rethrowDecryptFailure(err: unknown): never {
+  if (
+    err instanceof Error &&
+    /unable to authenticate data|Unsupported state|bad decrypt|wrong final block length/i.test(
+      err.message,
+    )
+  ) {
+    throw new Error(TOKEN_DECRYPT_FAILED_MESSAGE)
+  }
+  throw err
+}
+
 export function encrypt(text: string): string {
   const iv = crypto.randomBytes(GCM_IV_LENGTH)
   const cipher = crypto.createCipheriv(
     'aes-256-gcm',
-    Buffer.from(ENCRYPTION_KEY, 'hex'),
+    encryptionKeyBuffer(),
     iv,
   )
   let encrypted = cipher.update(text, 'utf8', 'hex')
@@ -65,15 +90,19 @@ export function decrypt(encryptedText: string): string {
         `Encrypted token has unexpected GCM auth-tag length ${authTag.length}`,
       )
     }
-    const decipher = crypto.createDecipheriv(
-      'aes-256-gcm',
-      Buffer.from(ENCRYPTION_KEY, 'hex'),
-      iv,
-    )
-    decipher.setAuthTag(authTag)
-    let decrypted = decipher.update(ctHex, 'hex', 'utf8')
-    decrypted += decipher.final('utf8')
-    return decrypted
+    try {
+      const decipher = crypto.createDecipheriv(
+        'aes-256-gcm',
+        encryptionKeyBuffer(),
+        iv,
+      )
+      decipher.setAuthTag(authTag)
+      let decrypted = decipher.update(ctHex, 'hex', 'utf8')
+      decrypted += decipher.final('utf8')
+      return decrypted
+    } catch (err) {
+      rethrowDecryptFailure(err)
+    }
   }
 
   if (parts.length === 2) {
@@ -85,14 +114,18 @@ export function decrypt(encryptedText: string): string {
         `Encrypted token has unexpected CBC IV length ${iv.length}`,
       )
     }
-    const decipher = crypto.createDecipheriv(
-      'aes-256-cbc',
-      Buffer.from(ENCRYPTION_KEY, 'hex'),
-      iv,
-    )
-    let decrypted = decipher.update(ctHex, 'hex', 'utf8')
-    decrypted += decipher.final('utf8')
-    return decrypted
+    try {
+      const decipher = crypto.createDecipheriv(
+        'aes-256-cbc',
+        encryptionKeyBuffer(),
+        iv,
+      )
+      let decrypted = decipher.update(ctHex, 'hex', 'utf8')
+      decrypted += decipher.final('utf8')
+      return decrypted
+    } catch (err) {
+      rethrowDecryptFailure(err)
+    }
   }
 
   throw new Error(

@@ -71,7 +71,12 @@ Extensões de browser (ModHeader etc.) também funcionam. Se o Host já traz slu
 
 ### Cookies locais
 
-Domain `.localhost`. Se a sessão “não cola” entre `localhost` e `slug.localhost`, limpe cookies do site e faça login de novo.
+Em local o cookie é **host-only** (sem `Domain=.localhost`): vários browsers rejeitam
+esse Domain no host `localhost`, e a sessão “loga e volta pro login”.
+
+- Use `http://localhost:3000` (não o IP da rede, ex. `192.168.x.x`).
+- Tenant local: header `x-tenant-slug` no apex, ou login separado em `slug.localhost`.
+- Se a sessão ainda falhar, limpe cookies do site e tente de novo.
 
 ## Erros
 

@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { ContactExtendedFields } from '@/components/contacts/contact-extended-fields';
+import { ContactProcessesPanel } from '@/components/contacts/contact-processes-panel';
 import { usePipelineLabels } from '@/hooks/use-pipeline-labels';
 import {
   emptyExtendedFields,
@@ -406,6 +407,7 @@ export function ContactDetailView({
                       ['tags', t('tabs.tags')],
                       ['notes', t('tabs.notes')],
                       ['deals', t('tabs.deals')],
+                      ['processes', t('tabs.processes')],
                     ] as const
                   ).map(([value, label]) => (
                     <TabsTrigger
@@ -651,6 +653,15 @@ export function ContactDetailView({
                       ))}
                     </div>
                   )}
+                </TabsContent>
+
+                <TabsContent
+                  value="processes"
+                  className="mt-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-5 py-4"
+                >
+                  {contactId ? (
+                    <ContactProcessesPanel contactId={contactId} />
+                  ) : null}
                 </TabsContent>
               </Tabs>
             </div>

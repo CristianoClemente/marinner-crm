@@ -22,7 +22,13 @@ export async function loadZapiCredentialsForAccount(
   accountId: string,
 ): Promise<
   | { ok: true; instanceId: string; instanceToken: string; clientToken: string }
-  | { ok: false; status: number; error: string }
+  | {
+      ok: false
+      status: number
+      error: string
+      reason: 'missing' | 'wrong_provider' | 'token_corrupted'
+      needs_reset?: boolean
+    }
 > {
   const { data: config, error } = await supabase
     .from('whatsapp_config')
@@ -33,7 +39,12 @@ export async function loadZapiCredentialsForAccount(
     .maybeSingle()
 
   if (error || !config) {
-    return { ok: false, status: 404, error: 'Configuração Z-API não encontrada' }
+    return {
+      ok: false,
+      status: 404,
+      error: 'Configuração Z-API não encontrada',
+      reason: 'missing',
+    }
   }
 
   const row = {
@@ -48,6 +59,7 @@ export async function loadZapiCredentialsForAccount(
       ok: false,
       status: 400,
       error: 'Esta conta não está configurada com Z-API',
+      reason: 'wrong_provider',
     }
   }
 
@@ -63,7 +75,9 @@ export async function loadZapiCredentialsForAccount(
       ok: false,
       status: 400,
       error:
-        'Não foi possível descriptografar os tokens Z-API. Redefina a configuração.',
+        'Não foi possível descriptografar os tokens Z-API. Digite-os de novo e salve.',
+      reason: 'token_corrupted',
+      needs_reset: true,
     }
   }
 }

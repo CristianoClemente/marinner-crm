@@ -143,9 +143,21 @@ Enquanto `profileLoading`, `useCan` e `RequireRole` falham fechados (`false` / n
 ### 5.3 Middleware (`src/middleware.ts`)
 
 - Valida **apenas autenticação** (cookie), **não** role.
-- Paths protegidos (login obrigatório):  
-  `/dashboard`, `/inbox`, `/contacts`, `/pipelines`, `/broadcasts`, `/automations`, `/settings`
-- **Não** listados hoje: `/flows`, `/agents`, `/notifications` (gap de edge auth).
+- Paths protegidos (login obrigatório): rotas de feature do dashboard (`/dashboard`, `/inbox`, `/contacts`, `/pipelines`, `/broadcasts`, `/automations`, `/flows`, `/agents`, `/catalog`, `/pos`, `/processes`, `/process-templates`, `/agenda`, `/settings`, …).
+
+### 5.3.1 Navegação (sidebar)
+
+Fonte única: `src/lib/nav/nav-items.ts` (`minRole` por item e por grupo).
+
+| Superfície | Quem vê |
+|------------|---------|
+| Nav operacional (Painel, Inbox, Notificações, Contatos, Funis, Processos, PDV) | `viewer+` |
+| Submenu **Escola** → Catálogo | `viewer+` |
+| Submenu **Escola** → locais / equipamentos / instrutores / templates de processo | `admin+` |
+| Submenu **Automação** (transmissões, automações, fluxos, agentes IA) | `admin+` |
+| Instructor | só `/my-availability` (nav dedicada) |
+
+Grupo sem filho visível não é renderizado. Rotas continuam existindo; a UI só deixa de listar o que a role não deve operar no dia a dia.
 
 ### 5.4 RLS — `is_account_member(account_id, min_role)`
 

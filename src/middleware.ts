@@ -31,8 +31,11 @@ const PROTECTED_PATHS = [
   "/class-locations",
   "/equipment",
   "/instructors",
+  "/agenda",
   "/my-availability",
   "/notifications",
+  "/processes",
+  "/process-templates",
 ] as const;
 
 const AUTH_PATHS = ["/login", "/signup", "/forgot-password"] as const;

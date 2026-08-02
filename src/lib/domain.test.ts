@@ -94,9 +94,10 @@ describe("parseHost", () => {
 });
 
 describe("getAuthCookieDomain / getAuthCookieOptions", () => {
-  it("usa .localhost em desenvolvimento local", () => {
+  it("omite domain em desenvolvimento local (host-only cookie)", () => {
     process.env.DOMAIN_BASE = "localhost";
-    expect(getAuthCookieDomain()).toBe(".localhost");
+    expect(getAuthCookieDomain()).toBeUndefined();
+    expect(getAuthCookieOptions().domain).toBeUndefined();
   });
 
   it("usa .DOMAIN_BASE em produção", () => {

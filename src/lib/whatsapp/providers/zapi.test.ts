@@ -105,6 +105,24 @@ describe('createZapiProvider', () => {
     expect(status.detail).toContain('You are already connected')
   })
 
+  it('getConnectionStatus trata smartphone desconectado como offline', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          connected: true,
+          smartphoneConnected: false,
+        }),
+      }),
+    )
+
+    const p = createZapiProvider(creds)
+    const status = await p.getConnectionStatus()
+    expect(status.connected).toBe(false)
+    expect(status.detail).toContain('smartphone desconectado')
+  })
+
   it('propaga erro HTTP da Z-API', async () => {
     vi.stubGlobal(
       'fetch',

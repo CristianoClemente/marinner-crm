@@ -123,24 +123,30 @@ export function parseHost(host: string): ParsedHost {
 /**
  * Domain attribute for Supabase auth cookies so apex and tenant
  * subdomains share the same session.
+ *
+ * Em localhost **omitimos** o Domain: vários browsers rejeitam
+ * `Domain=.localhost` no host `localhost`, e a sessão “loga e volta
+ * pro login”. Tenant local usa header `x-tenant-slug` ou aceita
+ * cookie host-only (ver docs/dominio-e-urls.md).
  */
-export function getAuthCookieDomain(): string {
+export function getAuthCookieDomain(): string | undefined {
   const base = getDomainBase();
   if (base === "localhost" || base.endsWith(".localhost")) {
-    return ".localhost";
+    return undefined;
   }
   return `.${base}`;
 }
 
 export function getAuthCookieOptions(): {
-  domain: string;
+  domain?: string;
   path: string;
   sameSite: "lax";
   secure: boolean;
 } {
   const isProd = process.env.NODE_ENV === "production";
+  const domain = getAuthCookieDomain();
   return {
-    domain: getAuthCookieDomain(),
+    ...(domain ? { domain } : {}),
     path: "/",
     sameSite: "lax",
     secure: isProd,

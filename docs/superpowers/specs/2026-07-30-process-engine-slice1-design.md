@@ -1,7 +1,7 @@
 # Design: Fatia 1 — Motor de processo (templates + enrollment)
 
 **Data:** 2026-07-30  
-**Status:** aprovado (aguardando plano)  
+**Status:** implementado (fatia 1)
 **Abordagem:** A — domínio novo `process_*` (não reusar funil)  
 **Epic:** `docs/superpowers/specs/2026-07-30-process-oriented-school-epic-design.md`
 

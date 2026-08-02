@@ -6,11 +6,12 @@ import {
 } from "./bucket-map";
 
 describe("isLogicalBucket", () => {
-  it("aceita os quatro buckets lógicos", () => {
+  it("aceita os buckets lógicos inclusive process-docs", () => {
     expect(isLogicalBucket("chat-media")).toBe(true);
     expect(isLogicalBucket("flow-media")).toBe(true);
     expect(isLogicalBucket("account-branding")).toBe(true);
     expect(isLogicalBucket("avatars")).toBe(true);
+    expect(isLogicalBucket("process-docs")).toBe(true);
     expect(isLogicalBucket("other")).toBe(false);
   });
 });
@@ -37,6 +38,19 @@ describe("buildObjectKey", () => {
     });
     expect(key).toBe("avatars/account-acc/user-u1/avatar-2.jpg");
   });
+
+  it("process-docs usa key estável por campo", () => {
+    const key = buildObjectKey({
+      logicalBucket: "process-docs",
+      accountId: "acc",
+      userId: "u1",
+      fileName: "rg.pdf",
+      processId: "p1",
+      fieldId: "f1",
+      now: 3,
+    });
+    expect(key).toBe("processes/account-acc/process-p1/field-f1.pdf");
+  });
 });
 
 describe("assertPathAllowed", () => {
@@ -56,6 +70,17 @@ describe("assertPathAllowed", () => {
       assertPathAllowed({
         logicalBucket: "chat-media",
         path: "chat/account-acc/1-a.png",
+        accountId: "acc",
+        userId: "u1",
+      }),
+    ).not.toThrow();
+  });
+
+  it("aceita process-docs da conta", () => {
+    expect(() =>
+      assertPathAllowed({
+        logicalBucket: "process-docs",
+        path: "processes/account-acc/process-p/field-f.pdf",
         accountId: "acc",
         userId: "u1",
       }),

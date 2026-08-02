@@ -8,35 +8,30 @@ import { useAuth } from "@/hooks/use-auth";
 import { useTotalUnread } from "@/hooks/use-total-unread";
 import { useUnreadNotifications } from "@/hooks/use-unread-notifications";
 import {
-  Bell,
-  Bot,
-  CalendarDays,
+  ChevronDown,
   Crown,
-  GitBranch,
   GraduationCap,
-  LayoutDashboard,
   LogOut,
-  MapPin,
-  MessageSquare,
-  Package,
   PanelLeft,
   PanelLeftClose,
-  Radio,
   Settings,
   Shield,
-  Ship,
-  ShoppingCart,
   User,
   UserCog,
-  Users,
   UsersRound,
-  Workflow,
   X,
-  Zap,
 } from "lucide-react";
 import type { AccountRole } from "@/lib/auth/roles";
-import { hasMinRole, isInstructorRole } from "@/lib/auth/roles";
+import { isInstructorRole } from "@/lib/auth/roles";
 import { DEFAULT_LOGO_SRC } from "@/lib/brand";
+import {
+  filterNavGroups,
+  filterNavItems,
+  INSTRUCTOR_NAV,
+  isGroupActive,
+  isNavItemActive,
+  PRIMARY_NAV,
+} from "@/lib/nav/nav-items";
 import {
   Avatar,
   AvatarFallback,
@@ -56,7 +51,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useTranslations } from "next-intl";
-import { useWhatsAppProvider } from "@/hooks/use-whatsapp-provider";
 
 const SIDEBAR_COLLAPSED_KEY = "marinner:sidebar:collapsed";
 
@@ -91,37 +85,8 @@ const ROLE_CHIP: Record<
   },
 };
 
-interface NavItem {
-  href: string;
-  labelKey: string;
-  icon: typeof LayoutDashboard;
-  beta?: boolean;
-}
-
-const navItems: NavItem[] = [
-  { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard },
-  { href: "/inbox", labelKey: "inbox", icon: MessageSquare },
-  { href: "/notifications", labelKey: "notifications", icon: Bell },
-  { href: "/contacts", labelKey: "contacts", icon: Users },
-  { href: "/pipelines", labelKey: "pipelines", icon: GitBranch },
-  { href: "/catalog", labelKey: "catalog", icon: Package },
-  { href: "/class-locations", labelKey: "classLocations", icon: MapPin },
-  { href: "/equipment", labelKey: "equipment", icon: Ship },
-  { href: "/instructors", labelKey: "instructors", icon: GraduationCap },
-  { href: "/pos", labelKey: "pos", icon: ShoppingCart },
-  { href: "/broadcasts", labelKey: "broadcasts", icon: Radio },
-  { href: "/automations", labelKey: "automations", icon: Zap },
-  { href: "/flows", labelKey: "flows", icon: Workflow, beta: true },
-  { href: "/agents", labelKey: "aiAgents", icon: Bot },
-];
-
-/** Nav mínima do role instructor (domínio de aulas, sem CRM operacional). */
-const instructorNavItems: NavItem[] = [
-  { href: "/my-availability", labelKey: "myAvailability", icon: CalendarDays },
-];
-
 const bottomNavItems = [
-  { href: "/settings", labelKey: "settings", icon: Settings },
+  { href: "/settings", labelKey: "settings" as const, icon: Settings },
 ];
 
 interface SidebarProps {
@@ -156,11 +121,12 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
   const t = useTranslations("Sidebar");
   const pathname = usePathname();
   const { profile, profileLoading, account, accountRole, signOut } = useAuth();
-  const { isZapi } = useWhatsAppProvider();
   const totalUnread = useTotalUnread();
   const unreadNotifications = useUnreadNotifications();
   const [collapsed, setCollapsed] = useState(false);
   const [collapseReady, setCollapseReady] = useState(false);
+  // `undefined` = grupo segue o estado ativo da rota; boolean = escolha do usuário.
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
   const showAccountStrip =
     !profileLoading &&
@@ -177,16 +143,17 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
     setCollapseReady(true);
   }, []);
 
+  function applyCollapsed(next: boolean) {
+    setCollapsed(next);
+    try {
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(next));
+    } catch {
+      // private browsing / sandbox
+    }
+  }
+
   function toggleCollapsed() {
-    setCollapsed((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(next));
-      } catch {
-        // ignore
-      }
-      return next;
-    });
+    applyCollapsed(!collapsed);
   }
 
   useEffect(() => {
@@ -211,14 +178,14 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
   // No mobile o drawer sempre mostra labels; collapse só vale em lg+.
   const rail = collapseReady && collapsed;
 
-  const primaryNav =
-    accountRole && isInstructorRole(accountRole)
-      ? instructorNavItems
-      : navItems.filter(
-          (item) =>
-            item.href !== "/instructors" ||
-            (accountRole != null && hasMinRole(accountRole, "admin")),
-        );
+  const isInstructor = accountRole != null && isInstructorRole(accountRole);
+  // Enquanto a role não carrega, só o que qualquer membro pode ver.
+  const primaryNav = isInstructor
+    ? filterNavItems(INSTRUCTOR_NAV, accountRole)
+    : accountRole
+      ? filterNavItems(PRIMARY_NAV, accountRole)
+      : PRIMARY_NAV.filter((item) => item.minRole === "viewer");
+  const navGroups = isInstructor ? [] : filterNavGroups(accountRole);
 
   return (
     <TooltipProvider delay={300}>
@@ -313,32 +280,19 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
         <nav className="flex-1 overflow-y-auto px-2 py-4 lg:px-3">
           <ul className="flex flex-col gap-1">
             {primaryNav.map((item) => {
-              const isActive =
-                pathname === item.href ||
-                (item.href !== "/dashboard" && pathname.startsWith(item.href));
-              const label = t(item.labelKey as string);
+              const isActive = isNavItemActive(pathname, item.href);
+              const label = t(item.labelKey);
               const showUnreadDot =
                 item.href === "/inbox" && totalUnread > 0 && !isActive;
               const showNotificationBadge =
                 item.href === "/notifications" && unreadNotifications > 0;
-              const showBroadcastsMetaOnly =
-                item.href === "/broadcasts" && isZapi;
-              const tooltipLabel = showBroadcastsMetaOnly
-                ? `${label} — ${t("broadcastsMetaOnlyHint")}`
-                : label;
 
               return (
                 <li key={item.href}>
-                  <SidebarTooltip label={tooltipLabel} enabled={rail}>
+                  <SidebarTooltip label={label} enabled={rail}>
                     <Link
                       href={item.href}
-                      title={
-                        rail
-                          ? tooltipLabel
-                          : showBroadcastsMetaOnly
-                            ? t("broadcastsMetaOnlyHint")
-                            : undefined
-                      }
+                      title={rail ? label : undefined}
                       className={cn(
                         "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors lg:py-2",
                         rail && "lg:justify-center lg:px-0",
@@ -365,18 +319,6 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                           )}
                         >
                           {t("beta")}
-                        </span>
-                      )}
-                      {showBroadcastsMetaOnly && (
-                        <span
-                          aria-label={t("broadcastsMetaOnlyHint")}
-                          className={cn(
-                            "shrink-0 text-[10px] font-medium tracking-wide text-muted-foreground/70",
-                            rail &&
-                              "lg:absolute lg:right-1 lg:bottom-1 lg:text-[8px]",
-                          )}
-                        >
-                          {t("broadcastsMetaOnly")}
                         </span>
                       )}
                       {showUnreadDot && (
@@ -411,6 +353,103 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                       )}
                     </Link>
                   </SidebarTooltip>
+                </li>
+              );
+            })}
+
+            {navGroups.map(({ group, children }) => {
+              const label = t(group.labelKey);
+              const groupActive = isGroupActive(pathname, children);
+              const expanded = openGroups[group.id] ?? groupActive;
+
+              return (
+                <li key={group.id}>
+                  <SidebarTooltip label={label} enabled={rail}>
+                    <button
+                      type="button"
+                      aria-expanded={rail ? false : expanded}
+                      aria-controls={`nav-group-${group.id}`}
+                      title={rail ? label : undefined}
+                      onClick={() => {
+                        // No rail o submenu não cabe: expande a sidebar e abre o grupo.
+                        if (rail) applyCollapsed(false);
+                        setOpenGroups((prev) => ({
+                          ...prev,
+                          [group.id]: rail ? true : !expanded,
+                        }));
+                      }}
+                      className={cn(
+                        "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors lg:py-2",
+                        rail && "lg:justify-center lg:px-0",
+                        groupActive
+                          ? "bg-primary/10 text-primary"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                      )}
+                    >
+                      <group.icon className="h-4 w-4 shrink-0" />
+                      <span
+                        className={cn(
+                          "flex-1 truncate text-left",
+                          rail && "lg:hidden",
+                        )}
+                      >
+                        {label}
+                      </span>
+                      <ChevronDown
+                        aria-hidden
+                        className={cn(
+                          "h-3.5 w-3.5 shrink-0 transition-transform duration-200",
+                          expanded && "rotate-180",
+                          rail && "lg:hidden",
+                        )}
+                      />
+                    </button>
+                  </SidebarTooltip>
+
+                  {expanded && (
+                    <ul
+                      id={`nav-group-${group.id}`}
+                      className={cn(
+                        "mt-1 ml-4 flex flex-col gap-1 border-l border-border pl-2",
+                        rail && "lg:hidden",
+                      )}
+                    >
+                      {children.map((child) => {
+                        const childActive = isNavItemActive(
+                          pathname,
+                          child.href,
+                        );
+                        const childLabel = t(child.labelKey);
+
+                        return (
+                          <li key={child.href}>
+                            <Link
+                              href={child.href}
+                              className={cn(
+                                "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors lg:py-1.5",
+                                childActive
+                                  ? "bg-primary/10 font-medium text-primary"
+                                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                              )}
+                            >
+                              <child.icon className="h-3.5 w-3.5 shrink-0" />
+                              <span className="flex-1 truncate">
+                                {childLabel}
+                              </span>
+                              {child.beta && (
+                                <span
+                                  aria-label={t("beta")}
+                                  className="rounded-full border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-amber-300"
+                                >
+                                  {t("beta")}
+                                </span>
+                              )}
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
                 </li>
               );
             })}

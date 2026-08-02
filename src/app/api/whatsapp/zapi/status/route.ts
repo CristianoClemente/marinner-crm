@@ -18,7 +18,12 @@ export async function GET() {
   const creds = await loadZapiCredentialsForAccount(supabase, auth.accountId)
   if (!creds.ok) {
     return NextResponse.json(
-      { connected: false, reason: 'no_config', message: creds.error },
+      {
+        connected: false,
+        reason: creds.reason,
+        needs_reset: Boolean(creds.needs_reset),
+        message: creds.error,
+      },
       { status: 200 },
     )
   }

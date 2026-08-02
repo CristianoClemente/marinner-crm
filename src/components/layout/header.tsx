@@ -16,30 +16,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { WhatsAppOfflineIndicator } from "@/components/layout/whatsapp-offline-indicator";
 import { ModeToggle } from "@/components/layout/mode-toggle";
-
-const pageTitles: Record<string, string> = {
-  "/dashboard": "dashboard",
-  "/inbox": "inbox",
-  "/notifications": "notifications",
-  "/contacts": "contacts",
-  "/pipelines": "pipelines",
-  "/catalog": "catalog",
-  "/class-locations": "classLocations",
-  "/equipment": "equipment",
-  "/instructors": "instructors",
-  "/my-availability": "myAvailability",
-  "/pos": "pos",
-  "/broadcasts": "broadcasts",
-  "/automations": "automations",
-  "/settings": "settings",
-};
+import { HEADER_TITLE_BY_PATH } from "@/lib/nav/nav-items";
 
 function getPageTitleKey(pathname: string): string {
-  if (pageTitles[pathname]) return pageTitles[pathname];
-  const match = Object.entries(pageTitles).find(([path]) =>
-    pathname.startsWith(path),
-  );
+  if (HEADER_TITLE_BY_PATH[pathname]) return HEADER_TITLE_BY_PATH[pathname];
+  const match = Object.entries(HEADER_TITLE_BY_PATH)
+    .filter(([path]) => path !== "/dashboard")
+    .sort((a, b) => b[0].length - a[0].length)
+    .find(([path]) => pathname === path || pathname.startsWith(`${path}/`));
   return match ? match[1] : "dashboard";
 }
 
@@ -80,6 +66,7 @@ export function Header({ onOpenSidebar }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-1 sm:gap-2">
+        <WhatsAppOfflineIndicator />
         <ModeToggle />
 
         <DropdownMenu>

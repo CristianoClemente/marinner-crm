@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { decrypt, encrypt, isLegacyFormat } from "./encryption";
+import { decrypt, encrypt, isLegacyFormat, TOKEN_DECRYPT_FAILED_MESSAGE } from "./encryption";
+
 
 const KEY_HEX = process.env.ENCRYPTION_KEY!;
 
@@ -57,14 +58,16 @@ describe("encryption", () => {
         ctHex.slice(2);
       expect(() =>
         decrypt(`${ivHex}:${tamperedCtHex}:${tagHex}`),
-      ).toThrow();
+      ).toThrow(TOKEN_DECRYPT_FAILED_MESSAGE);
     });
 
     it("rejects a swapped auth tag", () => {
       const ct = encrypt("secret");
       const [ivHex, ctHex] = ct.split(":");
       const bogusTag = "00".repeat(16);
-      expect(() => decrypt(`${ivHex}:${ctHex}:${bogusTag}`)).toThrow();
+      expect(() => decrypt(`${ivHex}:${ctHex}:${bogusTag}`)).toThrow(
+        TOKEN_DECRYPT_FAILED_MESSAGE,
+      );
     });
 
     it("rejects a GCM IV of the wrong length", () => {

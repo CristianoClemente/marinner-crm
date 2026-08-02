@@ -31,6 +31,14 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
+    // Uploads de processo passam por PUT /api/processes/[id]/fields
+    // (key escopada a process/field).
+    if (bucketRaw === "process-docs") {
+      return NextResponse.json(
+        { error: "Use a API de campos do processo para enviar documentos." },
+        { status: 400 },
+      );
+    }
     const logicalBucket = bucketRaw;
 
     if (!(file instanceof File)) {

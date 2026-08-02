@@ -30,13 +30,13 @@ Não é um CRM genérico “para qualquer PME”: é **gestão de escola náutic
 
 ## Capabilities and Constraints
 
-**Confirmado no produto hoje:** inbox compartilhada, contatos/tags/import, funis/negócios, broadcasts com templates Meta, automações, fluxos, assistente de IA (chave do cliente), API pública e MCP, multi-tenant por `account_id` + resolução por Host/slug, **catálogo + estoque + PDV (incl. estorno)**, **locais de aula**, **equipamentos (frota)**, **instrutores** (ficha, disponibilidade, role dedicada).
+**Confirmado no produto hoje:** inbox compartilhada, contatos/tags/import, funis/negócios, **processos operacionais** (templates + enrollment por contato + **campos configuráveis por etapa** com upload R2), **Agenda** (nav principal: turmas + lembretes/eventos com cor, integrante e anotações), broadcasts com templates Meta, automações, fluxos, assistente de IA (chave do cliente), API pública e MCP, multi-tenant por `account_id` + resolução por Host/slug, **catálogo + estoque + PDV (incl. estorno)**, **locais de aula**, **equipamentos (frota)**, **instrutores** (ficha, disponibilidade, role dedicada).
 
 **Em evolução (SaaS):** billing Asaas, planos/trial, console de plataforma — ver docs internos de plano SaaS; não inventar preços ou claims comerciais no UI.
 
 **Terminologia:** “escola” / “conta” / “workspace” referem-se à organização tenant; “agente” é o papel operacional na inbox; “instrutor” é login de domínio de aulas (não herda SELECT do CRM).
 
-**Em aberto:** itens de linha no funil ligados ao catálogo; módulos acadêmicos (alunos, turmas, matrículas, grade/agenda de aulas) — não assumir como entregue até existir no código.
+**Em aberto:** itens de linha no funil ligados ao catálogo; módulos acadêmicos avançados (pagamento no processo, provas/conclusão, P&L de turma, dashboard operacional) — ver epic process-oriented; não assumir como entregue até existir no código.
 
 ## Brand Commitments
 
@@ -48,7 +48,8 @@ Não é um CRM genérico “para qualquer PME”: é **gestão de escola náutic
 ## Evidence on Hand
 
 - Código e UI do CRM em `src/` (dashboard autenticado, auth, settings).
-- Domínio escola: catálogo/PDV (`/catalog`, `/pos`), locais (`/class-locations`), equipamentos (`/equipment`), instrutores (`/instructors`, `/my-availability`).
+- Domínio escola: catálogo/PDV (`/catalog`, `/pos`), locais (`/class-locations`), equipamentos (`/equipment`), instrutores (`/instructors`, `/my-availability`), processos (`/processes`, `/process-templates`), agenda (`/agenda` — turmas + lembretes/eventos; item de nav principal).
+- Navegação: sidebar operacional (inclui Agenda) + submenus recolhíveis “Escola” (catálogo, locais, equipamentos, instrutores, templates de processo) e “Automação” (transmissões, automações, fluxos, agentes IA, admin+), filtrados por role em `src/lib/nav/nav-items.ts`.
 - Logo Marinner: `public/brand/marinner-logo.svg`, `public/favicon.svg`, `src/app/icon.svg`.
 - Domínio e multi-tenant: `docs/dominio-e-urls.md`, Fatia 1/2 em `docs/superpowers/`.
 - Roles: `docs/roles-e-permissoes.md` (inclui `instructor` rank 0).

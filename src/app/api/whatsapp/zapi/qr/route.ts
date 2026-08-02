@@ -16,7 +16,14 @@ export async function GET() {
 
   const creds = await loadZapiCredentialsForAccount(supabase, auth.accountId)
   if (!creds.ok) {
-    return NextResponse.json({ error: creds.error }, { status: creds.status })
+    return NextResponse.json(
+      {
+        error: creds.error,
+        reason: creds.reason,
+        needs_reset: Boolean(creds.needs_reset),
+      },
+      { status: creds.status },
+    )
   }
 
   const url = `https://api.z-api.io/instances/${encodeURIComponent(creds.instanceId)}/token/${encodeURIComponent(creds.instanceToken)}/qr-code/image`

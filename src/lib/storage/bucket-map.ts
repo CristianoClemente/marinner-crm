@@ -5,6 +5,7 @@ export const LOGICAL_BUCKETS = [
   "flow-media",
   "account-branding",
   "avatars",
+  "process-docs",
 ] as const;
 
 export type LogicalBucket = (typeof LOGICAL_BUCKETS)[number];
@@ -37,8 +38,6 @@ function requireEnv(name: string): string {
 }
 
 function mediaBucketName(): string {
-  // Só use o bucket de dev se marcado explicitamente — o r2.dev
-  // público de MEDIA precisa apontar para o mesmo bucket.
   if (process.env.R2_USE_MEDIA_DEV === "true") {
     return requireEnv("R2_BUCKET_MEDIA_DEV");
   }
@@ -58,25 +57,24 @@ function mediaPublicBase(): string {
  * Só usar no servidor (lê process.env).
  */
 export function resolveR2Target(logicalBucket: LogicalBucket): R2Target {
-  if (logicalBucket === "chat-media") {
+  if (
+    logicalBucket === "chat-media" ||
+    logicalBucket === "flow-media" ||
+    logicalBucket === "process-docs"
+  ) {
     const publicBaseUrl = mediaPublicBase();
     if (!publicBaseUrl) {
       throw new Error("Variável de ambiente ausente: R2_PUBLIC_BASE_URL_MEDIA");
     }
+    const prefix =
+      logicalBucket === "chat-media"
+        ? "chat/"
+        : logicalBucket === "flow-media"
+          ? "flow/"
+          : "processes/";
     return {
       r2Bucket: mediaBucketName(),
-      prefix: "chat/",
-      publicBaseUrl,
-    };
-  }
-  if (logicalBucket === "flow-media") {
-    const publicBaseUrl = mediaPublicBase();
-    if (!publicBaseUrl) {
-      throw new Error("Variável de ambiente ausente: R2_PUBLIC_BASE_URL_MEDIA");
-    }
-    return {
-      r2Bucket: mediaBucketName(),
-      prefix: "flow/",
+      prefix,
       publicBaseUrl,
     };
   }
@@ -98,11 +96,28 @@ const R2_PREFIX: Record<LogicalBucket, string> = {
   "flow-media": "flow/",
   "account-branding": "branding/",
   avatars: "avatars/",
+  "process-docs": "processes/",
 };
 
 /** Prefixo R2 puro (sem ler env) — usado em keys e testes. */
 export function r2PrefixFor(logicalBucket: LogicalBucket): string {
   return R2_PREFIX[logicalBucket];
+}
+
+function safeFileExt(fileName: string, fallback: string): string {
+  const hasExt = /\.[^.]+$/.test(fileName);
+  return hasExt ? fileName.split(".").pop()!.toLowerCase() : fallback;
+}
+
+/** Key R2 estável por campo — novo upload sobrescreve o mesmo objeto (sem fantasmas). */
+export function buildProcessDocKey(input: {
+  accountId: string;
+  processId: string;
+  fieldId: string;
+  fileName: string;
+}): string {
+  const ext = safeFileExt(input.fileName, "bin");
+  return `processes/account-${input.accountId}/process-${input.processId}/field-${input.fieldId}.${ext}`;
 }
 
 export function buildObjectKey(input: {
@@ -111,15 +126,26 @@ export function buildObjectKey(input: {
   userId: string;
   fileName: string;
   now?: number;
+  processId?: string;
+  fieldId?: string;
 }): string {
   const now = input.now ?? Date.now();
   const prefix = r2PrefixFor(input.logicalBucket);
 
+  if (input.logicalBucket === "process-docs") {
+    if (!input.processId || !input.fieldId) {
+      throw new Error("process-docs exige processId e fieldId.");
+    }
+    return buildProcessDocKey({
+      accountId: input.accountId,
+      processId: input.processId,
+      fieldId: input.fieldId,
+      fileName: input.fileName,
+    });
+  }
+
   if (input.logicalBucket === "avatars") {
-    const hasExt = /\.[^.]+$/.test(input.fileName);
-    const ext = hasExt
-      ? input.fileName.split(".").pop()!.toLowerCase()
-      : "png";
+    const ext = safeFileExt(input.fileName, "png");
     return `${prefix}account-${input.accountId}/user-${input.userId}/avatar-${now}.${ext}`;
   }
 
@@ -137,13 +163,19 @@ export function buildSupabaseObjectPath(input: {
   userId: string;
   fileName: string;
   now?: number;
+  processId?: string;
+  fieldId?: string;
 }): string {
   const now = input.now ?? Date.now();
+  if (input.logicalBucket === "process-docs") {
+    if (!input.processId || !input.fieldId) {
+      throw new Error("process-docs exige processId e fieldId.");
+    }
+    const ext = safeFileExt(input.fileName, "bin");
+    return `account-${input.accountId}/process-${input.processId}/field-${input.fieldId}.${ext}`;
+  }
   if (input.logicalBucket === "avatars") {
-    const hasExt = /\.[^.]+$/.test(input.fileName);
-    const ext = hasExt
-      ? input.fileName.split(".").pop()!.toLowerCase()
-      : "png";
+    const ext = safeFileExt(input.fileName, "png");
     return `${input.userId}/avatar-${now}.${ext}`;
   }
   return buildMediaPath(input.accountId, input.fileName, now);
@@ -161,9 +193,7 @@ export function assertPathAllowed(input: {
   }
 
   if (input.logicalBucket === "avatars") {
-    // R2: avatars/account-<id>/user-<uid>/…
     const r2Prefix = `avatars/account-${input.accountId}/user-${input.userId}/`;
-    // Supabase legado: <userId>/…
     const sbPrefix = `${input.userId}/`;
     if (path.startsWith(r2Prefix) || path.startsWith(sbPrefix)) return;
     throw new Error("Path de avatar fora do escopo do usuário.");
@@ -180,6 +210,13 @@ export function assertPathAllowed(input: {
   } else if (input.logicalBucket === "flow-media") {
     if (
       path.startsWith(`flow/${accountSeg}`) ||
+      path.startsWith(accountSeg)
+    ) {
+      return;
+    }
+  } else if (input.logicalBucket === "process-docs") {
+    if (
+      path.startsWith(`processes/${accountSeg}`) ||
       path.startsWith(accountSeg)
     ) {
       return;
