@@ -18,7 +18,7 @@ import { AccountFavicon } from "@/components/layout/account-favicon";
 // client components can't export Next's metadata object.
 
 function DashboardShellInner({ children }: { children: React.ReactNode }) {
-  const { user, loading, profileLoading, accountRole } = useAuth();
+  const { user, loading, profileLoading, accountRole, isOwner } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -26,6 +26,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
   // always visible and this stays at `false` (ignored by the component).
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
+  const [billingChecked, setBillingChecked] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -42,7 +43,44 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
     }
   }, [loading, profileLoading, user, accountRole, pathname, router]);
 
-  if (loading) {
+  // Billing gate: sem trial/active → checkout (owner inicia; demais veem bloqueio).
+  useEffect(() => {
+    if (loading || profileLoading || !user) return;
+    if (accountRole && isInstructorRole(accountRole)) {
+      setBillingChecked(true);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/billing/subscription");
+        if (!res.ok) {
+          if (!cancelled) setBillingChecked(true);
+          return;
+        }
+        const body = (await res.json()) as {
+          entitlements?: { needsCheckout?: boolean; isAccessAllowed?: boolean };
+        };
+        if (cancelled) return;
+        if (body.entitlements?.needsCheckout) {
+          router.replace(
+            isOwner
+              ? "/billing/checkout"
+              : "/billing/checkout?resume=1",
+          );
+          return;
+        }
+        setBillingChecked(true);
+      } catch {
+        if (!cancelled) setBillingChecked(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, profileLoading, user, accountRole, isOwner, router]);
+
+  if (loading || !billingChecked) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">

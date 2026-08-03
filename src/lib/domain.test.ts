@@ -11,12 +11,18 @@ import {
 
 const ORIGINAL = {
   DOMAIN_BASE: process.env.DOMAIN_BASE,
+  NEXT_PUBLIC_DOMAIN_BASE: process.env.NEXT_PUBLIC_DOMAIN_BASE,
   NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
 };
 
 afterEach(() => {
   if (ORIGINAL.DOMAIN_BASE === undefined) delete process.env.DOMAIN_BASE;
   else process.env.DOMAIN_BASE = ORIGINAL.DOMAIN_BASE;
+  if (ORIGINAL.NEXT_PUBLIC_DOMAIN_BASE === undefined) {
+    delete process.env.NEXT_PUBLIC_DOMAIN_BASE;
+  } else {
+    process.env.NEXT_PUBLIC_DOMAIN_BASE = ORIGINAL.NEXT_PUBLIC_DOMAIN_BASE;
+  }
   if (ORIGINAL.NEXT_PUBLIC_SITE_URL === undefined) {
     delete process.env.NEXT_PUBLIC_SITE_URL;
   } else {
@@ -96,17 +102,27 @@ describe("parseHost", () => {
 describe("getAuthCookieDomain / getAuthCookieOptions", () => {
   it("omite domain em desenvolvimento local (host-only cookie)", () => {
     process.env.DOMAIN_BASE = "localhost";
+    delete process.env.NEXT_PUBLIC_DOMAIN_BASE;
+    expect(getAuthCookieDomain()).toBeUndefined();
+    expect(getAuthCookieOptions().domain).toBeUndefined();
+  });
+
+  it("omite domain quando só NEXT_PUBLIC_DOMAIN_BASE=localhost (browser)", () => {
+    delete process.env.DOMAIN_BASE;
+    process.env.NEXT_PUBLIC_DOMAIN_BASE = "localhost";
     expect(getAuthCookieDomain()).toBeUndefined();
     expect(getAuthCookieOptions().domain).toBeUndefined();
   });
 
   it("usa .DOMAIN_BASE em produção", () => {
     process.env.DOMAIN_BASE = "marinner.com.br";
+    delete process.env.NEXT_PUBLIC_DOMAIN_BASE;
     expect(getAuthCookieDomain()).toBe(".marinner.com.br");
   });
 
   it("monta options com sameSite lax", () => {
     process.env.DOMAIN_BASE = "marinner.com.br";
+    delete process.env.NEXT_PUBLIC_DOMAIN_BASE;
     const opts = getAuthCookieOptions();
     expect(opts.domain).toBe(".marinner.com.br");
     expect(opts.path).toBe("/");

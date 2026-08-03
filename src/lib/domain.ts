@@ -2,7 +2,8 @@
  * Domínio do SaaS Marinner — apex vs tenant (subdomínio por empresa).
  *
  * Env:
- * - DOMAIN_BASE — ex.: marinner.com.br (prod) ou localhost (dev)
+ * - NEXT_PUBLIC_DOMAIN_BASE — preferido (disponível no browser; cookies de auth)
+ * - DOMAIN_BASE — fallback server-only; ex.: marinner.com.br (prod) ou localhost (dev)
  * - NEXT_PUBLIC_SITE_URL — URL canônica do apex (scheme + host, sem barra final)
  */
 
@@ -18,7 +19,13 @@ export type ParsedHost =
   | { kind: "tenant"; slug: string };
 
 export function getDomainBase(): string {
-  const raw = process.env.DOMAIN_BASE?.trim().toLowerCase();
+  // NEXT_PUBLIC_* is required on the browser: without it, createBrowserClient
+  // would default to .marinner.com.br and browsers reject the auth cookie on localhost.
+  const raw = (
+    process.env.NEXT_PUBLIC_DOMAIN_BASE ?? process.env.DOMAIN_BASE
+  )
+    ?.trim()
+    .toLowerCase();
   if (raw) return raw.replace(/^\.+/, "").replace(/\.$/, "");
   return DEFAULT_DOMAIN_BASE;
 }

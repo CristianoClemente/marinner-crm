@@ -36,6 +36,7 @@ const PROTECTED_PATHS = [
   "/notifications",
   "/processes",
   "/process-templates",
+  "/billing",
 ] as const;
 
 const AUTH_PATHS = ["/login", "/signup", "/forgot-password"] as const;
