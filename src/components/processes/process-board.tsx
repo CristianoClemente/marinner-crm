@@ -1,9 +1,22 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
+import {
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  PointerSensor,
+  closestCorners,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
 import {
   Check,
   ChevronRight,
@@ -14,12 +27,18 @@ import {
 } from "lucide-react";
 
 import { useWhatsAppProvider } from "@/hooks/use-whatsapp-provider";
+import { formatCurrency } from "@/lib/currency";
 import { sortStages } from "@/lib/processes/advance";
 import {
   processContactLabel,
   processContactMeta,
 } from "@/lib/processes/contact-label";
-import type { EnrollmentProcess, ProcessTemplateStage } from "@/types";
+import { cn } from "@/lib/utils";
+import type {
+  AdvanceMode,
+  EnrollmentProcess,
+  ProcessTemplateStage,
+} from "@/types";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -30,33 +49,38 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { ProcessActionKind } from "./process-action-dialog";
 
-/** Bucket dos processos cuja etapa atual não pertence mais ao template. */
 const NO_STAGE = "__sem_etapa__";
 
 interface ProcessBoardProps {
   stages: ProcessTemplateStage[];
   processes: EnrollmentProcess[];
   canOperate: boolean;
+  advanceMode?: AdvanceMode;
   pendingByProcessId?: Record<string, number>;
   onOpen: (process: EnrollmentProcess) => void;
   onViewContact: (contactId: string) => void;
   onAction: (process: EnrollmentProcess, kind: ProcessActionKind) => void;
+  onMoveToStage?: (process: EnrollmentProcess, stageId: string) => void;
 }
 
 export function ProcessBoard({
   stages,
   processes,
   canOperate,
+  advanceMode = "sequential",
   pendingByProcessId,
   onOpen,
   onViewContact,
   onAction,
+  onMoveToStage,
 }: ProcessBoardProps) {
   const t = useTranslations("Processes.list");
   const { provider, loading: providerLoading } = useWhatsAppProvider();
   const canOpenInbox = !providerLoading && provider !== null;
+  const freeDrag = advanceMode === "free" && canOperate && Boolean(onMoveToStage);
 
   const ordered = useMemo(() => sortStages(stages), [stages]);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   const byStage = useMemo(() => {
     const map = new Map<string, EnrollmentProcess[]>();
@@ -73,13 +97,44 @@ export function ProcessBoard({
   }, [ordered, processes]);
 
   const orphans = byStage.get(NO_STAGE) ?? [];
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor),
+  );
 
-  return (
+  const activeProcess = activeId
+    ? (processes.find((p) => p.id === activeId) ?? null)
+    : null;
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveId(String(event.active.id));
+  }, []);
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      setActiveId(null);
+      if (!onMoveToStage) return;
+      const { active, over } = event;
+      if (!over) return;
+      const processId = String(active.id);
+      const targetStageId = String(over.id);
+      if (targetStageId === NO_STAGE) return;
+      const process = processes.find((p) => p.id === processId);
+      if (!process || process.current_stage_id === targetStageId) return;
+      if (!ordered.some((s) => s.id === targetStageId)) return;
+      onMoveToStage(process, targetStageId);
+    },
+    [onMoveToStage, processes, ordered],
+  );
+
+  const board = (
     <div className="process-board flex h-full min-h-0 snap-x snap-mandatory gap-3 overflow-x-auto lg:snap-none">
       {ordered.map((stage, index) => (
         <StageColumn
           key={stage.id}
+          stageId={stage.id}
           title={stage.name}
+          color={stage.color}
           position={t("stageProgress", {
             current: index + 1,
             total: ordered.length,
@@ -87,6 +142,7 @@ export function ProcessBoard({
           processes={byStage.get(stage.id) ?? []}
           canOperate={canOperate}
           canOpenInbox={canOpenInbox}
+          freeDrag={freeDrag}
           pendingByProcessId={pendingByProcessId}
           onOpen={onOpen}
           onViewContact={onViewContact}
@@ -95,10 +151,12 @@ export function ProcessBoard({
       ))}
       {orphans.length > 0 ? (
         <StageColumn
+          stageId={NO_STAGE}
           title={t("noStage")}
           processes={orphans}
           canOperate={canOperate}
           canOpenInbox={canOpenInbox}
+          freeDrag={false}
           pendingByProcessId={pendingByProcessId}
           onOpen={onOpen}
           onViewContact={onViewContact}
@@ -119,24 +177,60 @@ export function ProcessBoard({
       `}</style>
     </div>
   );
+
+  if (!freeDrag) return board;
+
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCorners}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={() => setActiveId(null)}
+    >
+      {board}
+      <DragOverlay>
+        {activeProcess ? (
+          <div className="opacity-90">
+            <ProcessCard
+              process={activeProcess}
+              canOperate={false}
+              canOpenInbox={false}
+              pendingCount={pendingByProcessId?.[activeProcess.id]}
+              pendingLabel={t("pendingOverlay")}
+              onOpen={() => undefined}
+              onViewContact={() => undefined}
+              onAction={() => undefined}
+            />
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
+  );
 }
 
 function StageColumn({
+  stageId,
   title,
+  color,
   position,
   processes,
   canOperate,
   canOpenInbox,
+  freeDrag,
   pendingByProcessId,
   onOpen,
   onViewContact,
   onAction,
 }: {
+  stageId: string;
   title: string;
+  color?: string | null;
   position?: string;
   processes: EnrollmentProcess[];
   canOperate: boolean;
   canOpenInbox: boolean;
+  freeDrag: boolean;
   pendingByProcessId?: Record<string, number>;
   onOpen: (process: EnrollmentProcess) => void;
   onViewContact: (contactId: string) => void;
@@ -144,9 +238,16 @@ function StageColumn({
 }) {
   const t = useTranslations("Processes.list");
   const tFields = useTranslations("Processes.fields");
+  const { setNodeRef, isOver } = useDroppable({ id: stageId });
 
   return (
     <section className="flex h-full w-[85vw] min-w-65 max-w-80 shrink-0 snap-start flex-col rounded-lg border border-border bg-muted/40 p-3 lg:w-auto lg:max-w-none lg:min-w-65 lg:flex-1 lg:basis-65 lg:shrink lg:snap-none">
+      {color ? (
+        <div
+          className="-mx-3 -mt-3 mb-2 h-0.75 shrink-0 rounded-t-lg"
+          style={{ backgroundColor: color }}
+        />
+      ) : null}
       <div className="flex shrink-0 items-baseline justify-between gap-2">
         <h2 className="min-w-0 truncate text-sm font-medium text-foreground">
           {title}
@@ -161,30 +262,76 @@ function StageColumn({
         </p>
       ) : null}
 
-      <ul className="mt-3 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
+      <ul
+        ref={setNodeRef}
+        className={cn(
+          "mt-3 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto rounded-md",
+          freeDrag && isOver ? "bg-primary/5 ring-1 ring-dashed ring-primary/40" : "",
+        )}
+      >
         {processes.length === 0 ? (
           <li className="flex min-h-32 flex-1 items-center justify-center rounded-md border border-dashed border-border/80 px-2 py-8 text-center text-xs text-muted-foreground">
             {t("emptyStage")}
           </li>
         ) : (
-          processes.map((process) => (
-            <ProcessCard
-              key={process.id}
-              process={process}
-              canOperate={canOperate}
-              canOpenInbox={canOpenInbox}
-              pendingCount={pendingByProcessId?.[process.id]}
-              pendingLabel={tFields("pendingCount", {
-                count: pendingByProcessId?.[process.id] ?? 0,
-              })}
-              onOpen={onOpen}
-              onViewContact={onViewContact}
-              onAction={onAction}
-            />
-          ))
+          processes.map((process) =>
+            freeDrag ? (
+              <DraggableProcessCard
+                key={process.id}
+                process={process}
+                canOperate={canOperate}
+                canOpenInbox={canOpenInbox}
+                pendingCount={pendingByProcessId?.[process.id]}
+                pendingLabel={tFields("pendingCount", {
+                  count: pendingByProcessId?.[process.id] ?? 0,
+                })}
+                onOpen={onOpen}
+                onViewContact={onViewContact}
+                onAction={onAction}
+              />
+            ) : (
+              <ProcessCard
+                key={process.id}
+                process={process}
+                canOperate={canOperate}
+                canOpenInbox={canOpenInbox}
+                pendingCount={pendingByProcessId?.[process.id]}
+                pendingLabel={tFields("pendingCount", {
+                  count: pendingByProcessId?.[process.id] ?? 0,
+                })}
+                onOpen={onOpen}
+                onViewContact={onViewContact}
+                onAction={onAction}
+              />
+            ),
+          )
         )}
       </ul>
     </section>
+  );
+}
+
+function DraggableProcessCard(
+  props: Omit<Parameters<typeof ProcessCard>[0], never>,
+) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } =
+    useDraggable({ id: props.process.id });
+  const style = transform
+    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
+    : undefined;
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        isDragging && "opacity-50",
+        "cursor-grab active:cursor-grabbing",
+      )}
+      {...listeners}
+      {...attributes}
+    >
+      <ProcessCard {...props} />
+    </div>
   );
 }
 
@@ -210,9 +357,15 @@ function ProcessCard({
   const t = useTranslations("Processes.list");
   const router = useRouter();
   const [inboxBusy, setInboxBusy] = useState(false);
-  const label = processContactLabel(process, t("contactFallback"));
-  const meta = processContactMeta(process);
+  const contactLabel = processContactLabel(process, t("contactFallback"));
+  const label =
+    process.title && process.title.trim() ? process.title.trim() : contactLabel;
+  const meta =
+    process.title && process.title.trim()
+      ? contactLabel
+      : processContactMeta(process);
   const showFooter = canOperate || canOpenInbox;
+  const showMoney = Boolean(process.template?.has_monetary_value);
 
   async function openInbox() {
     if (inboxBusy) return;
@@ -240,7 +393,7 @@ function ProcessCard({
   }
 
   return (
-    <li className="shrink-0 rounded-lg bg-card ring-1 ring-foreground/10">
+    <li className="shrink-0 list-none rounded-lg bg-card ring-1 ring-foreground/10">
       <button
         type="button"
         onClick={() => onOpen(process)}
@@ -252,6 +405,14 @@ function ProcessCard({
         {meta ? (
           <span className="w-full truncate text-xs text-muted-foreground">
             {meta}
+          </span>
+        ) : null}
+        {showMoney ? (
+          <span className="mt-1 text-xs font-medium tabular-nums text-foreground">
+            {formatCurrency(
+              Number(process.value ?? 0),
+              process.currency || "BRL",
+            )}
           </span>
         ) : null}
         {typeof pendingCount === "number" && pendingCount > 0 ? (

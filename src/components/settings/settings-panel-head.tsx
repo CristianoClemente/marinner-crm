@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
+import { settingsType } from './settings-type';
 
 /**
- * Section header shown at the top of every settings panel — a title,
- * a one-line description, and an optional right-aligned action (e.g.
- * "New template", "Invite member"). Mirrors the mockup's `.panel-head`.
+ * L1 do módulo Configurações — título da aba + descrição (L3).
+ * Ver `settings-type.ts` para a escala de 3 níveis.
  */
 export function SettingsPanelHead({
   title,
@@ -26,13 +26,9 @@ export function SettingsPanelHead({
       )}
     >
       <div className="min-w-0">
-        <h2 className="text-lg font-semibold tracking-tight text-foreground">
-          {title}
-        </h2>
+        <h2 className={settingsType.panelTitle}>{title}</h2>
         {description ? (
-          <p className="mt-1 max-w-[62ch] text-sm text-muted-foreground">
-            {description}
-          </p>
+          <p className={settingsType.panelDescription}>{description}</p>
         ) : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}

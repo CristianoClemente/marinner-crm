@@ -24,10 +24,18 @@ import {
   TemplatePicker,
   type TemplateSendValues,
 } from "@/components/inbox/template-picker";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { useWhatsAppProvider } from "@/hooks/use-whatsapp-provider";
 import { toast } from "sonner";
 import { WifiOff } from "lucide-react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 
 // Remembers the agent's show/hide choice for the desktop contact panel
 // across reloads and sessions (device-scoped, like the theme prefs).
@@ -87,6 +95,8 @@ function InboxPageInner() {
    * below reconciles to the stored value right after mount instead.
    */
   const [contactPanelOpen, setContactPanelOpen] = useState(true);
+  /** Sheet de contato no mobile — o painel fixo só existe em lg+. */
+  const [mobileContactOpen, setMobileContactOpen] = useState(false);
   useEffect(() => {
     try {
       const stored = localStorage.getItem(CONTACT_PANEL_STORAGE_KEY);
@@ -106,6 +116,10 @@ function InboxPageInner() {
       }
       return next;
     });
+  }, []);
+
+  const handleOpenMobileContact = useCallback(() => {
+    setMobileContactOpen(true);
   }, []);
 
   // Fire the deep-link auto-select exactly once per URL — subsequent
@@ -624,6 +638,7 @@ function InboxPageInner() {
     setActiveConversation(null);
     setActiveContact(null);
     setMessages([]);
+    setMobileContactOpen(false);
     // Clearing the ref lets the deep-link auto-selector fire again if
     // the user later visits /inbox?c=<same-id> — desirable UX.
     autoSelectedForDeepLinkRef.current = null;
@@ -695,11 +710,18 @@ function InboxPageInner() {
       {/* WhatsApp connection banner — in the flex column, not absolute,
           so it pushes the panels down instead of overlapping them. */}
       {whatsappConnected === false && (
-        <div className="flex shrink-0 items-center justify-center gap-2 border-b border-amber-500/20 bg-amber-500/10 px-4 py-2">
-          <WifiOff className="h-4 w-4 text-amber-400" />
-          <p className="text-xs text-amber-400">
-            {t("whatsappNotConnected")}
-          </p>
+        <div className="flex shrink-0 flex-wrap items-center justify-center gap-2 border-b border-amber-500/20 bg-amber-500/10 px-4 py-2 sm:gap-3">
+          <WifiOff className="h-4 w-4 shrink-0 text-amber-400" />
+          <p className="text-xs text-amber-400">{t("whatsappNotConnected")}</p>
+          <Link
+            href="/settings?tab=whatsapp"
+            className={cn(
+              buttonVariants({ variant: "outline", size: "sm" }),
+              "border-amber-500/40 bg-transparent text-amber-300 hover:bg-amber-500/15 hover:text-amber-200",
+            )}
+          >
+            {t("whatsappConnectCta")}
+          </Link>
         </div>
       )}
 
@@ -753,19 +775,59 @@ function InboxPageInner() {
             onRefresh={handleManualRefresh}
             contactPanelOpen={contactPanelOpen}
             onToggleContactPanel={handleToggleContactPanel}
+            onOpenMobileContact={handleOpenMobileContact}
           />
         </div>
 
-        {/* Right panel: Contact sidebar — desktop only, and only when the
-            agent hasn't collapsed it via the thread-header toggle (#258).
-            On mobile it's always hidden (the `lg:block` below), so the
-            toggle — which is itself desktop-only — never affects it. */}
-        {contactPanelOpen && (
-          <div className="hidden lg:block">
-            <ContactSidebar contact={activeContact} />
+        {/* Right panel: Contact sidebar — desktop only.
+            Mantém o nó montado e anima max-width + slide para não
+            abrir/fechar a seco (#258). Mobile usa Sheet abaixo. */}
+        <div
+          className={cn(
+            "hidden h-full shrink-0 overflow-hidden lg:block",
+            "transition-[max-width,opacity] motion-reduce:transition-none",
+            contactPanelOpen
+              ? "max-w-72 opacity-100 duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]"
+              : "pointer-events-none max-w-0 opacity-0 duration-200 ease-in",
+          )}
+          aria-hidden={!contactPanelOpen}
+          inert={!contactPanelOpen ? true : undefined}
+        >
+          <div
+            className={cn(
+              "h-full w-72 transition-transform motion-reduce:transition-none motion-reduce:translate-x-0",
+              contactPanelOpen
+                ? "translate-x-0 duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]"
+                : "translate-x-4 duration-200 ease-in",
+            )}
+          >
+            <ContactSidebar
+              key={activeContact?.id ?? "empty"}
+              contact={activeContact}
+            />
           </div>
-        )}
+        </div>
       </div>
+
+      <Sheet open={mobileContactOpen} onOpenChange={setMobileContactOpen}>
+        <SheetContent
+          side="right"
+          className="w-full gap-0 p-0 sm:max-w-sm"
+        >
+          <SheetHeader className="sr-only">
+            <SheetTitle>
+              {activeContact?.name ||
+                activeContact?.phone ||
+                t("contactPanelTitle")}
+            </SheetTitle>
+          </SheetHeader>
+          <ContactSidebar
+            key={activeContact?.id ?? "empty-mobile"}
+            contact={activeContact}
+            embedded
+          />
+        </SheetContent>
+      </Sheet>
 
       <NewMessageDialog
         open={newMessageOpen}

@@ -7,10 +7,11 @@ import {
 } from "@/lib/auth/account";
 import { emitProcessEvent } from "@/lib/processes/events";
 import { isProcessStatus, sortStages } from "@/lib/processes/advance";
+import {
+  parseCommercialCreateFields,
+  PROCESS_SELECT,
+} from "@/lib/processes/process-select";
 import { isUuid } from "@/lib/processes/validate";
-
-const PROCESS_SELECT =
-  "*, template:process_templates(id, name, catalog_item_id, active), current_stage:process_template_stages!enrollment_processes_current_stage_id_fkey(*), contact:contacts(id, name, phone, cpf)";
 
 export async function GET(request: Request) {
   try {
@@ -48,10 +49,10 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const ctx = await requireRole("agent");
-    const body = (await request.json().catch(() => null)) as {
-      contact_id?: unknown;
-      template_id?: unknown;
-    } | null;
+    const body = (await request.json().catch(() => null)) as Record<
+      string,
+      unknown
+    > | null;
 
     if (!body || !isUuid(body.contact_id) || !isUuid(body.template_id)) {
       return NextResponse.json(
@@ -62,7 +63,7 @@ export async function POST(request: Request) {
 
     const { data: contact, error: cErr } = await ctx.supabase
       .from("contacts")
-      .select("id")
+      .select("id, name")
       .eq("account_id", ctx.accountId)
       .eq("id", body.contact_id)
       .maybeSingle();
@@ -75,7 +76,9 @@ export async function POST(request: Request) {
 
     const { data: template, error: tErr } = await ctx.supabase
       .from("process_templates")
-      .select("id, active")
+      .select(
+        "id, active, has_monetary_value, has_commercial_outcome, requires_catalog_item, catalog_item_id",
+      )
       .eq("account_id", ctx.accountId)
       .eq("id", body.template_id)
       .maybeSingle();
@@ -104,6 +107,17 @@ export async function POST(request: Request) {
       );
     }
 
+    const commercial = parseCommercialCreateFields(body);
+    if (template.has_commercial_outcome) {
+      commercial.commercial_status = "open";
+    }
+    if (!commercial.title) {
+      commercial.title =
+        typeof contact.name === "string" && contact.name.trim()
+          ? contact.name.trim().slice(0, 200)
+          : null;
+    }
+
     const first = ordered[0];
     const { data: process, error } = await ctx.supabase
       .from("enrollment_processes")
@@ -114,6 +128,17 @@ export async function POST(request: Request) {
         current_stage_id: first.id,
         status: "active",
         opened_by_user_id: ctx.userId,
+        title: commercial.title,
+        value: template.has_monetary_value ? commercial.value : 0,
+        currency: template.has_monetary_value ? commercial.currency : null,
+        assigned_to: isUuid(commercial.assigned_to)
+          ? commercial.assigned_to
+          : null,
+        expected_close_date: commercial.expected_close_date,
+        conversation_id: isUuid(commercial.conversation_id)
+          ? commercial.conversation_id
+          : null,
+        commercial_status: commercial.commercial_status,
       })
       .select(PROCESS_SELECT)
       .single();

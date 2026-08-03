@@ -60,4 +60,33 @@ describe("resolveAdvance", () => {
     });
     expect(r.ok && !r.complete && r.next.id).toBe("s2");
   });
+
+  it("free permite ir para qualquer etapa com target", () => {
+    const r = resolveAdvance({
+      stages,
+      currentStageId: "s2",
+      targetStageId: "s0",
+      advanceMode: "free",
+    });
+    expect(r.ok && !r.complete && r.next.id).toBe("s0");
+  });
+
+  it("free rejeita destino igual ao atual", () => {
+    const r = resolveAdvance({
+      stages,
+      currentStageId: "s1",
+      targetStageId: "s1",
+      advanceMode: "free",
+    });
+    expect(r.ok).toBe(false);
+  });
+
+  it("free sem target avança sequencialmente", () => {
+    const r = resolveAdvance({
+      stages,
+      currentStageId: "s0",
+      advanceMode: "free",
+    });
+    expect(r.ok && !r.complete && r.next.id).toBe("s1");
+  });
 });

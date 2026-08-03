@@ -28,15 +28,25 @@ import {
   RefreshCw,
   PanelRightOpen,
   PanelRightClose,
+  UserRound,
+  MoreHorizontal,
 } from "lucide-react";
 import { format, isToday, isYesterday, differenceInHours } from "date-fns";
+import { formatDate } from "@/lib/format";
 import { useTranslations } from "next-intl";
-import { Badge } from "@/components/ui/badge";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -110,13 +120,15 @@ interface MessageThreadProps {
    */
   contactPanelOpen?: boolean;
   onToggleContactPanel?: () => void;
+  /** Abre o Sheet de contato no mobile (painel fixo só existe em lg+). */
+  onOpenMobileContact?: () => void;
 }
 
 function formatDateSeparator(dateStr: string, t: ReturnType<typeof useTranslations>): string {
   const date = new Date(dateStr);
   if (isToday(date)) return t("today");
   if (isYesterday(date)) return t("yesterday");
-  return format(date, "MMMM d, yyyy");
+  return formatDate(date, { day: "numeric", month: "long", year: "numeric" });
 }
 
 function groupMessagesByDate(messages: Message[]) {
@@ -168,9 +180,11 @@ export function MessageThread({
   onRefresh,
   contactPanelOpen,
   onToggleContactPanel,
+  onOpenMobileContact,
 }: MessageThreadProps) {
   const t = useTranslations("Inbox.messageThread");
   const tTimer = useTranslations("Inbox.sessionTimer");
+  const tErrors = useTranslations("Inbox.errors");
   const tQuote = useTranslations("Inbox.replyQuote");
 
   const { user, profile } = useAuth();
@@ -487,7 +501,7 @@ export function MessageThread({
         if (!res.ok) {
           const reason = payload?.error || `HTTP ${res.status}`;
           console.error("Failed to send message:", reason);
-          toast.error(`Falha ao enviar: ${reason}`);
+          toast.error(tErrors("sendFailed"));
           // Mark the optimistic bubble as failed so the user sees what happened
           onUpdateMessage(tempId, { status: "failed" });
           return;
@@ -499,12 +513,11 @@ export function MessageThread({
         onUpdateMessage(tempId, { status: "sent" });
       } catch (err) {
         console.error("Failed to send message:", err);
-        const reason = err instanceof Error ? err.message : "network error";
-        toast.error(`Falha ao enviar: ${reason}`);
+        toast.error(tErrors("network"));
         onUpdateMessage(tempId, { status: "failed" });
       }
     },
-    [conversation, onNewMessage, onUpdateMessage, user?.id]
+    [conversation, onNewMessage, onUpdateMessage, user?.id, tErrors]
   );
 
   const handleSendMedia = useCallback(
@@ -555,7 +568,7 @@ export function MessageThread({
         if (!res.ok) {
           const reason = data?.error || `HTTP ${res.status}`;
           console.error("Failed to send media:", reason);
-          toast.error(`Falha ao enviar: ${reason}`);
+          toast.error(tErrors("sendFailed"));
           onUpdateMessage(tempId, { status: "failed" });
           // The upload never reached the recipient — GC the orphaned
           // object rather than leaving it in the public bucket forever.
@@ -566,13 +579,12 @@ export function MessageThread({
         onUpdateMessage(tempId, { status: "sent" });
       } catch (err) {
         console.error("Failed to send media:", err);
-        const reason = err instanceof Error ? err.message : "network error";
-        toast.error(`Falha ao enviar: ${reason}`);
+        toast.error(tErrors("network"));
         onUpdateMessage(tempId, { status: "failed" });
         void deleteAccountMedia(CHAT_MEDIA_BUCKET, payload.path).catch(() => {});
       }
     },
-    [conversation, onNewMessage, onUpdateMessage, user?.id],
+    [conversation, onNewMessage, onUpdateMessage, user?.id, tErrors],
   );
 
   const handleSendInteractive = useCallback(
@@ -630,18 +642,42 @@ export function MessageThread({
   );
 
   const handleStatusChange = useCallback(
-    async (status: ConversationStatus) => {
+    async (status: ConversationStatus, options?: { silent?: boolean }) => {
       if (!conversation) return;
+      const previous = conversation.status;
+      if (previous === status) return;
 
       const supabase = createClient();
-      await supabase
+      const { error } = await supabase
         .from("conversations")
         .update({ status })
         .eq("id", conversation.id);
 
+      if (error) {
+        toast.error(tErrors("sendFailed"));
+        return;
+      }
+
       onStatusChange(conversation.id, status);
+
+      if (!options?.silent) {
+        const labelKey =
+          status === "open"
+            ? "statusOpen"
+            : status === "pending"
+              ? "statusPending"
+              : "statusClosed";
+        toast.success(t("statusChanged", { status: t(labelKey) }), {
+          action: {
+            label: t("undo"),
+            onClick: () => {
+              void handleStatusChange(previous, { silent: true });
+            },
+          },
+        });
+      }
     },
-    [conversation, onStatusChange]
+    [conversation, onStatusChange, t, tErrors],
   );
 
   const handleOpenTemplates = useCallback(() => {
@@ -719,6 +755,74 @@ export function MessageThread({
     [conversation, onNewMessage, onUpdateMessage, user?.id],
   );
 
+  /** Reenvia mensagem com status failed (texto ou mídia com URL ainda disponível). */
+  const handleRetryMessage = useCallback(
+    async (message: Message) => {
+      if (!conversation || message.status !== "failed") return;
+
+      if (message.content_type === "text" && message.content_text) {
+        onUpdateMessage(message.id, { status: "sending" });
+        try {
+          const res = await fetch("/api/whatsapp/send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              conversation_id: conversation.id,
+              message_type: "text",
+              content_text: message.content_text,
+              reply_to_message_id: message.reply_to_message_id,
+            }),
+          });
+          const payload = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            toast.error(tErrors("resendFailed"));
+            onUpdateMessage(message.id, { status: "failed" });
+            return;
+          }
+          onUpdateMessage(message.id, { status: "sent" });
+        } catch {
+          toast.error(tErrors("network"));
+          onUpdateMessage(message.id, { status: "failed" });
+        }
+        return;
+      }
+
+      const mediaKinds = ["image", "video", "audio", "document"] as const;
+      if (
+        mediaKinds.includes(message.content_type as (typeof mediaKinds)[number]) &&
+        message.media_url
+      ) {
+        onUpdateMessage(message.id, { status: "sending" });
+        try {
+          const res = await fetch("/api/whatsapp/send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              conversation_id: conversation.id,
+              message_type: message.content_type,
+              media_url: message.media_url,
+              content_text: message.content_text,
+              reply_to_message_id: message.reply_to_message_id,
+            }),
+          });
+          if (!res.ok) {
+            toast.error(tErrors("resendFailed"));
+            onUpdateMessage(message.id, { status: "failed" });
+            return;
+          }
+          onUpdateMessage(message.id, { status: "sent" });
+        } catch {
+          toast.error(tErrors("network"));
+          onUpdateMessage(message.id, { status: "failed" });
+        }
+        return;
+      }
+
+      toast.error(tErrors("resendFailed"));
+    },
+    [conversation, onUpdateMessage, tErrors],
+  );
+
   // Build a quick id → Message map so reply quotes can be rendered without
   // an extra fetch — the thread already holds the full conversation.
   const messagesById = useMemo(() => {
@@ -738,7 +842,7 @@ export function MessageThread({
     return map;
   }, [reactions]);
 
-  const contactDisplayName = contact?.name || contact?.phone || "Customer";
+  const contactDisplayName = contact?.name || contact?.phone || t("unknownContact");
 
   const senderNameFor = useCallback(
     (m: Message): string | null => {
@@ -844,18 +948,19 @@ export function MessageThread({
           const payload = await res.json().catch(() => ({}));
           throw new Error(payload?.error || `HTTP ${res.status}`);
         }
-      } catch (err) {
-        const reason = err instanceof Error ? err.message : "network error";
-        toast.error(`Falha na reação: ${reason}`);
+      } catch {
+        toast.error(tErrors("reactionFailed"));
         setReactions(snapshot);
       }
     },
-    [conversation, user?.id],
+    [conversation, user?.id, tErrors],
   );
 
   const handleAssignChange = useCallback(
-    async (agentId: string | null) => {
+    async (agentId: string | null, options?: { silent?: boolean }) => {
       if (!conversation) return;
+      const previous = conversation.assigned_agent_id ?? null;
+      if (previous === agentId) return;
 
       const supabase = createClient();
       const { error } = await supabase
@@ -864,14 +969,34 @@ export function MessageThread({
         .eq("id", conversation.id);
 
       if (error) {
-        console.error("Failed to update assignment:", error);
-        toast.error("Falha ao atualizar a atribuição");
+        toast.error(tErrors("assignFailed"));
         return;
       }
 
       onAssignChange(conversation.id, agentId);
+
+      if (!options?.silent) {
+        const name =
+          agentId == null
+            ? null
+            : (profiles.find((p) => p.user_id === agentId)?.full_name ??
+              t("assigned"));
+        toast.success(
+          agentId == null
+            ? t("unassignedToast")
+            : t("assignedTo", { name: name ?? t("assigned") }),
+          {
+            action: {
+              label: t("undo"),
+              onClick: () => {
+                void handleAssignChange(previous, { silent: true });
+              },
+            },
+          },
+        );
+      }
     },
-    [conversation, onAssignChange],
+    [conversation, onAssignChange, profiles, t, tErrors],
   );
 
   // Empty state — same WhatsApp-style doodle background as the active
@@ -879,14 +1004,14 @@ export function MessageThread({
   // pattern under the user's eye.
   if (!conversation || !contact) {
     return (
-      <div className={cn("flex flex-1 flex-col items-center justify-center", DOODLE_BG_CLASSES)}>
+      <div className={cn("flex flex-1 flex-col items-center justify-center px-4 animate-in fade-in-0 duration-200 motion-reduce:animate-none", DOODLE_BG_CLASSES)}>
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
           <MessageSquare className="h-8 w-8 text-muted-foreground" />
         </div>
-        <h3 className="mt-4 text-sm font-medium text-muted-foreground">
+        <h3 className="mt-4 text-sm font-medium text-foreground">
           {t("selectConversation")}
         </h3>
-        <p className="mt-1 text-xs text-muted-foreground">
+        <p className="mt-1 max-w-xs text-center text-xs text-muted-foreground">
           {t("selectConversationHint")}
         </p>
       </div>
@@ -934,30 +1059,270 @@ export function MessageThread({
             {displayName.charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0">
-            <h2 className="truncate text-sm font-semibold text-foreground">{displayName}</h2>
+            <h2 className="truncate text-sm font-medium text-foreground">{displayName}</h2>
             <p className="truncate text-xs text-muted-foreground">{contact.phone}</p>
           </div>
-          {/* Session timer badge — Meta 24h window only; hidden for Z-API. */}
+          {/* Session timer — Meta 24h; popover explica a regra (desktop + touch). */}
           {!isZapi && sessionInfo.remaining && (
-          <Badge
-            variant="outline"
-            className={cn(
-              "ml-1 hidden gap-1 border-border text-[10px] sm:inline-flex sm:ml-2",
-              sessionInfo.expired ? "text-red-400" : "text-primary"
-            )}
-          >
-            <Clock className="h-3 w-3" />
-            {sessionInfo.remaining}
-          </Badge>
+            <Popover>
+              <PopoverTrigger
+                className={cn(
+                  "ml-1 inline-flex max-w-[9.5rem] shrink-0 cursor-pointer items-center gap-1 truncate rounded-full border border-border bg-transparent px-2 py-0.5 text-xs font-medium outline-none transition-[background-color,transform,color] duration-150 ease-out hover:bg-muted hover:scale-[1.02] active:scale-95 sm:ml-2 sm:max-w-none motion-reduce:transition-none motion-reduce:hover:scale-100 motion-reduce:active:scale-100",
+                  sessionInfo.expired ? "text-red-400" : "text-primary",
+                )}
+                aria-label={tTimer("windowTitle")}
+              >
+                <Clock className="h-3 w-3 shrink-0" />
+                <span className="truncate">{sessionInfo.remaining}</span>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-72">
+                <p className="text-xs font-medium text-foreground">
+                  {tTimer("windowTitle")}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {tTimer("windowExplain")}
+                </p>
+              </PopoverContent>
+            </Popover>
           )}
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Contact-panel toggle — desktop only. The contact sidebar
-              eats a chunk of horizontal width that crowds the thread on
-              smaller laptops; this lets agents reclaim it when they just
-              want to read and reply. Hidden on mobile, where the sidebar
-              never renders as a permanent panel anyway. Issue #258. */}
+        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+          {/* Contato no mobile — Sheet no page; desktop usa o toggle do painel. */}
+          {onOpenMobileContact && (
+            <button
+              type="button"
+              onClick={onOpenMobileContact}
+              aria-label={t("openContact")}
+              title={t("showContact")}
+              className="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:hidden"
+            >
+              <UserRound className="h-4 w-4" />
+            </button>
+          )}
+
+          {/* Desktop: status / assign / refresh inline. Mobile: overflow. */}
+          <div className="hidden items-center gap-1 lg:flex">
+            {onRefresh && (
+              <button
+                type="button"
+                onClick={handleRefreshClick}
+                disabled={isRefreshing}
+                aria-label={t("refreshConversation")}
+                title={t("refresh")}
+                className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-60"
+              >
+                <RefreshCw
+                  className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin")}
+                />
+              </button>
+            )}
+
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className={cn(
+                  "inline-flex h-8 items-center justify-center gap-1 rounded-md px-2 text-xs font-medium hover:bg-muted",
+                  currentStatus?.color ?? "text-muted-foreground",
+                )}
+              >
+                {currentStatus ? t(`status${currentStatus.label}`) : t("status")}
+                <ChevronDown className="h-3 w-3" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="border-border bg-popover"
+              >
+                {STATUS_OPTIONS.map((opt) => (
+                  <DropdownMenuItem
+                    key={opt.value}
+                    onClick={() => handleStatusChange(opt.value)}
+                    className={cn(
+                      opt.value === conversation.status
+                        ? "font-medium"
+                        : "font-normal",
+                      opt.color,
+                    )}
+                  >
+                    {t(`status${opt.label}`)}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className={cn(
+                  "inline-flex h-8 items-center justify-center gap-1 rounded-md px-2 text-xs font-medium hover:bg-muted",
+                  assignedAgentId ? "text-primary" : "text-muted-foreground",
+                )}
+              >
+                <UserPlus className="h-3 w-3" />
+                <span className="max-w-[8rem] truncate">{assignLabel}</span>
+                <ChevronDown className="h-3 w-3" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="border-border bg-popover"
+              >
+                {profiles.length === 0 ? (
+                  <DropdownMenuItem
+                    disabled
+                    className="font-normal text-muted-foreground"
+                  >
+                    {t("noTeammates")}
+                  </DropdownMenuItem>
+                ) : (
+                  profiles.map((p) => {
+                    const isSelected = p.user_id === assignedAgentId;
+                    const presence = getPresence(p.user_id);
+                    return (
+                      <DropdownMenuItem
+                        key={p.id}
+                        onClick={() => handleAssignChange(p.user_id)}
+                        className={cn(
+                          isSelected
+                            ? "font-medium text-primary"
+                            : "font-normal text-popover-foreground",
+                        )}
+                      >
+                        <PresenceDot
+                          status={presence}
+                          label={presenceLabel(
+                            presence,
+                            getRow(p.user_id)?.last_seen_at ?? null,
+                            now,
+                          )}
+                          className="mr-2"
+                        />
+                        <span className="flex-1">
+                          {p.full_name}
+                          {p.user_id === user?.id ? t("me") : ""}
+                        </span>
+                        {isSelected && <Check className="ml-2 h-3 w-3" />}
+                      </DropdownMenuItem>
+                    );
+                  })
+                )}
+                {assignedAgentId && (
+                  <>
+                    <DropdownMenuSeparator className="bg-border" />
+                    <DropdownMenuItem
+                      onClick={() => handleAssignChange(null)}
+                      className="font-normal text-muted-foreground"
+                    >
+                      {t("unassign")}
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {/* Mobile overflow — status / assign / refresh fora da linha principal. */}
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              aria-label={t("moreActions")}
+              title={t("moreActions")}
+              className="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground lg:hidden"
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="w-52 border-border bg-popover"
+            >
+              {onRefresh && (
+                <DropdownMenuItem
+                  onClick={handleRefreshClick}
+                  disabled={isRefreshing}
+                  className="font-normal"
+                >
+                  <RefreshCw
+                    className={cn(
+                      "mr-2 h-3.5 w-3.5",
+                      isRefreshing && "animate-spin",
+                    )}
+                  />
+                  {t("refresh")}
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className="font-medium">
+                  {t("status")}:{" "}
+                  {currentStatus
+                    ? t(`status${currentStatus.label}`)
+                    : "—"}
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="border-border bg-popover">
+                  {STATUS_OPTIONS.map((opt) => (
+                    <DropdownMenuItem
+                      key={opt.value}
+                      onClick={() => handleStatusChange(opt.value)}
+                      className={cn(
+                        opt.value === conversation.status
+                          ? "font-medium"
+                          : "font-normal",
+                        opt.color,
+                      )}
+                    >
+                      {t(`status${opt.label}`)}
+                      {opt.value === conversation.status && (
+                        <Check className="ml-auto h-3 w-3" />
+                      )}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className="font-medium">
+                  <UserPlus className="mr-2 h-3.5 w-3.5" />
+                  {assignLabel}
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="border-border bg-popover">
+                  {profiles.length === 0 ? (
+                    <DropdownMenuItem
+                      disabled
+                      className="font-normal text-muted-foreground"
+                    >
+                      {t("noTeammates")}
+                    </DropdownMenuItem>
+                  ) : (
+                    profiles.map((p) => {
+                      const isSelected = p.user_id === assignedAgentId;
+                      return (
+                        <DropdownMenuItem
+                          key={p.id}
+                          onClick={() => handleAssignChange(p.user_id)}
+                          className={cn(
+                            isSelected
+                              ? "font-medium text-primary"
+                              : "font-normal text-popover-foreground",
+                          )}
+                        >
+                          {p.full_name}
+                          {p.user_id === user?.id ? t("me") : ""}
+                          {isSelected && <Check className="ml-auto h-3 w-3" />}
+                        </DropdownMenuItem>
+                      );
+                    })
+                  )}
+                  {assignedAgentId && (
+                    <>
+                      <DropdownMenuSeparator className="bg-border" />
+                      <DropdownMenuItem
+                        onClick={() => handleAssignChange(null)}
+                        className="font-normal text-muted-foreground"
+                      >
+                        {t("unassign")}
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Contact-panel toggle — último à direita no desktop. Issue #258. */}
           {onToggleContactPanel && (
             <button
               type="button"
@@ -968,131 +1333,33 @@ export function MessageThread({
               title={contactPanelOpen ? t("hideContact") : t("showContact")}
               aria-pressed={contactPanelOpen}
               className={cn(
-                "hidden h-7 w-7 items-center justify-center rounded-md transition-colors hover:bg-muted hover:text-foreground lg:inline-flex",
+                "hidden size-8 items-center justify-center rounded-md lg:inline-flex",
+                "transition-[color,background-color,transform] duration-150 ease-out",
+                "hover:bg-muted hover:text-foreground active:scale-90",
+                "motion-reduce:transition-none motion-reduce:active:scale-100",
                 contactPanelOpen ? "text-primary" : "text-muted-foreground",
               )}
             >
-              {contactPanelOpen ? (
-                <PanelRightClose className="h-4 w-4" />
-              ) : (
-                <PanelRightOpen className="h-4 w-4" />
-              )}
+              <span
+                key={contactPanelOpen ? "close" : "open"}
+                className="inline-flex animate-in fade-in-0 zoom-in-75 duration-150 motion-reduce:animate-none"
+              >
+                {contactPanelOpen ? (
+                  <PanelRightClose className="h-4 w-4" />
+                ) : (
+                  <PanelRightOpen className="h-4 w-4" />
+                )}
+              </span>
             </button>
           )}
-
-          {/* Manual refresh — forces a refetch of the messages + the
-              conversation list (the parent bumps its resyncToken). Useful
-              when realtime missed an event or the agent just wants to be
-              sure nothing's stale. Only rendered when the parent wires
-              up `onRefresh`. */}
-          {onRefresh && (
-            <button
-              type="button"
-              onClick={handleRefreshClick}
-              disabled={isRefreshing}
-              aria-label={t("refreshConversation")}
-              title={t("refresh")}
-              className={cn(
-                "inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-60",
-              )}
-            >
-              <RefreshCw
-                className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin")}
-              />
-            </button>
-          )}
-
-          {/* Status dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger className={cn(
-                  "inline-flex items-center justify-center h-7 gap-1 px-2 text-xs rounded-md hover:bg-muted",
-                  currentStatus?.color ?? "text-muted-foreground"
-                )}>
-                {currentStatus ? t(`status${currentStatus.label}`) : t("status")}
-                <ChevronDown className="h-3 w-3" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              className="border-border bg-popover"
-            >
-              {STATUS_OPTIONS.map((opt) => (
-                <DropdownMenuItem
-                  key={opt.value}
-                  onClick={() => handleStatusChange(opt.value)}
-                  className={cn("text-sm", opt.color)}
-                >
-                  {t(`status${opt.label}`)}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Assign dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              className={cn(
-                "inline-flex items-center justify-center h-7 gap-1 px-2 text-xs rounded-md hover:bg-muted",
-                assignedAgentId ? "text-primary" : "text-muted-foreground"
-              )}
-            >
-              <UserPlus className="h-3 w-3" />
-              <span className="hidden sm:inline">{assignLabel}</span>
-              <ChevronDown className="h-3 w-3" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              className="border-border bg-popover"
-            >
-              {profiles.length === 0 ? (
-                <DropdownMenuItem disabled className="text-sm text-muted-foreground">
-                  {t("noTeammates")}
-                </DropdownMenuItem>
-              ) : (
-                profiles.map((p) => {
-                  const isSelected = p.user_id === assignedAgentId;
-                  const presence = getPresence(p.user_id);
-                  return (
-                    <DropdownMenuItem
-                      key={p.id}
-                      onClick={() => handleAssignChange(p.user_id)}
-                      className={cn(
-                        "text-sm",
-                        isSelected ? "text-primary" : "text-popover-foreground"
-                      )}
-                    >
-                      <PresenceDot
-                        status={presence}
-                        label={presenceLabel(
-                          presence,
-                          getRow(p.user_id)?.last_seen_at ?? null,
-                          now
-                        )}
-                        className="mr-2"
-                      />
-                      <span className="flex-1">
-                        {p.full_name}
-                        {p.user_id === user?.id ? t("me") : ""}
-                      </span>
-                      {isSelected && <Check className="ml-2 h-3 w-3" />}
-                    </DropdownMenuItem>
-                  );
-                })
-              )}
-              {assignedAgentId && (
-                <>
-                  <DropdownMenuSeparator className="bg-border" />
-                  <DropdownMenuItem
-                    onClick={() => handleAssignChange(null)}
-                    className="text-sm text-muted-foreground"
-                  >
-                    {t("unassign")}
-                  </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       </div>
+
+      {!isZapi && sessionInfo.expired && (
+        <div className="hidden border-b border-amber-500/20 bg-amber-500/10 px-4 py-2 animate-in fade-in-0 slide-in-from-top-1 duration-200 motion-reduce:animate-none lg:block">
+          <p className="text-xs text-amber-300">{tTimer("windowExplain")}</p>
+        </div>
+      )}
 
       {/* Messages Area — a barra vem do global em globals.css */}
       <div
@@ -1104,19 +1371,22 @@ export function MessageThread({
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           </div>
         ) : messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12">
+          <div className="flex flex-col items-center justify-center py-12 animate-in fade-in-0 duration-200 motion-reduce:animate-none">
             <p className="text-sm text-muted-foreground">{t("noMessagesYet")}</p>
             <p className="text-xs text-muted-foreground">
               {t("sendTemplateHint")}
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div
+            key={conversation.id}
+            className="space-y-4 animate-in fade-in-0 duration-150 motion-reduce:animate-none"
+          >
             {messageGroups.map((group) => (
               <div key={group.date}>
                 {/* Date separator */}
                 <div className="mb-4 flex items-center justify-center">
-                  <span className="rounded-full bg-muted px-3 py-1 text-[10px] font-medium text-muted-foreground">
+                  <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
                     {formatDateSeparator(group.date, t)}
                   </span>
                 </div>
@@ -1153,6 +1423,11 @@ export function MessageThread({
                         onReact={(emoji) => {
                           if (emoji) void postReaction(msg.id, emoji);
                         }}
+                        onRetry={
+                          msg.status === "failed"
+                            ? () => void handleRetryMessage(msg)
+                            : undefined
+                        }
                       >
                         <MessageBubble
                           message={msg}
@@ -1162,6 +1437,11 @@ export function MessageThread({
                           senderName={senderNameFor(msg)}
                           onToggleReaction={
                             isZapi ? undefined : handlePillToggle
+                          }
+                          onRetry={
+                            msg.status === "failed"
+                              ? () => void handleRetryMessage(msg)
+                              : undefined
                           }
                         />
                       </MessageActions>

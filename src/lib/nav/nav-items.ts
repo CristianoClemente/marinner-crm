@@ -3,7 +3,6 @@ import {
   Bell,
   Bot,
   CalendarDays,
-  GitBranch,
   GraduationCap,
   LayoutDashboard,
   ListTodo,
@@ -29,7 +28,6 @@ export type NavLabelKey =
   | "inbox"
   | "notifications"
   | "contacts"
-  | "pipelines"
   | "processes"
   | "pos"
   | "school"
@@ -81,16 +79,16 @@ export const PRIMARY_NAV: readonly NavItemDef[] = [
   },
   { href: "/contacts", labelKey: "contacts", icon: Users, minRole: "viewer" },
   {
-    href: "/pipelines",
-    labelKey: "pipelines",
-    icon: GitBranch,
-    minRole: "viewer",
-  },
-  {
     href: "/processes",
     labelKey: "processes",
     icon: ListTodo,
     minRole: "viewer",
+  },
+  {
+    href: "/process-templates",
+    labelKey: "processTemplates",
+    icon: Settings2,
+    minRole: "admin",
   },
   { href: "/pos", labelKey: "pos", icon: ShoppingCart, minRole: "viewer" },
   {
@@ -130,12 +128,6 @@ export const NAV_GROUPS: readonly NavGroupDef[] = [
         href: "/instructors",
         labelKey: "instructors",
         icon: GraduationCap,
-        minRole: "admin",
-      },
-      {
-        href: "/process-templates",
-        labelKey: "processTemplates",
-        icon: Settings2,
         minRole: "admin",
       },
     ],
@@ -226,7 +218,6 @@ export const HEADER_TITLE_BY_PATH: Record<string, NavLabelKey> = {
   "/inbox": "inbox",
   "/notifications": "notifications",
   "/contacts": "contacts",
-  "/pipelines": "pipelines",
   "/processes": "processes",
   "/process-templates": "processTemplates",
   "/catalog": "catalog",

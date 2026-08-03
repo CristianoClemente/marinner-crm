@@ -60,6 +60,8 @@ export type LocationValidateError =
   | "invalid_expense"
   | "invalid_bonus"
   | "invalid_dates"
+  | "missing_authority"
+  | "invalid_authority"
   | "nothing_to_update";
 
 export interface ClassLocationCreateInput {
@@ -75,6 +77,7 @@ export interface ClassLocationCreateInput {
   has_expense: boolean;
   expense_type: LocationCostType | null;
   expense_amount: number | null;
+  authority_id: number;
 }
 
 export interface ClassLocationPatchInput {
@@ -90,6 +93,28 @@ export interface ClassLocationPatchInput {
   has_expense?: boolean;
   expense_type?: LocationCostType | null;
   expense_amount?: number | null;
+  authority_id?: number;
+}
+
+function parseAuthorityId(
+  raw: unknown,
+):
+  | { ok: true; value: number }
+  | { ok: false; error: LocationValidateError; message: string } {
+  const n =
+    typeof raw === "number"
+      ? raw
+      : typeof raw === "string" && /^\d+$/.test(raw.trim())
+        ? Number(raw.trim())
+        : NaN;
+  if (!Number.isInteger(n) || n < 1) {
+    return {
+      ok: false,
+      error: "invalid_authority",
+      message: "Jurisdição inválida",
+    };
+  }
+  return { ok: true, value: n };
 }
 
 function readAddressFields(
@@ -240,6 +265,16 @@ export function validateClassLocationCreate(
   const expense = normalizeExpense(has_expense, b.expense_type, b.expense_amount);
   if (!expense.ok) return expense;
 
+  if (!("authority_id" in b) || b.authority_id === null || b.authority_id === "") {
+    return {
+      ok: false,
+      error: "missing_authority",
+      message: "Jurisdição é obrigatória",
+    };
+  }
+  const authority = parseAuthorityId(b.authority_id);
+  if (!authority.ok) return authority;
+
   return {
     ok: true,
     value: {
@@ -249,6 +284,7 @@ export function validateClassLocationCreate(
       has_expense,
       expense_type: expense.expense_type,
       expense_amount: expense.expense_amount,
+      authority_id: authority.value,
     },
   };
 }
@@ -329,6 +365,12 @@ export function validateClassLocationPatch(
     patch.has_expense = has_expense;
     patch.expense_type = expense.expense_type;
     patch.expense_amount = expense.expense_amount;
+  }
+
+  if ("authority_id" in b) {
+    const authority = parseAuthorityId(b.authority_id);
+    if (!authority.ok) return authority;
+    patch.authority_id = authority.value;
   }
 
   if (Object.keys(patch).length === 0) {

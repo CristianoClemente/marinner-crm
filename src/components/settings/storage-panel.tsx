@@ -10,7 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SettingsPanelHead } from "@/components/settings/settings-panel-head";
+import { settingsType } from "@/components/settings/settings-type";
 import { formatBytesPt } from "@/lib/storage/chat-quota";
+import { cn } from "@/lib/utils";
 
 type PackageRow = {
   id: string;
@@ -126,25 +128,23 @@ export function StoragePanel() {
       : 0;
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-3xl space-y-8 animate-in fade-in-50 duration-200">
       <SettingsPanelHead
         title={t("title")}
         description={t("description")}
       />
 
       {loading || !data ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className={cn("flex items-center gap-2", settingsType.body)}>
           <Loader2 className="size-4 animate-spin" />
           {t("loading")}
         </div>
       ) : (
         <>
-          <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+          <div className="space-y-3 rounded-xl bg-muted/30 p-4 ring-1 ring-foreground/10 sm:p-5">
             <div className="flex items-baseline justify-between gap-2">
-              <p className="text-sm font-medium text-foreground">
-                {t("usageTitle")}
-              </p>
-              <p className="text-sm text-muted-foreground">
+              <p className={settingsType.sectionTitle}>{t("usageTitle")}</p>
+              <p className={settingsType.body}>
                 {data.usedLabel} / {data.quotaLabel} ({pct}%)
               </p>
             </div>
@@ -154,23 +154,21 @@ export function StoragePanel() {
                 style={{ width: `${pct}%` }}
               />
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className={settingsType.meta}>
               {t("retentionHint", { days: data.retentionDays })}
             </p>
-            <p className="text-xs text-muted-foreground">
+            <p className={settingsType.meta}>
               {t("baseQuotaHint", {
                 base: formatBytesPt(data.baseQuotaBytes),
               })}
             </p>
-            <p className="text-xs text-muted-foreground">{t("requestHint")}</p>
+            <p className={settingsType.meta}>{t("requestHint")}</p>
           </div>
 
           <div className="space-y-2">
-            <h3 className="text-sm font-medium text-foreground">
-              {t("packagesTitle")}
-            </h3>
+            <h3 className={settingsType.sectionTitle}>{t("packagesTitle")}</h3>
             {data.packages.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("noPackages")}</p>
+              <p className={settingsType.body}>{t("noPackages")}</p>
             ) : (
               <ul className="divide-y divide-border rounded-xl border border-border">
                 {data.packages.map((p) => (
@@ -185,7 +183,7 @@ export function StoragePanel() {
                           ({formatBytesPt(p.extra_bytes)})
                         </span>
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className={settingsType.meta}>
                         {p.status === "active" ? t("statusActive") : t("statusCanceled")}
                         {p.notes ? ` · ${p.notes}` : ""}
                       </p>
@@ -210,12 +208,12 @@ export function StoragePanel() {
           {canEditSettings ? (
             <form
               onSubmit={onAddPackage}
-              className="space-y-3 rounded-xl border border-border bg-card p-4"
+              className="space-y-3 rounded-xl bg-muted/30 p-4 ring-1 ring-foreground/10"
             >
-              <h3 className="text-sm font-medium text-foreground">
+              <h3 className={settingsType.sectionTitle}>
                 {t("addPackageTitle")}
               </h3>
-              <p className="text-xs text-muted-foreground">{t("addPackageHint")}</p>
+              <p className={settingsType.meta}>{t("addPackageHint")}</p>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="extra-gb">{t("extraGb")}</Label>

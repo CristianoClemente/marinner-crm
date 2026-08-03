@@ -7,11 +7,12 @@ import { useAuth } from '@/hooks/use-auth';
 import { formatCurrency } from '@/lib/currency';
 import { formatDateTime } from '@/lib/format';
 import { toast } from 'sonner';
-import type { Contact, Tag, ContactNote, Deal, MessageTemplate } from '@/types';
+import type { Contact, Tag, ContactNote, MessageTemplate } from '@/types';
 import {
   TemplatePicker,
   type TemplateSendValues,
 } from '@/components/inbox/template-picker';
+import { ContactResidenciaButton } from '@/components/documents/contact-residencia-button';
 import {
   Sheet,
   SheetContent,
@@ -98,8 +99,17 @@ export function ContactDetailView({
   const [savingNote, setSavingNote] = useState(false);
   const [loadingNotes, setLoadingNotes] = useState(false);
 
-  // Deals tab
-  const [deals, setDeals] = useState<Deal[]>([]);
+  // Deals tab (instâncias comerciais no Kanban unificado)
+  const [deals, setDeals] = useState<
+    Array<{
+      id: string;
+      title: string | null;
+      value: number;
+      currency: string | null;
+      commercial_status: string | null;
+      current_stage: { name: string; color: string | null } | null;
+    }>
+  >([]);
   const [loadingDeals, setLoadingDeals] = useState(false);
 
   const fetchContact = useCallback(async () => {
@@ -154,11 +164,32 @@ export function ContactDetailView({
     if (!contactId) return;
     setLoadingDeals(true);
     const { data } = await supabase
-      .from('deals')
-      .select('*, stage:pipeline_stages(*)')
+      .from('enrollment_processes')
+      .select(
+        'id, title, value, currency, commercial_status, current_stage:process_template_stages!enrollment_processes_current_stage_id_fkey(name, color)',
+      )
       .eq('contact_id', contactId)
+      .not('commercial_status', 'is', null)
       .order('created_at', { ascending: false });
-    setDeals((data ?? []) as Deal[]);
+    const rows = (data ?? []).map((row) => {
+      const stage = Array.isArray(row.current_stage)
+        ? row.current_stage[0]
+        : row.current_stage;
+      return {
+        id: row.id as string,
+        title: (row.title as string | null) ?? null,
+        value: Number(row.value ?? 0),
+        currency: (row.currency as string | null) ?? null,
+        commercial_status: (row.commercial_status as string | null) ?? null,
+        current_stage: stage
+          ? {
+              name: stage.name as string,
+              color: (stage.color as string | null) ?? null,
+            }
+          : null,
+      };
+    });
+    setDeals(rows);
     setLoadingDeals(false);
   }, [contactId, supabase]);
 
@@ -391,6 +422,11 @@ export function ContactDetailView({
                   )}
                   {t('sendTemplateBtn')}
                 </Button>
+                {contactId ? (
+                  <div className="mt-2">
+                    <ContactResidenciaButton contactId={contactId} />
+                  </div>
+                ) : null}
               </SheetHeader>
 
               <Tabs
@@ -615,17 +651,17 @@ export function ContactDetailView({
                         >
                           <div className="flex items-start justify-between gap-2">
                             <p className="text-sm font-medium text-foreground">
-                              {deal.title}
+                              {deal.title || '—'}
                             </p>
-                            {deal.stage && (
+                            {deal.current_stage && (
                               <span
                                 className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
                                 style={{
-                                  backgroundColor: `${deal.stage.color}20`,
-                                  color: deal.stage.color,
+                                  backgroundColor: `${deal.current_stage.color || '#64748b'}20`,
+                                  color: deal.current_stage.color || '#64748b',
                                 }}
                               >
-                                {stageLabel(deal.stage.name)}
+                                {stageLabel(deal.current_stage.name)}
                               </span>
                             )}
                           </div>
@@ -637,15 +673,16 @@ export function ContactDetailView({
                                 deal.currency || defaultCurrency,
                               )}
                             </span>
-                            {deal.status && deal.status !== 'open' && (
+                            {deal.commercial_status &&
+                              deal.commercial_status !== 'open' && (
                               <span
                                 className={
-                                  deal.status === 'won'
+                                  deal.commercial_status === 'won'
                                     ? 'text-primary'
                                     : 'text-red-400'
                                 }
                               >
-                                {deal.status}
+                                {deal.commercial_status}
                               </span>
                             )}
                           </div>

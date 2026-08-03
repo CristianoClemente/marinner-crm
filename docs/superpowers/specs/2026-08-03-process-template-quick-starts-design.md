@@ -1,7 +1,7 @@
 # Design: Modelos de início rápido para funis (process templates)
 
 **Data:** 2026-08-03  
-**Status:** aprovado em brainstorm — aguardando plano de implementação  
+**Status:** implementado  
 **Abordagem:** 1 — catálogo estático em código (padrão Automações/Fluxos)
 
 ## Norte
@@ -19,14 +19,17 @@ Disclaimer de produto (UI + copy): modelo da escola; **não substitui** a NORMAM
 
 | Tema | Decisão |
 |------|---------|
-| Escopo v1 | 1 funil comercial + Arrais-Amador + Motonauta |
+| Taxonomia de produto | Dois papéis de funil: **venda** e **processo** (não “comercial vs habilitação”) |
+| Processo na v1 | Presets de processo = Arrais-Amador e Motonauta; **despachante** e outras categorias = fatias futuras no mesmo papel |
+| Escopo v1 | 1 funil de venda + 2 processos (Arrais, Motonauta) |
 | Clique no card | Abre dialog pré-preenchido (não cria no banco) |
 | Conteúdo | Etapas + capacidades + campos essenciais por etapa |
 | Persistência | Catálogo estático em `src/lib/processes/quick-start-templates.ts` |
 | API | Nenhuma nova; Salvar = `POST` template + `PUT` stages + `PUT` fields |
-| Galeria | Sempre visível para quem gerencia funis (`edit-settings`) |
+| Galeria | Sempre visível; cards com ícone + título + descrição + **meta** (etapas · modo · venda\|processo) |
+| Dialog pós-preset | Hint no header apenas (sem preview de etapas); form pré-preenchido |
 | “Novo funil” | Continua dialog em branco (defaults atuais) |
-| Catálogo (habilitação) | `requires_catalog_item=true`; escola escolhe serviço antes de salvar |
+| Catálogo (processo) | `requires_catalog_item=true` nos presets de processo; escola escolhe serviço antes de salvar |
 | Norma | Seed inspirado na NORMAM; campos editáveis no dialog |
 
 ## Arquitetura
@@ -50,6 +53,7 @@ src/lib/processes/quick-start-templates.ts
 Cada preset expõe:
 
 - `slug`: `sales_pipeline` \| `arrais_amador` \| `motonauta`
+- `kind`: `sale` \| `process` — taxonomia de produto (UI: “venda” / “processo”); habilita presets futuros (ex. despachante) sem novo eixo
 - `icon`: nome lucide estável (ex. `Handshake`, `Ship`, `Waves`)
 - `capabilities`: flags do template unificado (`advance_mode`, `has_monetary_value`, `has_commercial_outcome`, `requires_catalog_item`, `block_advance_if_incomplete`)
 - `stages[]`: `{ name, allow_skip, accepts_classes, fields[] }`
@@ -57,17 +61,50 @@ Cada preset expõe:
 
 Nome/descrição **não** ficam hardcoded em EN no módulo — chaves i18n `Processes.templates.quickStart.*`.
 
-### UI
+### UI / UX (shape Operate)
 
-- Seção “Modelos de início rápido” no topo (grid responsivo como Automações)
-- Card: ícone + título + descrição curta; hover no idioma Operate
-- Clique → `openCreateFromPreset`: zera `editing`, aplica draft, `setOpen(true)`
-- Hint no dialog quando veio de preset (ex.: “Modelo de início rápido — revise antes de salvar”)
-- Empty state da lista: “Escolha um modelo acima ou crie do zero”
+**Modo:** Operate — densidade de ferramenta; galeria para decidir rápido, dialog para revisar e salvar.
+
+**Job:** admin/owner em `/process-templates` escolhe um seed (**venda** ou **processo**) sem montar funil do zero; o dialog pré-preenchido é o lugar da edição.
+
+**Taxonomia (copy e meta)**
+
+- Papéis: **venda** (funil comercial) e **processo** (execução operacional).
+- Na v1, presets de processo são Arrais e Motonauta; copy **não** trata “habilitação” como o oposto de venda — habilitação é um *tipo* de processo (como despachante será depois).
+- Sem chip de categoria; o papel entra na **meta** do card.
+
+**Galeria (cards) — decisão 1B**
+
+- Seção “Modelos de início rápido” no topo, sempre visível para quem gerencia funis.
+- Grid responsivo: `1` → `2` (md) → `3` (xl) colunas (3 presets; não forçar 4 como Automações).
+- Card (botão): ícone em tint `primary-soft` · título `text-sm font-semibold` · descrição `text-xs muted` · **meta densa** `text-xs muted` numa linha, ex.:
+  - Venda: `4 etapas · livre · venda`
+  - Arrais / Motonauta: `5 etapas · sequencial · processo`
+- Hover: `border-primary/50` + fundo sutil (padrão Automações); foco teclado visível.
+- Clique → `openCreateFromPreset(slug)` (só estado local).
+
+**Dialog a partir de preset — decisão 2A**
+
+- Mesmo dialog de criar (header/footer fixos, corpo rolável).
+- Hint único no header/descrição: “Modelo de início rápido — revise antes de salvar.” Nos presets NORMAM, acrescentar: “Não substitui a NORMAM.”
+- **Sem** preview/lista de etapas no topo do dialog (o form já traz etapas+campos).
+- Título permanece “Novo funil” (ou equivalente i18n); o nome do preset já vem no campo Nome.
+- “Novo funil” em branco continua disponível; empty state da lista: “Escolha um modelo acima ou crie do zero”.
+
+**Hierarquia tipográfica (já alinhada ao polish do modal)**
+
+- Seções do form: `text-base`; controles `text-sm`; meta/hints `text-xs`.
+
+**Anti-goals de UI**
+
+- Não transformar a galeria em landing (hero, stats, badges ornamentais).
+- Não duplicar a estrutura do funil como “preview” dentro do dialog.
+- Não criar segundo builder só para presets.
+- Não rotular o eixo como “comercial vs habilitação” — isso trava despachante e outros processos.
 
 ## Conteúdo dos presets
 
-### `sales_pipeline` — Funil comercial
+### `sales_pipeline` — Funil de venda (`kind: sale`)
 
 | Capacidade | Valor |
 |---|---|
@@ -81,7 +118,7 @@ Etapas: Qualificação → Proposta → Negociação → Fechamento.
 
 Campos (mínimos): nota/contexto em Qualificação (textarea); valor esperado em Proposta (text). Sem `accepts_classes`.
 
-### `arrais_amador` — Arrais-Amador (NORMAM-211)
+### `arrais_amador` — Arrais-Amador (`kind: process`, NORMAM-211)
 
 | Capacidade | Valor |
 |---|---|
@@ -101,7 +138,7 @@ Etapas e campos essenciais:
 | Prova | — | date: data do exame; select: aprovado/reprovado |
 | CHA emitida | — | date: data de emissão; text: número/observações |
 
-### `motonauta` — Motonauta (NORMAM-212)
+### `motonauta` — Motonauta (`kind: process`, NORMAM-212)
 
 Mesma estrutura operacional do Arrais (sequential + catálogo + block + turmas na prática). Campos espelham inscrição MTA: docs + atestado de treinamento Motonauta + exame + CHA-MTA (rótulos i18n distintos).
 
@@ -115,9 +152,9 @@ Mesma estrutura operacional do Arrais (sequential + catálogo + block + turmas n
 ## Testes
 
 - Unitário em `quick-start-templates.test.ts`:
-  - 3 slugs presentes e shapes válidos
-  - comercial: `free`, sem exigir catálogo
-  - Arrais/Motonauta: `sequential`, `requires_catalog_item`, etapa prática com `accepts_classes`, Documentação/Prova com campos
+  - 3 slugs presentes, `kind` sale|process, shapes válidos
+  - venda: `free`, sem exigir catálogo
+  - Arrais/Motonauta: `kind=process`, `sequential`, `requires_catalog_item`, etapa prática com `accepts_classes`, Documentação/Prova com campos
 - Sem E2E obrigatório na v1
 
 ## Fora de escopo
@@ -126,15 +163,15 @@ Mesma estrutura operacional do Arrais (sequential + catálogo + block + turmas n
 - Endpoint `/presets` ou sync quando a NORMA mudar
 - Criar item de catálogo junto com o funil
 - Presets no Kanban `/processes`
-- Outras categorias (Veleiro, Mestre, Capitão) — fatias futuras
+- Outros **processos** (despachante, Veleiro, Mestre, Capitão, …) — fatias futuras no mesmo `kind: process`
 
 ## Critérios de sucesso
 
-- Galeria com 3 cards em `/process-templates`
-- Clique abre dialog preenchido; Salvar cria funil usável no Kanban
-- Comercial e habilitação diferem por capacidades sem dois builders
+- Galeria com 3 cards (meta: etapas · modo · venda|processo) em `/process-templates`
+- Clique abre dialog preenchido com hint; Salvar cria funil usável no Kanban
+- Venda e processo diferem por capacidades/`kind` sem dois builders
 - typecheck/lint/testes do módulo passam
-- Copy deixa claro que o modelo não substitui a norma
+- Copy deixa claro que o modelo não substitui a norma (presets NORMAM)
 
 ## Relação com o epic
 

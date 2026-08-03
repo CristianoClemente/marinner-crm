@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 
 import { SECTION_META, type SettingsSection } from './settings-sections';
 import { SettingsChip, StatusDot } from './settings-chip';
+import { settingsType } from './settings-type';
 import { ROLE_META } from './role-meta';
 
 interface OverviewCounts {
@@ -228,6 +229,11 @@ export function SettingsOverview({
       loading: false,
       subtitle: t('appearance', { mode: modeLabel, theme: themeName }),
     },
+    {
+      section: 'jurisdictions',
+      loading: false,
+      subtitle: t('jurisdictions'),
+    },
   ];
 
   return (
@@ -246,11 +252,11 @@ export function SettingsOverview({
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-base font-semibold text-foreground">
+            <div className={cn('truncate', settingsType.sectionTitle)}>
               {displayName}
             </div>
             {profile?.email ? (
-              <div className="truncate text-sm text-muted-foreground">
+              <div className={cn('truncate', settingsType.body)}>
                 {profile.email}
               </div>
             ) : null}
@@ -283,10 +289,10 @@ export function SettingsOverview({
                 <Icon className="size-4" />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-sm font-semibold text-foreground">
+                <span className={cn('block', settingsType.sectionTitle)}>
                   {tSections(section)}
                 </span>
-                <span className="mt-0.5 flex items-center gap-1.5 text-sm text-muted-foreground">
+                <span className={cn('mt-0.5 flex items-center gap-1.5', settingsType.body)}>
                   {loading ? (
                     <>
                       <Loader2 className="size-3 animate-spin" /> {t('loading')}

@@ -1,34 +1,62 @@
 "use client";
 
-import { Check, Palette, SunMoon } from "lucide-react";
+import { Check, Monitor, Palette, SunMoon } from "lucide-react";
 
 import { useTheme } from "@/hooks/use-theme";
-import { MODES, THEMES, type Mode, type ThemeId } from "@/lib/themes";
+import { DEFAULT_THEME, MODES, THEMES, type Mode, type ThemeId } from "@/lib/themes";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
 import { BrandingPanel } from "./branding-panel";
+import { SettingsScopeChip } from "./settings-scope-chip";
 import { SettingsPanelHead } from "./settings-panel-head";
+import { settingsType } from "./settings-type";
 
 /**
  * Aparência + marca da escola.
  *
- * 1. Marca (conta): nome, logo, slug — admin+, persistido no banco.
- * 2. Tema do dispositivo: modo + cor de destaque — localStorage.
+ * Dois contratos de persistência, visualmente separados:
+ * 1. Marca (conta) — Card + Salvar → banco
+ * 2. Preferências do dispositivo — ao vivo → localStorage
  */
 export function AppearancePanel() {
-  const { theme, setTheme, mode, setMode } = useTheme();
   const t = useTranslations("Settings.appearance");
-
-  const activeTheme = THEMES.find((item) => item.id === theme) ?? THEMES[0];
 
   return (
     <section className="max-w-3xl animate-in fade-in-50 duration-200">
       <SettingsPanelHead title={t("title")} description={t("description")} />
 
-      <div className="space-y-8">
+      <div className="space-y-10">
         <BrandingPanel />
 
-        <section className="space-y-3">
+        <DevicePreferences />
+      </div>
+    </section>
+  );
+}
+
+/** Zona B — tema ao vivo; sem Card de formulário e sem CTA Salvar. */
+function DevicePreferences() {
+  const { theme, setTheme, mode, setMode } = useTheme();
+  const t = useTranslations("Settings.appearance");
+  const activeTheme = THEMES.find((item) => item.id === theme) ?? THEMES[0];
+
+  return (
+    <section className="space-y-5">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-t border-border pt-8">
+        <div className="min-w-0">
+          <h3 className={cn("flex items-center gap-2", settingsType.sectionTitle)}>
+            <Monitor className="size-4 text-muted-foreground" aria-hidden />
+            {t("deviceTitle")}
+          </h3>
+          <p className={cn("mt-1 max-w-[56ch]", settingsType.body)}>
+            {t("deviceHint")}
+          </p>
+        </div>
+        <SettingsScopeChip scope="device" />
+      </div>
+
+      <div className="space-y-6 rounded-xl bg-muted/30 p-4 ring-1 ring-foreground/10 sm:p-5">
+        <div className="space-y-3">
           <SectionHead icon={<SunMoon className="size-4" />} title={t("mode")}>
             {t("modeHint")}
           </SectionHead>
@@ -47,9 +75,9 @@ export function AppearancePanel() {
               />
             ))}
           </div>
-        </section>
+        </div>
 
-        <section className="space-y-3">
+        <div className="space-y-3 border-t border-border/60 pt-5">
           <SectionHead icon={<Palette className="size-4" />} title={t("accentColor")}>
             {t("accentHint")}
           </SectionHead>
@@ -65,24 +93,19 @@ export function AppearancePanel() {
                 id={item.id}
                 name={item.name}
                 swatch={item.swatch}
+                isDefault={item.id === DEFAULT_THEME}
                 isActive={item.id === theme}
                 onPick={() => setTheme(item.id)}
               />
             ))}
           </div>
 
-          <div
-            aria-live="polite"
-            className="rounded-lg border border-border bg-card px-4 py-3"
-          >
-            <div className="text-sm font-semibold text-foreground">
-              {activeTheme.name}
-            </div>
-            <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">
-              {activeTheme.tagline}
-            </p>
-          </div>
-        </section>
+          <p aria-live="polite" className={settingsType.meta}>
+            {activeTheme.id === DEFAULT_THEME
+              ? t("accentRecommended")
+              : t("accentSelected", { name: activeTheme.name })}
+          </p>
+        </div>
       </div>
     </section>
   );
@@ -99,13 +122,13 @@ function SectionHead({
 }) {
   return (
     <div>
-      <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+      <h4 className={cn("flex items-center gap-2 text-sm font-medium text-foreground")}>
         <span className="text-muted-foreground" aria-hidden>
           {icon}
         </span>
         {title}
-      </h3>
-      <p className="mt-1 text-sm text-muted-foreground">{children}</p>
+      </h4>
+      <p className={cn("mt-1", settingsType.meta)}>{children}</p>
     </div>
   );
 }
@@ -155,7 +178,6 @@ function ModeCard({
           : "border-border hover:border-primary/40",
       )}
     >
-      {/* Miniatura da UI no modo correspondente. */}
       <span
         aria-hidden
         className="flex h-16 items-stretch gap-1.5 p-2"
@@ -165,7 +187,8 @@ function ModeCard({
           className="w-1/4 rounded-sm"
           style={{ background: surfaces.card }}
         />
-        <span className="flex flex-1 flex-col justify-center gap-1.5 rounded-sm p-2"
+        <span
+          className="flex flex-1 flex-col justify-center gap-1.5 rounded-sm p-2"
           style={{ background: surfaces.card }}
         >
           <span
@@ -207,12 +230,14 @@ function SwatchButton({
   id,
   name,
   swatch,
+  isDefault,
   isActive,
   onPick,
 }: {
   id: ThemeId;
   name: string;
   swatch: string;
+  isDefault: boolean;
   isActive: boolean;
   onPick: () => void;
 }) {
@@ -223,18 +248,24 @@ function SwatchButton({
       role="radio"
       onClick={onPick}
       aria-checked={isActive}
-      aria-label={t("useTheme", { name })}
-      title={name}
+      aria-label={
+        isDefault
+          ? `${t("useTheme", { name })} — ${t("accentRecommended")}`
+          : t("useTheme", { name })
+      }
+      title={isDefault ? `${name} · ${t("accentRecommended")}` : name}
       className={cn(
         "relative flex size-11 items-center justify-center rounded-full transition-transform sm:size-10",
         "ring-offset-2 ring-offset-background hover:scale-105",
-        isActive ? "ring-2 ring-primary" : "ring-1 ring-border",
+        isActive ? "ring-2 ring-foreground/80" : "ring-1 ring-border",
+        isDefault && !isActive && "ring-2 ring-primary/50",
       )}
       style={{ background: swatch }}
     >
       {isActive && (
         <Check
-          className="size-4 text-primary-foreground drop-shadow-sm"
+          className="size-4 drop-shadow-sm"
+          style={{ color: "oklch(0.985 0 0)" }}
           aria-hidden
         />
       )}

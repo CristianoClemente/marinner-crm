@@ -1,5 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { isAdvanceMode } from "@/lib/processes/advance";
+import type { AdvanceMode } from "@/lib/processes/types";
+
 export function isUuid(value: unknown): value is string {
   return (
     typeof value === "string" &&
@@ -9,11 +12,21 @@ export function isUuid(value: unknown): value is string {
   );
 }
 
+export type TemplateCreateValue = {
+  name: string;
+  catalog_item_id: string | null;
+  active: boolean;
+  advance_mode: AdvanceMode;
+  has_monetary_value: boolean;
+  has_commercial_outcome: boolean;
+  requires_catalog_item: boolean;
+  block_advance_if_incomplete?: boolean;
+  habilitation_kind?: "arrais" | "motonauta" | null;
+};
+
 export function validateTemplateCreate(
   body: unknown,
-):
-  | { ok: true; value: { name: string; catalog_item_id: string; active: boolean } }
-  | { ok: false; message: string } {
+): { ok: true; value: TemplateCreateValue } | { ok: false; message: string } {
   if (!body || typeof body !== "object") {
     return { ok: false, message: "Body inválido." };
   }
@@ -21,18 +34,55 @@ export function validateTemplateCreate(
   if (typeof b.name !== "string" || !b.name.trim()) {
     return { ok: false, message: "Nome é obrigatório." };
   }
-  if (!isUuid(b.catalog_item_id)) {
+
+  const requiresCatalog =
+    b.requires_catalog_item === undefined
+      ? true
+      : Boolean(b.requires_catalog_item);
+
+  let catalog_item_id: string | null = null;
+  if (b.catalog_item_id === null || b.catalog_item_id === undefined || b.catalog_item_id === "") {
+    catalog_item_id = null;
+  } else if (isUuid(b.catalog_item_id)) {
+    catalog_item_id = b.catalog_item_id;
+  } else {
     return { ok: false, message: "Item do catálogo inválido." };
   }
+
+  if (requiresCatalog && !catalog_item_id) {
+    return { ok: false, message: "Item do catálogo é obrigatório neste funil." };
+  }
+
+  const advance_mode: AdvanceMode = isAdvanceMode(b.advance_mode)
+    ? b.advance_mode
+    : "sequential";
+
   const active = b.active === undefined ? true : Boolean(b.active);
-  return {
-    ok: true,
-    value: {
-      name: b.name.trim().slice(0, 120),
-      catalog_item_id: b.catalog_item_id,
-      active,
-    },
+  const value: TemplateCreateValue = {
+    name: b.name.trim().slice(0, 120),
+    catalog_item_id,
+    active,
+    advance_mode,
+    has_monetary_value: Boolean(b.has_monetary_value),
+    has_commercial_outcome: Boolean(b.has_commercial_outcome),
+    requires_catalog_item: requiresCatalog,
   };
+  if ("block_advance_if_incomplete" in b) {
+    value.block_advance_if_incomplete = Boolean(b.block_advance_if_incomplete);
+  }
+  if ("habilitation_kind" in b) {
+    if (b.habilitation_kind === null || b.habilitation_kind === "") {
+      value.habilitation_kind = null;
+    } else if (
+      b.habilitation_kind === "arrais" ||
+      b.habilitation_kind === "motonauta"
+    ) {
+      value.habilitation_kind = b.habilitation_kind;
+    } else {
+      return { ok: false, message: "habilitation_kind inválido." };
+    }
+  }
+  return { ok: true, value };
 }
 
 /** Confirma que o item existe na conta e é serviço ativo. */
@@ -83,6 +133,7 @@ export function validateStagesReplace(
         position: number;
         allow_skip: boolean;
         accepts_classes: boolean;
+        color: string | null;
       }>;
     }
   | { ok: false; message: string } {
@@ -102,6 +153,7 @@ export function validateStagesReplace(
     position: number;
     allow_skip: boolean;
     accepts_classes: boolean;
+    color: string | null;
   }> = [];
   const positions = new Set<number>();
   for (let i = 0; i < stages.length; i++) {
@@ -122,12 +174,17 @@ export function validateStagesReplace(
       return { ok: false, message: "Posições de etapa duplicadas." };
     }
     positions.add(position);
+    let color: string | null = null;
+    if (typeof row.color === "string" && row.color.trim()) {
+      color = row.color.trim().slice(0, 32);
+    }
     out.push({
       id: typeof row.id === "string" && isUuid(row.id) ? row.id : undefined,
       name: row.name.trim().slice(0, 80),
       position,
       allow_skip: Boolean(row.allow_skip),
       accepts_classes: Boolean(row.accepts_classes),
+      color,
     });
   }
   out.sort((a, b) => a.position - b.position);

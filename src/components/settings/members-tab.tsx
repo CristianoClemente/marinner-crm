@@ -75,6 +75,7 @@ import {
 } from '@/components/presence/presence-dot';
 import { InviteMemberDialog } from './invite-member-dialog';
 import { SettingsPanelHead } from './settings-panel-head';
+import { settingsType } from './settings-type';
 import { ROLE_META } from './role-meta';
 
 interface Member {
@@ -287,7 +288,7 @@ export function MembersTab() {
         description={t('description')}
         action={
           <RequireRole min="admin">
-            <Button onClick={() => setInviteOpen(true)}>
+            <Button onClick={() => setInviteOpen(true)} className="min-h-11 sm:min-h-8">
               <Plus className="size-4" />
               {t('inviteMember')}
             </Button>
@@ -386,7 +387,7 @@ export function MembersTab() {
                           {member.full_name || t('unnamed')}
                         </span>
                         {isSelf && (
-                          <Badge className="bg-muted text-muted-foreground border-border text-[10px] uppercase tracking-wide">
+                          <Badge className="bg-muted text-muted-foreground border-border text-xs uppercase tracking-wide">
                             {t('you')}
                           </Badge>
                         )}
@@ -480,7 +481,7 @@ export function MembersTab() {
         <div>
           <div className="mb-2 flex items-center gap-2">
             <UsersRound className="size-4 text-muted-foreground" />
-            <h3 className="text-sm font-semibold text-foreground">
+            <h3 className={settingsType.sectionTitle}>
               {t('pendingInvitations')}
             </h3>
             <Badge className="bg-muted text-muted-foreground border-border">
@@ -531,7 +532,7 @@ export function MembersTab() {
                             {inv.label || t('untitledInvite')}
                           </span>
                           <span
-                            className={`inline-flex shrink-0 items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium ${inviteRoleMeta.className}`}
+                            className={`inline-flex shrink-0 items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium ${inviteRoleMeta.className}`}
                           >
                             <InviteRoleIcon className="size-3" />
                             {tRoles(inv.role)}

@@ -81,7 +81,7 @@ Predicados em `src/lib/auth/roles.ts` — **usar sempre estes**, nunca comparar 
 |------------|-----------|:-----:|:-----:|:-----:|:------:|:----------:|
 | Ler dados operacionais do CRM | membro (`viewer+`) | ✓ | ✓ | ✓ | ✓ | ✗ |
 | Operação (enviar msg, CRUD contatos/deals/broadcasts/automations/flows) | `canSendMessages` → `agent+` | ✓ | ✓ | ✓ | ✗ | ✗ |
-| Editar settings (WhatsApp, templates, tags, pipelines, AI config, API keys…) | `canEditSettings` → `admin+` | ✓ | ✓ | ✗ | ✗ | ✗ |
+| Editar settings (WhatsApp, templates, tags, funis/process-templates, AI config, API keys…) | `canEditSettings` → `admin+` | ✓ | ✓ | ✗ | ✗ | ✗ |
 | Gerenciar membros / convites / mudar roles | `canManageMembers` → `admin+` | ✓ | ✓ | ✗ | ✗ | ✗ |
 | Transferir ownership | `canTransferOwnership` | ✓ | ✗ | ✗ | ✗ | ✗ |
 | Deletar conta | `canDeleteAccount` | ✓ | ✗ | ✗ | ✗ | ✗ |
@@ -143,7 +143,7 @@ Enquanto `profileLoading`, `useCan` e `RequireRole` falham fechados (`false` / n
 ### 5.3 Middleware (`src/middleware.ts`)
 
 - Valida **apenas autenticação** (cookie), **não** role.
-- Paths protegidos (login obrigatório): rotas de feature do dashboard (`/dashboard`, `/inbox`, `/contacts`, `/pipelines`, `/broadcasts`, `/automations`, `/flows`, `/agents`, `/catalog`, `/pos`, `/processes`, `/process-templates`, `/agenda`, `/settings`, …).
+- Paths protegidos (login obrigatório): rotas de feature do dashboard (`/dashboard`, `/inbox`, `/contacts`, `/broadcasts`, `/automations`, `/flows`, `/agents`, `/catalog`, `/pos`, `/processes`, `/process-templates`, `/agenda`, `/settings`, …; `/pipelines` redireciona ao Kanban).
 
 ### 5.3.1 Navegação (sidebar)
 
@@ -151,7 +151,7 @@ Fonte única: `src/lib/nav/nav-items.ts` (`minRole` por item e por grupo).
 
 | Superfície | Quem vê |
 |------------|---------|
-| Nav operacional (Painel, Inbox, Notificações, Contatos, Funis, Processos, PDV) | `viewer+` |
+| Nav operacional (Painel, Inbox, Notificações, Contatos, Kanban, PDV) | `viewer+` |
 | Submenu **Escola** → Catálogo | `viewer+` |
 | Submenu **Escola** → locais / equipamentos / instrutores / templates de processo | `admin+` |
 | Submenu **Automação** (transmissões, automações, fluxos, agentes IA) | `admin+` |
@@ -174,7 +174,7 @@ Padrão geral:
 | Classe | SELECT | INSERT/UPDATE/DELETE |
 |--------|--------|---------------------|
 | **Operacional** (contacts, conversations, messages, deals, broadcasts, automations, flows, contact_notes, contact_tags…) | `viewer+` | `agent+` |
-| **Settings** (tags, whatsapp_config, message_templates, pipelines, api_keys write, ai_configs, invitations…) | `viewer+` | `admin+` |
+| **Settings** (tags, whatsapp_config, message_templates, process_templates, api_keys write, ai_configs, invitations…) | `viewer+` | `admin+` |
 | **Logs / runs** | `viewer+` | em geral só `service_role` |
 | **profiles** | próprios + membros `viewer+` | UPDATE só da própria linha; trigger 034 impede mudança de `account_role`/`account_id` pelo client |
 | **accounts** SELECT | qualquer membro (`instructor+`, rank ≥ 0) | migration `052` — necessário para `getCurrentAccount` do instructor |

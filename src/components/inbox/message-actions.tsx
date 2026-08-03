@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { CornerUpLeft, Copy, SmilePlus } from "lucide-react";
+import { CornerUpLeft, Copy, SmilePlus, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -22,6 +22,8 @@ interface MessageActionsProps {
   onReact: (emoji: string) => void;
   /** Meta Cloud API only — hide when account uses Z-API. */
   reactionsEnabled?: boolean;
+  /** Reenviar mensagem com falha. */
+  onRetry?: () => void;
   children: ReactNode;
 }
 
@@ -35,6 +37,7 @@ export function MessageActions({
   onReply,
   onReact,
   reactionsEnabled = true,
+  onRetry,
   children,
 }: MessageActionsProps) {
   const t = useTranslations("Inbox.actions");
@@ -79,6 +82,11 @@ export function MessageActions({
     setTouchOpen(false);
   };
 
+  const handleRetry = () => {
+    onRetry?.();
+    setTouchOpen(false);
+  };
+
   // Row alignment lives here (not in MessageBubble) so the `group/actions`
   // hover region matches the bubble's content width — hovering empty space
   // in the row no longer reveals the toolbar.
@@ -101,12 +109,25 @@ export function MessageActions({
       <div
         data-touch-open={touchOpen || pickerOpen ? "true" : undefined}
         className={cn(
-          "absolute -top-3 z-10 flex h-7 items-center gap-0.5 rounded-full border border-border bg-popover/95 px-1 shadow-md backdrop-blur-sm transition-opacity",
-          "opacity-0 group-hover/actions:opacity-100 group-focus-within/actions:opacity-100",
-          "data-[touch-open=true]:opacity-100",
+          "absolute -top-3 z-10 flex h-7 items-center gap-0.5 rounded-full border border-border bg-popover/95 px-1 shadow-md backdrop-blur-sm",
+          "translate-y-1 opacity-0 transition-[opacity,transform] duration-150 ease-out",
+          "group-hover/actions:translate-y-0 group-hover/actions:opacity-100",
+          "group-focus-within/actions:translate-y-0 group-focus-within/actions:opacity-100",
+          "data-[touch-open=true]:translate-y-0 data-[touch-open=true]:opacity-100",
+          "motion-reduce:transition-none motion-reduce:translate-y-0",
           isAgent ? "right-3" : "left-3",
         )}
       >
+        {onRetry && message.status === "failed" && (
+          <button
+            type="button"
+            onClick={handleRetry}
+            className="flex h-5 w-5 items-center justify-center rounded-full text-red-400 hover:bg-muted hover:text-red-300"
+            aria-label={t("resend")}
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+          </button>
+        )}
         {reactionsEnabled && (
         <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
           <PopoverTrigger

@@ -71,25 +71,88 @@ export async function PATCH(request: Request, context: Ctx) {
     if ("block_advance_if_incomplete" in b) {
       patch.block_advance_if_incomplete = Boolean(b.block_advance_if_incomplete);
     }
+    if ("advance_mode" in b) {
+      if (b.advance_mode !== "free" && b.advance_mode !== "sequential") {
+        return NextResponse.json(
+          { error: "Modo de avanço inválido." },
+          { status: 400 },
+        );
+      }
+      patch.advance_mode = b.advance_mode;
+    }
+    if ("has_monetary_value" in b) {
+      patch.has_monetary_value = Boolean(b.has_monetary_value);
+    }
+    if ("has_commercial_outcome" in b) {
+      patch.has_commercial_outcome = Boolean(b.has_commercial_outcome);
+    }
+    if ("requires_catalog_item" in b) {
+      patch.requires_catalog_item = Boolean(b.requires_catalog_item);
+    }
+    if ("habilitation_kind" in b) {
+      if (b.habilitation_kind === null || b.habilitation_kind === "") {
+        patch.habilitation_kind = null;
+      } else if (
+        b.habilitation_kind === "arrais" ||
+        b.habilitation_kind === "motonauta"
+      ) {
+        patch.habilitation_kind = b.habilitation_kind;
+      } else {
+        return NextResponse.json(
+          { error: "habilitation_kind inválido." },
+          { status: 400 },
+        );
+      }
+    }
     if ("catalog_item_id" in b) {
-      if (!isUuid(b.catalog_item_id)) {
+      if (b.catalog_item_id === null || b.catalog_item_id === "") {
+        patch.catalog_item_id = null;
+      } else if (!isUuid(b.catalog_item_id)) {
         return NextResponse.json(
           { error: "Item do catálogo inválido." },
           { status: 400 },
         );
+      } else {
+        const service = await requireActiveCatalogService(
+          ctx.supabase,
+          ctx.accountId,
+          b.catalog_item_id,
+        );
+        if (!service.ok) {
+          return NextResponse.json(
+            { error: service.message },
+            { status: service.status },
+          );
+        }
+        patch.catalog_item_id = b.catalog_item_id;
       }
-      const service = await requireActiveCatalogService(
-        ctx.supabase,
-        ctx.accountId,
-        b.catalog_item_id,
+    }
+
+    const requires =
+      "requires_catalog_item" in patch
+        ? Boolean(patch.requires_catalog_item)
+        : undefined;
+    const catalogId =
+      "catalog_item_id" in patch ? patch.catalog_item_id : undefined;
+    if (requires === true && catalogId === null) {
+      return NextResponse.json(
+        { error: "Item do catálogo é obrigatório neste funil." },
+        { status: 400 },
       );
-      if (!service.ok) {
+    }
+    if (requires === true && catalogId === undefined) {
+      const { data: current } = await ctx.supabase
+        .from("process_templates")
+        .select("catalog_item_id")
+        .eq("account_id", ctx.accountId)
+        .eq("id", id)
+        .maybeSingle();
+      if (!current?.catalog_item_id) {
         return NextResponse.json(
-          { error: service.message },
-          { status: service.status },
+          { error: "Item do catálogo é obrigatório neste funil." },
+          { status: 400 },
         );
       }
-      patch.catalog_item_id = b.catalog_item_id;
     }
     if (Object.keys(patch).length === 0) {
       return NextResponse.json(

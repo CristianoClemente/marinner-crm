@@ -265,6 +265,31 @@ export default function ProcessesPage() {
     }
   }
 
+  async function moveToStage(process: EnrollmentProcess, stageId: string) {
+    try {
+      const res = await fetch(`/api/processes/${process.id}/advance`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ target_stage_id: stageId }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (res.status === 409 && Array.isArray(json.missing)) {
+          setFieldsFromAdvance(true);
+          setFieldsProcess(process);
+          setFieldsOpen(true);
+          toast.message(t("advanceNeedsFields"));
+          return;
+        }
+        throw new Error(json.error || t("moveFailed"));
+      }
+      setDataVersion((v) => v + 1);
+      await loadProcesses({ silent: true });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("moveFailed"));
+    }
+  }
+
   function openDetail(process: EnrollmentProcess) {
     setDetailId(process.id);
     setDetailOpen(true);
@@ -522,10 +547,12 @@ export default function ProcessesPage() {
             stages={boardStages}
             processes={processes}
             canOperate={canOperate}
+            advanceMode={selectedTemplate?.advance_mode ?? "sequential"}
             pendingByProcessId={pendingByProcessId}
             onOpen={(p) => void openCard(p)}
             onViewContact={openContact}
             onAction={(p, k) => void requestAction(p, k)}
+            onMoveToStage={(p, stageId) => void moveToStage(p, stageId)}
           />
         </div>
       ) : (

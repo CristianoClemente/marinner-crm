@@ -89,7 +89,7 @@ Densidade e scanability vencem expressão. Tokens em OKLCH, superfícies frias (
 
 **Key Characteristics:**
 - Dark-first; light é opt-in
-- Accent padrão = laranja da logo (`#ea580c` / `oklch(0.646 0.222 41)`); 12+ accents opcionais por dispositivo
+- Accent padrão = laranja da logo (`#ea580c` / `oklch(0.646 0.222 41)`); 12 accents por dispositivo
 - Profundidade por tom e ring, não por sombra ostensiva
 - Controles compactos (botão default `h-8`)
 - White-label da escola no shell; Marinner no apex
@@ -126,10 +126,12 @@ Omitido como papel de marca — “secondary” no código é superfície neutra
 **Character:** Tipografia utilitária de ferramenta — uma família, hierarquia por peso/tamanho, sem display ornamental. Inter é o incumbe atual; troca tipográfica exige decisão explícita de redesign, não “melhoria” oportunista.
 
 ### Hierarchy
-- **Title** (500, `text-base` / 1rem, leading-snug): títulos de card e seções de settings
-- **Body** (400, `text-sm` / 0.875rem): padrão da UI
-- **Label** (500, `text-sm`): labels de formulário
-- **Muted meta** (`text-xs` / `text-muted-foreground`): timestamps, hints, badges densos
+Três níveis no módulo Configurações (`src/components/settings/settings-type.ts`):
+- **L1 painel** (600, `text-lg` / tracking-tight): título da aba (`SettingsPanelHead`)
+- **L2 seção** (500, `text-base` / leading-snug): `CardTitle` e títulos de bloco
+- **L3 corpo / meta** (`text-sm` corrido; `text-xs` escaneável): dicas, listas secundárias, badges
+
+Fora de Configurações, o mesmo contraste se aplica: título de card/seção em `text-base` medium; corpo em `text-sm`; meta em `text-xs`. Labels de formulário ficam em `text-sm` medium.
 
 ### Named Rules
 **The One Voice Type Rule.** Não introduzir uma segunda família “para dar personalidade” em telas Operate sem atualizar este DESIGN.md.

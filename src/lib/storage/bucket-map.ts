@@ -120,6 +120,14 @@ export function buildProcessDocKey(input: {
   return `processes/account-${input.accountId}/process-${input.processId}/field-${input.fieldId}.${ext}`;
 }
 
+/** PDF gerado de habilitação — um objeto por emissão (não sobrescreve). */
+export function buildGeneratedDocumentKey(input: {
+  accountId: string;
+  documentId: string;
+}): string {
+  return `processes/account-${input.accountId}/generated/${input.documentId}.pdf`;
+}
+
 export function buildObjectKey(input: {
   logicalBucket: LogicalBucket;
   accountId: string;

@@ -9,6 +9,7 @@ import {
   isLocationStatus,
   validateClassLocationCreate,
 } from "@/lib/class-locations/validate";
+import { assertAccountHasAuthority } from "@/lib/class-locations/assert-authority";
 
 export async function GET(request: Request) {
   try {
@@ -48,6 +49,15 @@ export async function POST(request: Request) {
     const parsed = validateClassLocationCreate(body);
     if (!parsed.ok) {
       return NextResponse.json({ error: parsed.message }, { status: 400 });
+    }
+
+    const linked = await assertAccountHasAuthority(
+      ctx.supabase,
+      ctx.accountId,
+      parsed.value.authority_id,
+    );
+    if (!linked.ok) {
+      return NextResponse.json({ error: linked.message }, { status: 400 });
     }
 
     const { data, error } = await ctx.supabase

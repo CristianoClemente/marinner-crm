@@ -105,6 +105,7 @@ export async function PUT(request: Request, context: Ctx) {
         position: s.position,
         allow_skip: s.allow_skip,
         accepts_classes: s.accepts_classes,
+        color: s.color,
       };
       if (s.id && keepIds.has(s.id)) {
         const { error } = await ctx.supabase

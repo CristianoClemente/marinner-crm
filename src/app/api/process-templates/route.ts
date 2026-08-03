@@ -5,7 +5,10 @@ import {
   requireRole,
   toErrorResponse,
 } from "@/lib/auth/account";
-import { validateTemplateCreate, requireActiveCatalogService } from "@/lib/processes/validate";
+import {
+  validateTemplateCreate,
+  requireActiveCatalogService,
+} from "@/lib/processes/validate";
 
 export async function GET(request: Request) {
   try {
@@ -54,16 +57,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: parsed.message }, { status: 400 });
     }
 
-    const service = await requireActiveCatalogService(
-      ctx.supabase,
-      ctx.accountId,
-      parsed.value.catalog_item_id,
-    );
-    if (!service.ok) {
-      return NextResponse.json(
-        { error: service.message },
-        { status: service.status },
+    if (parsed.value.catalog_item_id) {
+      const service = await requireActiveCatalogService(
+        ctx.supabase,
+        ctx.accountId,
+        parsed.value.catalog_item_id,
       );
+      if (!service.ok) {
+        return NextResponse.json(
+          { error: service.message },
+          { status: service.status },
+        );
+      }
     }
 
     const { data, error } = await ctx.supabase

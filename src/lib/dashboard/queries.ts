@@ -61,7 +61,11 @@ export async function loadMetrics(db: DB): Promise<MetricsBundle> {
       .select('id', { count: 'exact', head: true })
       .gte('created_at', yesterdayStart)
       .lt('created_at', todayStart),
-    db.from('deals').select('value, status').eq('status', 'open'),
+    db
+      .from('enrollment_processes')
+      .select('value')
+      .eq('status', 'active')
+      .eq('commercial_status', 'open'),
     db
       .from('messages')
       .select('id', { count: 'exact', head: true })
@@ -76,7 +80,7 @@ export async function loadMetrics(db: DB): Promise<MetricsBundle> {
   ])
 
   const openDealsRows = (openDeals.data ?? []) as { value: number | null }[]
-  const openDealsValue = openDealsRows.reduce((sum, d) => sum + (d.value ?? 0), 0)
+  const openDealsValue = openDealsRows.reduce((sum, d) => sum + Number(d.value ?? 0), 0)
 
   return {
     activeConversations: {
@@ -131,21 +135,50 @@ export async function loadConversationsSeries(
 // --- 3. Pipeline donut -------------------------------------------------
 
 export async function loadPipelineDonut(db: DB): Promise<PipelineDonutData> {
+  // Prefer templates comerciais (valor + outcome); senão todos com etapas.
+  const { data: templates } = await db
+    .from('process_templates')
+    .select('id, has_monetary_value, has_commercial_outcome')
+    .eq('active', true)
+
+  const commercialIds = (templates ?? [])
+    .filter(
+      (t: { has_monetary_value: boolean; has_commercial_outcome: boolean }) =>
+        t.has_monetary_value && t.has_commercial_outcome,
+    )
+    .map((t: { id: string }) => t.id)
+
+  let stagesQuery = db
+    .from('process_template_stages')
+    .select('id, name, color, template_id, position')
+    .order('position')
+  if (commercialIds.length > 0) {
+    stagesQuery = stagesQuery.in('template_id', commercialIds)
+  }
+
   const [stagesRes, dealsRes] = await Promise.all([
-    db.from('pipeline_stages').select('id, name, color, pipeline_id, position').order('position'),
-    db.from('deals').select('stage_id, value, status').eq('status', 'open'),
+    stagesQuery,
+    db
+      .from('enrollment_processes')
+      .select('current_stage_id, value, status, commercial_status')
+      .eq('status', 'active')
+      .eq('commercial_status', 'open'),
   ])
 
   const stages =
-    (stagesRes.data ?? []) as { id: string; name: string; color: string }[]
-  const deals = (dealsRes.data ?? []) as { stage_id: string; value: number | null }[]
+    (stagesRes.data ?? []) as { id: string; name: string; color: string | null }[]
+  const deals = (dealsRes.data ?? []) as {
+    current_stage_id: string | null
+    value: number | null
+  }[]
 
   const byStage = new Map<string, { count: number; total: number }>()
   for (const d of deals) {
-    const row = byStage.get(d.stage_id) ?? { count: 0, total: 0 }
+    if (!d.current_stage_id) continue
+    const row = byStage.get(d.current_stage_id) ?? { count: 0, total: 0 }
     row.count += 1
-    row.total += d.value ?? 0
-    byStage.set(d.stage_id, row)
+    row.total += Number(d.value ?? 0)
+    byStage.set(d.current_stage_id, row)
   }
 
   const slices: PipelineStageSlice[] = stages
@@ -156,9 +189,6 @@ export async function loadPipelineDonut(db: DB): Promise<PipelineDonutData> {
       dealCount: byStage.get(s.id)?.count ?? 0,
       totalValue: byStage.get(s.id)?.total ?? 0,
     }))
-    // Hide empty stages from the ring (but we'd still show them in the
-    // legend if the user wanted a full breakdown — trimming keeps the
-    // visual clean for the common case).
     .filter((s) => s.totalValue > 0 || s.dealCount > 0)
 
   return {
@@ -282,8 +312,10 @@ export async function loadActivity(db: DB, limit = 20): Promise<ActivityItem[]> 
       .order('created_at', { ascending: false })
       .limit(10),
     db
-      .from('deals')
-      .select('id, title, updated_at, stage:pipeline_stages(name)')
+      .from('enrollment_processes')
+      .select(
+        'id, title, updated_at, current_stage:process_template_stages!enrollment_processes_current_stage_id_fkey(name)',
+      )
       .order('updated_at', { ascending: false })
       .limit(10),
     db
@@ -336,19 +368,22 @@ export async function loadActivity(db: DB, limit = 20): Promise<ActivityItem[]> 
 
   for (const d of (deals.data ?? []) as unknown as Array<{
     id: string
-    title: string
+    title: string | null
     updated_at: string
-    stage: { name: string }[] | { name: string } | null
+    current_stage: { name: string }[] | { name: string } | null
   }>) {
-    const stage = Array.isArray(d.stage) ? d.stage[0] : d.stage
+    const stage = Array.isArray(d.current_stage)
+      ? d.current_stage[0]
+      : d.current_stage
+    const title = d.title || 'Sem título'
     items.push({
       id: `deal-${d.id}`,
       kind: 'deal',
       text: stage?.name
-        ? `Deal "${d.title}" in ${stage.name}`
-        : `Deal "${d.title}" updated`,
+        ? `Negócio "${title}" em ${stage.name}`
+        : `Negócio "${title}" atualizado`,
       at: d.updated_at,
-      href: '/pipelines',
+      href: '/processes',
     })
   }
 

@@ -72,7 +72,7 @@ export function SettingsRail({
             )}
           >
             {label ? (
-              <div className="hidden px-3 pt-3.5 pb-1.5 text-[11px] font-semibold tracking-[0.09em] text-muted-foreground uppercase lg:block">
+              <div className="hidden px-3 pt-3.5 pb-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase lg:block">
                 {t(`groups.${group}`)}
               </div>
             ) : null}

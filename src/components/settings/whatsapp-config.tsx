@@ -16,6 +16,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { useTranslations } from 'next-intl';
 import { formatDateTime } from '@/lib/format';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
@@ -23,6 +24,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { SettingsPanelHead } from './settings-panel-head';
 import { SettingsChip, StatusDot } from './settings-chip';
+import { settingsType } from './settings-type';
 import {
   Accordion,
   AccordionItem,
@@ -438,7 +440,7 @@ export function WhatsAppConfig() {
             setProvider(next);
           }}
         />
-        <p className="mt-2 text-xs text-muted-foreground">
+        <p className={cn('mt-2', settingsType.meta)}>
           {provider === 'zapi' ? t('providerHintZapi') : t('providerHint')}
         </p>
       </div>
@@ -466,7 +468,7 @@ export function WhatsAppConfig() {
                 <p className="text-sm font-medium text-foreground">
                   {t('tokenCorrupted')}
                 </p>
-                <p className="text-sm text-muted-foreground">
+                <p className={settingsType.body}>
                   {statusMessage || t('tokenCorruptedDesc')}
                 </p>
                 <Button
@@ -508,7 +510,7 @@ export function WhatsAppConfig() {
               </SettingsChip>
             ) : null}
           </div>
-          <p className="max-w-[56ch] text-sm text-muted-foreground">
+          <p className={cn('max-w-[56ch]', settingsType.body)}>
             {connectionStatus === 'connected'
               ? t('connectedDesc')
               : statusMessage || t('notConnectedDesc')}
@@ -516,7 +518,7 @@ export function WhatsAppConfig() {
 
           {config ? (
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
-              <p className="min-w-0 flex-1 text-xs text-muted-foreground">
+              <p className={cn('min-w-0 flex-1', settingsType.meta)}>
                 {isRegistered ? (
                   t('subscribedSince', {
                     date: config.registered_at
@@ -552,7 +554,7 @@ export function WhatsAppConfig() {
           ) : null}
 
           {registrationProbe ? (
-            <div className="rounded-lg bg-muted/50 px-3 py-2 text-xs">
+            <div className={cn('rounded-lg bg-muted/50 px-3 py-2', settingsType.meta)}>
               <p className="font-medium text-foreground">
                 {t('diagnosticLastRun')}{' '}
                 <span
@@ -593,14 +595,16 @@ export function WhatsAppConfig() {
         {/* API Credentials */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-foreground">{t('apiCredentialsTitle')}</CardTitle>
-            <CardDescription className="text-muted-foreground">
+            <CardTitle className={settingsType.sectionTitle}>
+              {t('apiCredentialsTitle')}
+            </CardTitle>
+            <CardDescription className={settingsType.body}>
               {t('apiCredentialsDesc')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-muted-foreground">{t('phoneNumberId')}</Label>
+              <Label>{t('phoneNumberId')}</Label>
               <Input
                 placeholder="e.g. 100234567890123"
                 value={phoneNumberId}
@@ -610,7 +614,7 @@ export function WhatsAppConfig() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-muted-foreground">{t('wabaId')}</Label>
+              <Label>{t('wabaId')}</Label>
               <Input
                 placeholder="e.g. 100234567890456"
                 value={wabaId}
@@ -620,7 +624,7 @@ export function WhatsAppConfig() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-muted-foreground">{t('accessToken')}</Label>
+              <Label>{t('accessToken')}</Label>
               <PasswordInput
                 placeholder={t('accessTokenPlaceholder')}
                 value={accessToken}
@@ -637,29 +641,29 @@ export function WhatsAppConfig() {
                 className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
               />
               {config && !tokenEdited && (
-                <p className="text-sm text-muted-foreground">
-                  {t('tokenHidden')}
-                </p>
+                <p className={settingsType.meta}>{t('tokenHidden')}</p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label className="text-muted-foreground">{t('webhookVerifyToken')}</Label>
+              <Label>{t('webhookVerifyToken')}</Label>
               <Input
                 placeholder={t('webhookVerifyTokenPlaceholder')}
                 value={verifyToken}
                 onChange={(e) => setVerifyToken(e.target.value)}
                 className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
               />
-              <p className="text-sm text-muted-foreground">
+              <p className={cn('leading-relaxed', settingsType.meta)}>
                 {t('webhookVerifyTokenHint')}
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-muted-foreground">
+              <Label>
                 {t('twoStepPin')}
-                <span className="ml-1 text-muted-foreground">{t('optional')}</span>
+                <span className={cn('ml-1 font-normal', settingsType.meta)}>
+                  {t('optional')}
+                </span>
               </Label>
               <Input
                 type="text"
@@ -672,7 +676,7 @@ export function WhatsAppConfig() {
                 }
                 className="bg-muted border-border text-foreground placeholder:text-muted-foreground tracking-widest"
               />
-              <p className="text-sm text-muted-foreground leading-relaxed">
+              <p className={cn('leading-relaxed', settingsType.meta)}>
                 {t('pinHint')}
               </p>
             </div>
@@ -682,14 +686,16 @@ export function WhatsAppConfig() {
         {/* Webhook URL */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-foreground">{t('webhookTitle')}</CardTitle>
-            <CardDescription className="text-muted-foreground">
+            <CardTitle className={settingsType.sectionTitle}>
+              {t('webhookTitle')}
+            </CardTitle>
+            <CardDescription className={settingsType.body}>
               {t('webhookDesc')}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <Label className="text-muted-foreground">{t('webhookUrl')}</Label>
+              <Label>{t('webhookUrl')}</Label>
               <div className="flex gap-2">
                 <Input
                   readOnly
@@ -772,22 +778,24 @@ export function WhatsAppConfig() {
       <div>
         <Card>
           <CardHeader>
-            <CardTitle className="text-foreground text-base">{t('setupInstructions')}</CardTitle>
-            <CardDescription className="text-muted-foreground">
+            <CardTitle className={settingsType.sectionTitle}>
+              {t('setupInstructions')}
+            </CardTitle>
+            <CardDescription className={settingsType.body}>
               {t('setupInstructionsDesc')}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Accordion>
               <AccordionItem className="border-border">
-                <AccordionTrigger className="text-muted-foreground hover:text-foreground hover:no-underline">
+                <AccordionTrigger className="text-sm font-medium text-foreground hover:no-underline">
                   <span className="flex items-center gap-2">
                     <span className="flex size-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">1</span>
                     {t('step1')}
                   </span>
                 </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground">
-                  <ol className="list-decimal list-inside space-y-1 text-sm">
+                <AccordionContent>
+                  <ol className={cn('list-decimal list-inside space-y-1', settingsType.body)}>
                     <li>{t('step1_1')}</li>
                     <li>{t('step1_2')}</li>
                     <li>{t('step1_3')}</li>
@@ -797,14 +805,14 @@ export function WhatsAppConfig() {
               </AccordionItem>
 
               <AccordionItem className="border-border">
-                <AccordionTrigger className="text-muted-foreground hover:text-foreground hover:no-underline">
+                <AccordionTrigger className="text-sm font-medium text-foreground hover:no-underline">
                   <span className="flex items-center gap-2">
                     <span className="flex size-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">2</span>
                     {t('step2')}
                   </span>
                 </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground">
-                  <ol className="list-decimal list-inside space-y-1 text-sm">
+                <AccordionContent>
+                  <ol className={cn('list-decimal list-inside space-y-1', settingsType.body)}>
                     <li>{t('step2_1')}</li>
                     <li>{t('step2_2')}</li>
                     <li>{t('step2_3')}</li>
@@ -813,14 +821,14 @@ export function WhatsAppConfig() {
               </AccordionItem>
 
               <AccordionItem className="border-border">
-                <AccordionTrigger className="text-muted-foreground hover:text-foreground hover:no-underline">
+                <AccordionTrigger className="text-sm font-medium text-foreground hover:no-underline">
                   <span className="flex items-center gap-2">
                     <span className="flex size-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">3</span>
                     {t('step3')}
                   </span>
                 </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground">
-                  <ol className="list-decimal list-inside space-y-1 text-sm">
+                <AccordionContent>
+                  <ol className={cn('list-decimal list-inside space-y-1', settingsType.body)}>
                     <li>{t('step3_1')}</li>
                     <li>{t.rich('step3_2', richStrong)}</li>
                     <li>{t.rich('step3_3', richStrong)}</li>
@@ -830,14 +838,14 @@ export function WhatsAppConfig() {
               </AccordionItem>
 
               <AccordionItem className="border-border">
-                <AccordionTrigger className="text-muted-foreground hover:text-foreground hover:no-underline">
+                <AccordionTrigger className="text-sm font-medium text-foreground hover:no-underline">
                   <span className="flex items-center gap-2">
                     <span className="flex size-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">4</span>
                     {t('step4')}
                   </span>
                 </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground">
-                  <ol className="list-decimal list-inside space-y-1 text-sm">
+                <AccordionContent>
+                  <ol className={cn('list-decimal list-inside space-y-1', settingsType.body)}>
                     <li>{t('step4_1')}</li>
                     <li>{t('step4_2')}</li>
                     <li>{t.rich('step4_3', richStrong)}</li>
@@ -848,12 +856,12 @@ export function WhatsAppConfig() {
               </AccordionItem>
             </Accordion>
 
-            <div className="mt-4 pt-4 border-t border-border">
+            <div className="mt-4 border-t border-border pt-4">
               <a
                 href="https://developers.facebook.com/docs/whatsapp/cloud-api/get-started"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 transition-colors"
+                className="inline-flex items-center gap-1.5 text-sm text-primary transition-colors hover:text-primary/80"
               >
                 <ExternalLink className="size-3.5" />
                 {t('metaDocs')}

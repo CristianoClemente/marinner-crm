@@ -6,8 +6,8 @@ import { SettingsPanelHead } from './settings-panel-head';
 import { useTranslations } from 'next-intl';
 
 /**
- * "Login & security" section — groups the former Profile-tab password
- * and active-sessions cards into their own dedicated home.
+ * Login e segurança — senha (persistida) e sessões (ação destrutiva),
+ * em zonas separadas como em Aparência.
  */
 export function SecurityPanel() {
   const t = useTranslations('Settings.security');
@@ -17,9 +17,11 @@ export function SecurityPanel() {
         title={t('title')}
         description={t('description')}
       />
-      <div className="space-y-4">
+      <div className="space-y-10">
         <PasswordForm />
-        <SessionsCard />
+        <div className="border-t border-border pt-8">
+          <SessionsCard />
+        </div>
       </div>
     </section>
   );

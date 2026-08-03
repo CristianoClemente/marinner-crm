@@ -1034,7 +1034,7 @@ export function MessageComposer({
                 gateReason="send messages"
                 disabled={!text.trim() || sessionExpired || sending}
                 onClick={handleSend}
-                className="size-9 rounded-full bg-primary p-0 hover:bg-primary/90 disabled:opacity-40"
+                className="size-9 rounded-full bg-primary p-0 transition-transform duration-100 ease-out hover:bg-primary/90 active:scale-90 disabled:opacity-40 motion-reduce:transition-none motion-reduce:active:scale-100"
               >
                 <Send className="size-4" />
               </GatedButton>
@@ -1166,7 +1166,7 @@ function MediaDraftPreview({
           disabled={busy}
           onClick={onSend}
           className={cn(
-            "h-9 w-9 shrink-0 bg-primary p-0 hover:bg-primary/90 disabled:opacity-40",
+            "h-9 w-9 shrink-0 bg-primary p-0 transition-transform duration-100 ease-out hover:bg-primary/90 active:scale-90 disabled:opacity-40 motion-reduce:transition-none motion-reduce:active:scale-100",
             draft.kind === "audio" && "ml-auto",
           )}
         >

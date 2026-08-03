@@ -42,6 +42,7 @@ import {
 } from '@/lib/api-keys/scopes';
 import { useTranslations } from 'next-intl';
 import { SettingsPanelHead } from './settings-panel-head';
+import { settingsType } from './settings-type';
 
 interface ApiKey {
   id: string;
@@ -148,7 +149,7 @@ export function ApiKeysSettings() {
         }
         action={
           <RequireRole min="admin">
-            <Button onClick={() => setCreateOpen(true)}>
+            <Button onClick={() => setCreateOpen(true)} className="min-h-11 sm:min-h-8">
               <Plus className="size-4" />
               {t('newApiKey')}
             </Button>
@@ -160,7 +161,7 @@ export function ApiKeysSettings() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-10 text-center">
             <KeyRound className="text-muted-foreground size-6" />
-            <p className="text-muted-foreground mt-2 text-sm">
+            <p className={`mt-2 ${settingsType.body}`}>
               {t('noApiKeys')}
             </p>
             {canEditSettings ? (
@@ -202,12 +203,12 @@ export function ApiKeysSettings() {
                           {k.name}
                         </span>
                         {status === 'revoked' && (
-                          <Badge className="border-border bg-muted text-muted-foreground text-[10px] tracking-wide uppercase">
+                          <Badge className="border-border bg-muted text-muted-foreground text-xs tracking-wide uppercase">
                             {t('revoked')}
                           </Badge>
                         )}
                         {status === 'expired' && (
-                          <Badge className="border-border bg-muted text-muted-foreground text-[10px] tracking-wide uppercase">
+                          <Badge className="border-border bg-muted text-muted-foreground text-xs tracking-wide uppercase">
                             {t('expired')}
                           </Badge>
                         )}
@@ -224,7 +225,7 @@ export function ApiKeysSettings() {
                           k.scopes.map((s) => (
                             <Badge
                               key={s}
-                              className="border-border bg-muted text-muted-foreground text-[10px]"
+                              className="border-border bg-muted text-muted-foreground text-xs"
                             >
                               {s}
                             </Badge>

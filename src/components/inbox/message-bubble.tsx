@@ -30,6 +30,8 @@ interface MessageBubbleProps {
   onToggleReaction?: (emoji: string) => void;
   /** Display name of the agent/bot who sent this outbound message. */
   senderName?: string | null;
+  /** Reenviar quando status === failed. */
+  onRetry?: () => void;
 }
 
 function StatusIcon({ status }: { status: Message["status"] }) {
@@ -267,11 +269,15 @@ export function MessageBubble({
   currentUserId,
   onToggleReaction,
   senderName,
+  onRetry,
 }: MessageBubbleProps) {
   const t = useTranslations("Inbox.bubble");
 
   const isAgent = message.sender_type === "agent" || message.sender_type === "bot";
   const time = format(new Date(message.created_at), "HH:mm");
+  const showRetry = isAgent && message.status === "failed" && onRetry;
+  const isOptimistic =
+    message.id.startsWith("temp-") || message.status === "sending";
 
   // Row alignment + width cap are owned by <MessageActions> so its hover
   // group matches the bubble's content area, not the full row.
@@ -280,14 +286,19 @@ export function MessageBubble({
       className={cn(
         "flex flex-col",
         isAgent ? "items-end" : "items-start",
+        isOptimistic &&
+          "animate-in fade-in-0 slide-in-from-bottom-2 duration-200 fill-mode-both motion-reduce:animate-none",
       )}
     >
       <div
         className={cn(
-          "relative rounded-2xl px-3 py-2",
+          "relative rounded-2xl px-3 py-2 transition-[box-shadow,transform] duration-150",
           isAgent
             ? "rounded-br-md bg-primary text-primary-foreground"
             : "rounded-bl-md bg-muted text-foreground",
+          message.status === "failed" &&
+            isAgent &&
+            "ring-1 ring-red-400/60 animate-in fade-in-0 zoom-in-95 duration-200 motion-reduce:animate-none",
         )}
       >
         {isAgent && senderName && (
@@ -342,6 +353,15 @@ export function MessageBubble({
           {isAgent && <StatusIcon status={message.status} />}
         </div>
       </div>
+      {showRetry && (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="mt-1 text-[11px] font-medium text-red-400 underline-offset-2 transition-colors hover:text-red-300 hover:underline animate-in fade-in-0 slide-in-from-top-1 duration-150 motion-reduce:animate-none"
+        >
+          {t("sendFailed")} · {t("resend")}
+        </button>
+      )}
       {reactions && reactions.length > 0 && onToggleReaction && (
         <MessageReactions
           reactions={reactions}

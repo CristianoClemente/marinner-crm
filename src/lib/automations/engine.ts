@@ -530,30 +530,40 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
     }
 
     case 'create_deal': {
+      // Compat: step ainda se chama create_deal; persiste em enrollment_processes
+      // (pipeline_id/stage_id = template_id/stage_id após migração 062).
       const cfg = step.step_config as CreateDealStepConfig
       if (!cfg.pipeline_id || !cfg.stage_id) throw new Error('create_deal needs pipeline + stage')
-      // Match the account's configured default currency rather than
-      // the static `deals.currency` DB default — keeps automation-
-      // created deals consistent with the one-currency-per-account
-      // rule (issue #218). Fall back to USD if the row is somehow
-      // missing the value (pre-021 forks).
+      if (!args.contactId) throw new Error('create_deal needs a contact')
       const { data: acct } = await db
         .from('accounts')
         .select('default_currency')
         .eq('id', args.automation.account_id)
         .maybeSingle()
-      await db.from('deals').insert({
-        // Tenancy + audit, same split as automation_logs above.
+      const { data: template } = await db
+        .from('process_templates')
+        .select('id, active, has_monetary_value, has_commercial_outcome')
+        .eq('account_id', args.automation.account_id)
+        .eq('id', cfg.pipeline_id)
+        .maybeSingle()
+      if (!template?.active) {
+        throw new Error('create_deal: funil/template inativo ou inexistente')
+      }
+      const { error } = await db.from('enrollment_processes').insert({
         account_id: args.automation.account_id,
-        user_id: args.automation.user_id,
-        pipeline_id: cfg.pipeline_id,
-        stage_id: cfg.stage_id,
         contact_id: args.contactId,
+        template_id: cfg.pipeline_id,
+        current_stage_id: cfg.stage_id,
+        status: 'active',
         title: interpolate(cfg.title, args),
-        value: cfg.value ?? 0,
-        currency: acct?.default_currency ?? DEFAULT_CURRENCY,
-        status: 'open',
+        value: template.has_monetary_value ? (cfg.value ?? 0) : 0,
+        currency: template.has_monetary_value
+          ? (acct?.default_currency ?? DEFAULT_CURRENCY)
+          : null,
+        commercial_status: template.has_commercial_outcome ? 'open' : null,
+        opened_by_user_id: args.automation.user_id,
       })
+      if (error) throw new Error(`create_deal: ${error.message}`)
       return 'deal created'
     }
 

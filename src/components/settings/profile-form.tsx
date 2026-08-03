@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Upload, Trash2, Mail, CircleAlert } from 'lucide-react';
+import { Upload, Trash2, Mail, CircleAlert } from 'lucide-react';
 
 import { createClient } from '@/lib/supabase/client';
 import { uploadAccountMedia } from '@/lib/storage/upload-media';
@@ -15,10 +15,20 @@ import {
   AvatarFallback,
   AvatarImage,
 } from '@/components/ui/avatar';
-import { Card, CardContent } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { useTranslations } from 'next-intl';
 import { formatDate } from '@/lib/format';
+import { cn } from '@/lib/utils';
+import { SettingsFormFooter } from './settings-form-footer';
 import { SettingsPanelHead } from './settings-panel-head';
+import { SettingsScopeChip } from './settings-scope-chip';
+import { settingsType } from './settings-type';
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 const ALLOWED_MIME = new Set([
@@ -192,6 +202,17 @@ export function ProfileForm() {
     }
   };
 
+  const discard = () => {
+    if (!profile) return;
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setFullName(profile.full_name ?? '');
+    setEmail(profile.email ?? '');
+    setPendingAvatar(null);
+    setPreviewUrl(null);
+    setRemoveAvatar(false);
+    setEmailChangePending(false);
+  };
+
   const dirty =
     !!profile &&
     (fullName.trim() !== (profile.full_name ?? '') ||
@@ -213,146 +234,149 @@ export function ProfileForm() {
         title={t('title')}
         description={t('description')}
       />
-      <form onSubmit={onSubmit} className="space-y-4">
+
+      <div className="space-y-8">
         <Card>
-          <CardContent className="space-y-6">
-          {/* Avatar row */}
-          <div className="flex flex-wrap items-center gap-5">
-            <Avatar size="lg" className="size-16">
-              {currentAvatar ? (
-                <AvatarImage src={currentAvatar} alt={fullName || 'Avatar'} />
-              ) : null}
-              <AvatarFallback className="bg-primary/10 text-base text-primary">
-                {initial}
-              </AvatarFallback>
-            </Avatar>
-
-            <div className="flex flex-wrap gap-2">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/png,image/jpeg,image/webp,image/gif"
-                className="hidden"
-                onChange={onPickFile}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={saving}
-              >
-                <Upload className="size-4" />
-                {currentAvatar ? t('changePhoto') : t('uploadPhoto')}
-              </Button>
-              {currentAvatar && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={onRemoveAvatar}
-                  disabled={saving}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  <Trash2 className="size-4" />
-                  {t('remove')}
-                </Button>
-              )}
-              <p className="w-full text-sm text-muted-foreground">
-                {t('photoHint')}
-              </p>
+          <CardHeader className="space-y-3">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <CardTitle className={settingsType.sectionTitle}>
+                {t('title')}
+              </CardTitle>
+              <SettingsScopeChip scope="personal" />
             </div>
-          </div>
+            <CardDescription className={settingsType.body}>
+              {t('description')}
+            </CardDescription>
+          </CardHeader>
 
-          {/* Name */}
-          <div className="space-y-2">
-            <Label htmlFor="profile-full-name" className="text-foreground">
-              {t('displayName')}
-            </Label>
-            <Input
-              id="profile-full-name"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder="Ada Lovelace"
-              maxLength={120}
-              disabled={saving}
-              required
-            />
-          </div>
+          <CardContent>
+            <form id="profile-form" onSubmit={onSubmit} className="space-y-6">
+              <div className="flex flex-wrap items-center gap-5">
+                <Avatar size="lg" className="size-16">
+                  {currentAvatar ? (
+                    <AvatarImage src={currentAvatar} alt={fullName || 'Avatar'} />
+                  ) : null}
+                  <AvatarFallback className="bg-primary/10 text-base text-primary">
+                    {initial}
+                  </AvatarFallback>
+                </Avatar>
 
-          {/* Email */}
-          <div className="space-y-2">
-            <Label htmlFor="profile-email" className="text-foreground">
-              {t('email')}
-            </Label>
-            <Input
-              id="profile-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={saving}
-              required
-            />
-            {emailChangePending && (
-              <p className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
-                <Mail className="mt-0.5 size-3.5 shrink-0" />
-                <span>
-                  {t.rich('emailChangeHint', { 
-                    oldEmail: profile?.email || '', 
-                    newEmail: email,
-                    bold: (chunks: React.ReactNode) => <strong>{chunks}</strong>
-                  })}
-                </span>
-              </p>
-            )}
-          </div>
+                <div className="flex flex-wrap gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    className="hidden"
+                    onChange={onPickFile}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={saving}
+                    className="min-h-11 sm:min-h-8"
+                  >
+                    <Upload className="size-4" />
+                    {currentAvatar ? t('changePhoto') : t('uploadPhoto')}
+                  </Button>
+                  {currentAvatar && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={onRemoveAvatar}
+                      disabled={saving}
+                      className="min-h-11 text-muted-foreground hover:text-foreground sm:min-h-8"
+                    >
+                      <Trash2 className="size-4" />
+                      {t('remove')}
+                    </Button>
+                  )}
+                  <p className={cn('w-full', settingsType.meta)}>{t('photoHint')}</p>
+                </div>
+              </div>
 
-          {/* Read-only block */}
-          <div className="rounded-lg border border-border bg-muted p-4">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {t('accountDetails')}
-            </p>
+              <div className="space-y-2">
+                <Label htmlFor="profile-full-name">{t('displayName')}</Label>
+                <Input
+                  id="profile-full-name"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Ada Lovelace"
+                  maxLength={120}
+                  disabled={saving}
+                  required
+                  className="h-11 text-base md:h-9 md:text-sm"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="profile-email">{t('email')}</Label>
+                <Input
+                  id="profile-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={saving}
+                  required
+                  className="h-11 text-base md:h-9 md:text-sm"
+                />
+                {emailChangePending && (
+                  <p className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
+                    <Mail className="mt-0.5 size-3.5 shrink-0" />
+                    <span>
+                      {t.rich('emailChangeHint', {
+                        oldEmail: profile?.email || '',
+                        newEmail: email,
+                        bold: (chunks: React.ReactNode) => <strong>{chunks}</strong>,
+                      })}
+                    </span>
+                  </p>
+                )}
+              </div>
+
+              {!profile && (
+                <p className={cn('flex items-center gap-2', settingsType.body)}>
+                  <CircleAlert className="size-4" />
+                  {t('loading')}
+                </p>
+              )}
+            </form>
+          </CardContent>
+
+          <SettingsFormFooter
+            formId="profile-form"
+            dirty={dirty}
+            saving={saving}
+            onDiscard={discard}
+            saveLabel={t('saveChanges')}
+            savingLabel={t('saving')}
+          />
+        </Card>
+
+        <section className="space-y-3 border-t border-border pt-8">
+          <h3 className={settingsType.sectionTitle}>{t('accountDetails')}</h3>
+          <div className="rounded-xl bg-muted/30 p-4 ring-1 ring-foreground/10">
             <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
               <div>
-                <dt className="text-muted-foreground">{t('role')}</dt>
+                <dt className={settingsType.meta}>{t('role')}</dt>
                 <dd className="mt-0.5 font-mono text-foreground">
                   {profile?.role ?? 'user'}
                 </dd>
               </div>
               <div>
-                <dt className="text-muted-foreground">{t('joined')}</dt>
+                <dt className={settingsType.meta}>{t('joined')}</dt>
                 <dd className="mt-0.5 text-foreground">{joined}</dd>
               </div>
               <div className="sm:col-span-2">
-                <dt className="text-muted-foreground">{t('userId')}</dt>
+                <dt className={settingsType.meta}>{t('userId')}</dt>
                 <dd className="mt-0.5 break-all font-mono text-xs text-muted-foreground">
                   {user?.id ?? '—'}
                 </dd>
               </div>
             </dl>
           </div>
-
-          {!profile && (
-            <p className="flex items-center gap-2 text-sm text-muted-foreground">
-              <CircleAlert className="size-4" />
-              {t('loading')}
-            </p>
-          )}
-
-        </CardContent>
-        </Card>
-
-        <div className="flex justify-end">
-          <Button type="submit" disabled={saving || !dirty || !profile}>
-            {saving ? (
-              <>
-                <Loader2 className="size-4 animate-spin" />
-                {t('saving')}
-              </>
-            ) : (
-              t('saveChanges')
-            )}
-          </Button>
-        </div>
-      </form>
+        </section>
+      </div>
     </section>
   );
 }

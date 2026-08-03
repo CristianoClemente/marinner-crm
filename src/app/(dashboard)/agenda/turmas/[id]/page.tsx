@@ -18,6 +18,14 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -27,6 +35,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  downloadGeneratedDocument,
+  GenerateDocumentDialog,
+  postGenerateDocument,
+} from "@/components/documents/generate-document-dialog";
 
 type LocationOpt = { id: string; name: string };
 type InstructorOpt = { id: string; full_name: string };
@@ -89,6 +102,7 @@ function FieldBlock({
 
 export default function TurmaDetailPage() {
   const t = useTranslations("Agenda");
+  const tDoc = useTranslations("Documents");
   const canManage = useCan("edit-settings");
   const router = useRouter();
   const params = useParams();
@@ -98,6 +112,11 @@ export default function TurmaDetailPage() {
   const [saving, setSaving] = useState(false);
   const [clazz, setClazz] = useState<ProcessClass | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const [closeDialogOpen, setCloseDialogOpen] = useState(false);
+  const [batchBusy, setBatchBusy] = useState(false);
+  const [atestadoEnrollmentId, setAtestadoEnrollmentId] = useState<
+    string | null
+  >(null);
 
   const [locations, setLocations] = useState<LocationOpt[]>([]);
   const [instructors, setInstructors] = useState<InstructorOpt[]>([]);
@@ -300,6 +319,37 @@ export default function TurmaDetailPage() {
       setSaving(false);
     }
   }
+
+  async function generateAtestadosBatch() {
+    if (!classId) return;
+    setBatchBusy(true);
+    try {
+      const res = await fetch(`/api/classes/${classId}/documents/atestados`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || tDoc("generateFailed"));
+      const ok = Number(json.okCount ?? 0);
+      const fail = Number(json.failCount ?? 0);
+      if (fail > 0) {
+        toast.warning(tDoc("batchPartial", { ok, fail }));
+      } else {
+        toast.success(tDoc("batchOk", { ok }));
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : tDoc("generateFailed"));
+      throw err;
+    } finally {
+      setBatchBusy(false);
+    }
+  }
+
+  const atestadoGaps: string[] = [];
+  if (!instructorId) atestadoGaps.push("Instrutor da turma");
+  if (!locationId) atestadoGaps.push("Local da aula");
+  if (enrollments.length === 0) atestadoGaps.push("Alunos alocados");
 
   async function enroll() {
     if (!classId || !poolPick || !canManage) return;
@@ -537,8 +587,18 @@ export default function TurmaDetailPage() {
                             </p>
                           ) : null}
                         </div>
-                        {/* Espaço reservado para ações por aluno (ex.: documentos) */}
                         <div className="flex shrink-0 items-center gap-1">
+                          {canManage && clazz?.status !== "canceled" ? (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              disabled={atestadoGaps.length > 0}
+                              onClick={() => setAtestadoEnrollmentId(en.id)}
+                            >
+                              {tDoc("atestado")}
+                            </Button>
+                          ) : null}
                           {canManage && clazz?.status === "open" ? (
                             <Button
                               type="button"
@@ -710,8 +770,8 @@ export default function TurmaDetailPage() {
                   type="button"
                   variant="outline"
                   className="w-full"
-                  disabled={saving}
-                  onClick={() => void setStatus("closed")}
+                  disabled={saving || batchBusy}
+                  onClick={() => setCloseDialogOpen(true)}
                 >
                   {t("close")}
                 </Button>
@@ -729,7 +789,16 @@ export default function TurmaDetailPage() {
             ) : null}
 
             {canManage && clazz?.status === "closed" ? (
-              <div className="border-t border-border pt-4">
+              <div className="flex flex-col gap-2 border-t border-border pt-4">
+                <Button
+                  type="button"
+                  className="w-full"
+                  disabled={batchBusy || atestadoGaps.length > 0}
+                  onClick={() => void generateAtestadosBatch()}
+                >
+                  {batchBusy ? <Loader2 className="animate-spin" /> : null}
+                  {tDoc("atestadosBatch")}
+                </Button>
                 <Button
                   type="button"
                   variant="outline"
@@ -744,6 +813,83 @@ export default function TurmaDetailPage() {
           </aside>
         </div>
       )}
+
+      <Dialog open={closeDialogOpen} onOpenChange={setCloseDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{tDoc("closeGenerateTitle")}</DialogTitle>
+            <DialogDescription>{tDoc("closeGenerateDesc")}</DialogDescription>
+          </DialogHeader>
+          {atestadoGaps.length > 0 ? (
+            <ul className="list-inside list-disc text-sm text-destructive">
+              {atestadoGaps.map((g) => (
+                <li key={g}>{g}</li>
+              ))}
+            </ul>
+          ) : null}
+          <p className="text-xs text-muted-foreground">{tDoc("disclaimer")}</p>
+          <DialogFooter className="flex-col gap-2 sm:flex-col">
+            <Button
+              type="button"
+              disabled={batchBusy || saving || atestadoGaps.length > 0}
+              onClick={() => {
+                void (async () => {
+                  await generateAtestadosBatch();
+                  await setStatus("closed");
+                  setCloseDialogOpen(false);
+                })();
+              }}
+            >
+              {batchBusy || saving ? (
+                <Loader2 className="animate-spin" />
+              ) : null}
+              {tDoc("closeAndGenerate")}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={batchBusy || saving}
+              onClick={() => {
+                void (async () => {
+                  await setStatus("closed");
+                  setCloseDialogOpen(false);
+                })();
+              }}
+            >
+              {tDoc("closeOnly")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <GenerateDocumentDialog
+        open={Boolean(atestadoEnrollmentId)}
+        onOpenChange={(open) => {
+          if (!open) setAtestadoEnrollmentId(null);
+        }}
+        title={tDoc("atestado")}
+        mode="atestado"
+        gaps={atestadoGaps}
+        summaryLines={
+          clazz
+            ? [
+                formatDateTime(clazz.starts_at),
+                instructors.find((i) => i.id === instructorId)?.full_name ?? "",
+              ].filter(Boolean)
+            : []
+        }
+        onGenerate={async (extra) => {
+          if (!atestadoEnrollmentId || !classId) return;
+          const doc = await postGenerateDocument({
+            kind: "atestado_arrais",
+            classId,
+            enrollmentId: atestadoEnrollmentId,
+            trainingHoursLabel: extra.trainingHoursLabel,
+          });
+          toast.success(tDoc("generateSuccess"));
+          await downloadGeneratedDocument(doc.id);
+        }}
+      />
     </div>
   );
 }

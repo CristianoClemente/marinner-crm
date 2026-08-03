@@ -28,6 +28,11 @@ export interface Entitlements {
   status: SubscriptionStatus | null;
   plan: PlanSummary | null;
   maxSeats: number;
+  /**
+   * Limite de jurisdições OM/STA vinculadas.
+   * `null` = ilimitado (Business). Key ausente em features → 1 (seguro).
+   */
+  maxJurisdictions: number | null;
   features: Record<string, unknown>;
   trialEndsAt: string | null;
   currentPeriodEnd: string | null;
@@ -84,16 +89,34 @@ export function computeEntitlements(input: {
     status === "past_due" ||
     status === "canceled";
 
+  const features = plan?.features ?? {};
+
   return {
     status,
     plan,
     maxSeats: plan?.maxSeats ?? 0,
-    features: plan?.features ?? {},
+    maxJurisdictions: parseMaxJurisdictions(features),
+    features,
     trialEndsAt: input.trialEndsAt ?? null,
     currentPeriodEnd: input.currentPeriodEnd ?? null,
     isAccessAllowed,
     needsCheckout,
   };
+}
+
+/** Lê `features.max_jurisdictions`. Ausente → 1; `null` → ilimitado. */
+export function parseMaxJurisdictions(
+  features: Record<string, unknown>,
+): number | null {
+  if (!Object.prototype.hasOwnProperty.call(features, "max_jurisdictions")) {
+    return 1;
+  }
+  const raw = features.max_jurisdictions;
+  if (raw === null) return null;
+  if (typeof raw === "number" && Number.isFinite(raw) && raw >= 1) {
+    return Math.floor(raw);
+  }
+  return 1;
 }
 
 function normalizeStatus(

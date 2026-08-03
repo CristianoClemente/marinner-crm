@@ -1,4 +1,6 @@
 export type ProcessStatus = "active" | "completed" | "canceled";
+export type AdvanceMode = "free" | "sequential";
+export type CommercialStatus = "open" | "won" | "lost";
 
 export type ProcessDomainEventType =
   | "process.created"
@@ -14,16 +16,23 @@ export interface ProcessTemplateStage {
   position: number;
   allow_skip: boolean;
   accepts_classes: boolean;
+  color?: string | null;
   created_at: string;
 }
 
 export interface ProcessTemplate {
   id: string;
   account_id: string;
-  catalog_item_id: string;
+  catalog_item_id: string | null;
   name: string;
   active: boolean;
   block_advance_if_incomplete?: boolean;
+  advance_mode: AdvanceMode;
+  has_monetary_value: boolean;
+  has_commercial_outcome: boolean;
+  requires_catalog_item: boolean;
+  /** Deriva docs NORMAM 211/212; null = funil sem habilitação tipada. */
+  habilitation_kind?: "arrais" | "motonauta" | null;
   created_at: string;
   updated_at: string;
   stages?: ProcessTemplateStage[];
@@ -37,6 +46,13 @@ export interface EnrollmentProcess {
   template_id: string;
   current_stage_id: string | null;
   status: ProcessStatus;
+  title: string | null;
+  value: number;
+  currency: string | null;
+  assigned_to: string | null;
+  expected_close_date: string | null;
+  conversation_id: string | null;
+  commercial_status: CommercialStatus | null;
   opened_at: string;
   completed_at: string | null;
   canceled_at: string | null;
@@ -69,6 +85,7 @@ export type ProcessTemplateStageInput = {
   position: number;
   allow_skip: boolean;
   accepts_classes: boolean;
+  color?: string | null;
 };
 
 export type ProcessFieldType =

@@ -8,10 +8,12 @@ import {
   normalizeConversations,
 } from "@/lib/inbox/conversations";
 import { cn } from "@/lib/utils";
-import type { Conversation, ConversationStatus, Tag } from "@/types";
+import type { Conversation, ConversationStatus, Profile, Tag } from "@/types";
 import { Search, ChevronDown, X, SquarePen } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { useTranslations } from "next-intl";
+import { useAuth } from "@/hooks/use-auth";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,9 +47,17 @@ const STATUS_COLORS: Record<ConversationStatus, string> = {
   closed: "bg-muted-foreground",
 };
 
+const STATUS_LABEL_KEYS: Record<
+  ConversationStatus,
+  "statusOpen" | "statusPending" | "statusClosed"
+> = {
+  open: "statusOpen",
+  pending: "statusPending",
+  closed: "statusClosed",
+};
 
-
-type InboxFilter = ConversationStatus | "all" | "unread";
+type AssignmentFilter = "all" | "mine" | "unassigned";
+type StatusFilter = "all" | ConversationStatus;
 
 export function ConversationList({
   activeConversationId,
@@ -59,23 +69,43 @@ export function ConversationList({
 }: ConversationListProps) {
   const t = useTranslations("Inbox.conversationList");
   const tNew = useTranslations("Inbox.newMessage");
-  
-  const FILTER_OPTIONS: { label: string; value: InboxFilter }[] = useMemo(() => [
-    { label: t("filterAll"), value: "all" },
-    { label: t("filterUnread"), value: "unread" },
-    { label: t("filterOpen"), value: "open" },
-    { label: t("filterPending"), value: "pending" },
-    { label: t("filterClosed"), value: "closed" },
-  ], [t]);
+  const { user } = useAuth();
+
+  const ASSIGNMENT_OPTIONS: { label: string; value: AssignmentFilter }[] =
+    useMemo(
+      () => [
+        { label: t("filterAll"), value: "all" },
+        { label: t("filterMine"), value: "mine" },
+        { label: t("filterUnassigned"), value: "unassigned" },
+      ],
+      [t],
+    );
+
+  const STATUS_FILTER_OPTIONS: { label: string; value: StatusFilter }[] =
+    useMemo(
+      () => [
+        { label: t("filterAll"), value: "all" },
+        { label: t("filterOpen"), value: "open" },
+        { label: t("filterPending"), value: "pending" },
+        { label: t("filterClosed"), value: "closed" },
+      ],
+      [t],
+    );
 
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<InboxFilter>("all");
+  const [assignmentFilter, setAssignmentFilter] =
+    useState<AssignmentFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [unreadOnly, setUnreadOnly] = useState(false);
   const [loading, setLoading] = useState(true);
   // Contact-based filters (issue #272). Tags use OR logic (a conversation
   // matches if its contact carries any selected tag), consistent with
   // Broadcast audience filtering.
   const [tags, setTags] = useState<Tag[]>([]);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [profilesByUserId, setProfilesByUserId] = useState<
+    Map<string, Profile>
+  >(() => new Map());
 
   // Keep the latest callback in a ref so the fetch effect below can
   // have a stable, empty-dep identity. Previously the fetch useCallback
@@ -144,19 +174,55 @@ export function ConversationList({
     };
   }, []);
 
+  // Nomes dos agentes atribuídos — um fetch para rotular as linhas da lista.
+  useEffect(() => {
+    const supabase = createClient();
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .order("full_name");
+      if (cancelled) return;
+      if (error) {
+        console.error("Failed to fetch profiles for inbox list:", error);
+        return;
+      }
+      const map = new Map<string, Profile>();
+      for (const row of (data as Profile[]) ?? []) {
+        map.set(row.user_id, row);
+      }
+      setProfilesByUserId(map);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const tagsById = useMemo(() => {
     const m = new Map<string, Tag>();
-    for (const t of tags) m.set(t.id, t);
+    for (const tag of tags) m.set(tag.id, tag);
     return m;
   }, [tags]);
 
   const filtered = useMemo(() => {
     let result = conversations;
+    const myId = user?.id;
 
-    if (filter === "unread") {
+    if (assignmentFilter === "mine") {
+      result = result.filter(
+        (c) => myId != null && c.assigned_agent_id === myId,
+      );
+    } else if (assignmentFilter === "unassigned") {
+      result = result.filter((c) => !c.assigned_agent_id);
+    }
+
+    if (statusFilter !== "all") {
+      result = result.filter((c) => c.status === statusFilter);
+    }
+
+    if (unreadOnly) {
       result = result.filter((c) => c.unread_count > 0);
-    } else if (filter !== "all") {
-      result = result.filter((c) => c.status === filter);
     }
 
     // Contact-based filters (tags via OR logic).
@@ -164,7 +230,7 @@ export function ConversationList({
       result = result.filter((c) =>
         matchesContactFilters(c, {
           tagIds: selectedTagIds,
-        })
+        }),
       );
     }
 
@@ -179,11 +245,19 @@ export function ConversationList({
     }
 
     return result;
-  }, [conversations, filter, search, selectedTagIds]);
+  }, [
+    conversations,
+    assignmentFilter,
+    statusFilter,
+    unreadOnly,
+    search,
+    selectedTagIds,
+    user?.id,
+  ]);
 
   const toggleTag = useCallback((id: string) => {
     setSelectedTagIds((prev) =>
-      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id],
     );
   }, []);
 
@@ -192,28 +266,47 @@ export function ConversationList({
   }, []);
 
   const hasContactFilters = selectedTagIds.length > 0;
+  const hasListFilters =
+    assignmentFilter !== "all" ||
+    statusFilter !== "all" ||
+    unreadOnly ||
+    hasContactFilters ||
+    search.trim().length > 0;
+
+  const clearAllListFilters = useCallback(() => {
+    setAssignmentFilter("all");
+    setStatusFilter("all");
+    setUnreadOnly(false);
+    setSearch("");
+    setSelectedTagIds([]);
+  }, []);
 
   const handleSearchChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setSearch(e.target.value);
     },
-    []
+    [],
   );
 
   const handleSelect = useCallback(
     (conv: Conversation) => {
       onSelect(conv);
     },
-    [onSelect]
+    [onSelect],
   );
 
-  const activeFilter = FILTER_OPTIONS.find((o) => o.value === filter);
+  const activeAssignment = ASSIGNMENT_OPTIONS.find(
+    (o) => o.value === assignmentFilter,
+  );
+  const activeStatus = STATUS_FILTER_OPTIONS.find(
+    (o) => o.value === statusFilter,
+  );
 
   return (
     // w-full on mobile so the list occupies the whole viewport when it's
     // the single pane showing; fixed 320px on desktop where it shares the
     // row with the thread + contact sidebar.
-    <div className="flex h-full w-full flex-col border-r border-border bg-card lg:w-80">
+    <div className="flex h-full w-full flex-col border-r border-border bg-card lg:w-96">
       {/* Search + Filter */}
       <div className="space-y-2 border-b border-border p-3">
         <div className="flex items-center gap-2">
@@ -243,23 +336,31 @@ export function ConversationList({
 
         <div className="flex flex-wrap items-center gap-1">
           <DropdownMenu>
-            <DropdownMenuTrigger className="inline-flex items-center justify-center h-7 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground rounded-md hover:bg-muted">
-                {activeFilter?.label ?? t("filterAll")}
-                <ChevronDown className="h-3 w-3" />
+            <DropdownMenuTrigger
+              className={cn(
+                "inline-flex h-7 items-center justify-center gap-1 rounded-md px-2 text-xs font-medium hover:bg-muted",
+                assignmentFilter !== "all"
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {assignmentFilter === "all"
+                ? t("filterAssignment")
+                : (activeAssignment?.label ?? t("filterAssignment"))}
+              <ChevronDown className="h-3 w-3" />
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="start"
               className="border-border bg-popover"
             >
-              {FILTER_OPTIONS.map((opt) => (
+              {ASSIGNMENT_OPTIONS.map((opt) => (
                 <DropdownMenuItem
                   key={opt.value}
-                  onClick={() => setFilter(opt.value)}
+                  onClick={() => setAssignmentFilter(opt.value)}
                   className={cn(
-                    "text-sm",
-                    filter === opt.value
-                      ? "text-primary"
-                      : "text-popover-foreground"
+                    assignmentFilter === opt.value
+                      ? "font-medium text-primary"
+                      : "font-normal text-popover-foreground",
                   )}
                 >
                   {opt.label}
@@ -268,19 +369,69 @@ export function ConversationList({
             </DropdownMenuContent>
           </DropdownMenu>
 
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              className={cn(
+                "inline-flex h-7 items-center justify-center gap-1 rounded-md px-2 text-xs font-medium hover:bg-muted",
+                statusFilter !== "all"
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {statusFilter === "all"
+                ? t("filterStatus")
+                : (activeStatus?.label ?? t("filterStatus"))}
+              <ChevronDown className="h-3 w-3" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="start"
+              className="border-border bg-popover"
+            >
+              {STATUS_FILTER_OPTIONS.map((opt) => (
+                <DropdownMenuItem
+                  key={opt.value}
+                  onClick={() => setStatusFilter(opt.value)}
+                  className={cn(
+                    statusFilter === opt.value
+                      ? "font-medium text-primary"
+                      : "font-normal text-popover-foreground",
+                  )}
+                >
+                  {opt.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <button
+            type="button"
+            onClick={() => setUnreadOnly((v) => !v)}
+            className={cn(
+              "inline-flex h-7 items-center justify-center rounded-md px-2 text-xs font-medium",
+              "transition-[color,background-color,transform] duration-150 ease-out active:scale-95",
+              "motion-reduce:transition-none motion-reduce:active:scale-100",
+              unreadOnly
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+            )}
+            aria-pressed={unreadOnly}
+          >
+            {unreadOnly ? t("filterUnreadOn") : t("filterUnread")}
+          </button>
+
           {tags.length > 0 && (
             <DropdownMenu>
               <DropdownMenuTrigger
                 className={cn(
-                  "inline-flex items-center justify-center h-7 gap-1 px-2 text-xs rounded-md hover:bg-muted",
+                  "inline-flex h-7 items-center justify-center gap-1 rounded-md px-2 text-xs font-medium hover:bg-muted",
                   selectedTagIds.length > 0
                     ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 {t("tags")}
                 {selectedTagIds.length > 0 && (
-                  <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+                  <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-xs font-medium tabular-nums text-primary-foreground">
                     {selectedTagIds.length}
                   </span>
                 )}
@@ -290,19 +441,24 @@ export function ConversationList({
                 align="start"
                 className="max-h-64 w-56 border-border bg-popover"
               >
-                {tags.map((t) => (
+                {tags.map((tagRow) => (
                   <DropdownMenuCheckboxItem
-                    key={t.id}
-                    checked={selectedTagIds.includes(t.id)}
-                    onCheckedChange={() => toggleTag(t.id)}
-                    className="text-sm text-popover-foreground"
+                    key={tagRow.id}
+                    checked={selectedTagIds.includes(tagRow.id)}
+                    onCheckedChange={() => toggleTag(tagRow.id)}
+                    className={cn(
+                      "text-popover-foreground",
+                      selectedTagIds.includes(tagRow.id)
+                        ? "font-medium"
+                        : "font-normal",
+                    )}
                   >
                     <span className="flex items-center gap-2">
                       <span
                         className="h-2 w-2 shrink-0 rounded-full"
-                        style={{ backgroundColor: t.color }}
+                        style={{ backgroundColor: tagRow.color }}
                       />
-                      <span className="truncate">{t.name}</span>
+                      <span className="truncate">{tagRow.name}</span>
                     </span>
                   </DropdownMenuCheckboxItem>
                 ))}
@@ -319,7 +475,7 @@ export function ConversationList({
                 <button
                   key={id}
                   onClick={() => toggleTag(id)}
-                  className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] text-foreground hover:bg-muted/70"
+                  className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-foreground hover:bg-muted/70"
                 >
                   <span
                     className="h-1.5 w-1.5 shrink-0 rounded-full"
@@ -332,7 +488,7 @@ export function ConversationList({
             })}
             <button
               onClick={clearContactFilters}
-              className="px-1 text-[11px] text-muted-foreground hover:text-foreground"
+              className="px-1 text-xs font-medium text-muted-foreground hover:text-foreground"
             >
               {t("clearAll")}
             </button>
@@ -352,8 +508,34 @@ export function ConversationList({
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           </div>
         ) : filtered.length === 0 ? (
-          <div className="px-4 py-12 text-center">
-            <p className="text-sm text-muted-foreground">{t("noConversations")}</p>
+          <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
+            <p className="text-sm text-muted-foreground">
+              {hasListFilters
+                ? t("noConversationsFiltered")
+                : t("noConversations")}
+            </p>
+            {!hasListFilters && (
+              <p className="max-w-[16rem] text-xs text-muted-foreground">
+                {t("noConversationsHint")}
+              </p>
+            )}
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {hasListFilters && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={clearAllListFilters}
+                >
+                  {t("clearFilters")}
+                </Button>
+              )}
+              {onNewMessage && (
+                <Button type="button" size="sm" onClick={onNewMessage}>
+                  {t("startMessage")}
+                </Button>
+              )}
+            </div>
           </div>
         ) : (
           <div className="flex flex-col">
@@ -363,6 +545,12 @@ export function ConversationList({
                 conversation={conv}
                 isActive={conv.id === activeConversationId}
                 onSelect={handleSelect}
+                assigneeName={
+                  conv.assigned_agent_id
+                    ? (profilesByUserId.get(conv.assigned_agent_id)
+                        ?.full_name ?? null)
+                    : null
+                }
                 t={t}
               />
             ))}
@@ -377,6 +565,7 @@ interface ConversationItemProps {
   conversation: Conversation;
   isActive: boolean;
   onSelect: (conversation: Conversation) => void;
+  assigneeName: string | null;
   t: ReturnType<typeof useTranslations>;
 }
 
@@ -384,11 +573,16 @@ function ConversationItem({
   conversation,
   isActive,
   onSelect,
+  assigneeName,
   t,
 }: ConversationItemProps) {
   const contact = conversation.contact;
   const displayName = contact?.name || contact?.phone || t("unknown");
   const initials = displayName.charAt(0).toUpperCase();
+  const statusLabel = t(STATUS_LABEL_KEYS[conversation.status]);
+  const assigneeLabel = conversation.assigned_agent_id
+    ? (assigneeName ?? t("unknown"))
+    : t("unassigned");
 
   const handleClick = useCallback(() => {
     onSelect(conversation);
@@ -396,7 +590,8 @@ function ConversationItem({
 
   const timeAgo = conversation.last_message_at
     ? formatDistanceToNow(new Date(conversation.last_message_at), {
-        addSuffix: false,
+        addSuffix: true,
+        locale: ptBR,
       })
     : "";
 
@@ -404,8 +599,11 @@ function ConversationItem({
     <button
       onClick={handleClick}
       className={cn(
-        "flex w-full items-start gap-3 px-3 py-3 text-left transition-colors hover:bg-muted/50",
-        isActive && "border-l-2 border-primary bg-muted/70"
+        "flex w-full items-start gap-3 px-3 py-3 text-left",
+        "transition-[background-color,transform,border-color] duration-150 ease-out",
+        "hover:bg-muted/50 active:scale-[0.995]",
+        "motion-reduce:transition-none motion-reduce:active:scale-100",
+        isActive && "border-l-2 border-primary bg-muted/70",
       )}
     >
       {/* Avatar */}
@@ -427,7 +625,9 @@ function ConversationItem({
           <span className="truncate text-sm font-medium text-foreground">
             {displayName}
           </span>
-          <span className="shrink-0 text-[10px] text-muted-foreground">{timeAgo}</span>
+          <span className="shrink-0 text-xs text-muted-foreground">
+            {timeAgo}
+          </span>
         </div>
         <div className="mt-0.5 flex items-center justify-between gap-2">
           <p className="truncate text-xs text-muted-foreground">
@@ -435,19 +635,30 @@ function ConversationItem({
           </p>
           <div className="flex shrink-0 items-center gap-1.5">
             {conversation.unread_count > 0 && (
-              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-xs font-medium tabular-nums text-primary-foreground animate-in zoom-in-50 fade-in-0 duration-150 motion-reduce:animate-none">
                 {conversation.unread_count}
               </span>
             )}
             <span
-              className={cn(
-                "h-2 w-2 rounded-full",
-                STATUS_COLORS[conversation.status]
-              )}
-              title={conversation.status}
-            />
+              className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 transition-colors duration-150"
+              title={statusLabel}
+              aria-label={statusLabel}
+            >
+              <span
+                className={cn(
+                  "h-1.5 w-1.5 rounded-full",
+                  STATUS_COLORS[conversation.status],
+                )}
+              />
+              <span className="text-xs font-medium text-muted-foreground">
+                {statusLabel}
+              </span>
+            </span>
           </div>
         </div>
+        <p className="mt-0.5 truncate text-xs text-muted-foreground">
+          {assigneeLabel}
+        </p>
       </div>
     </button>
   );

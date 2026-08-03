@@ -258,17 +258,33 @@ function ResourcesProvider({ children }: { children: ReactNode }) {
           .select("*")
           .eq("status", "APPROVED")
           .order("name"),
-        supabase.from("pipelines").select("id, name").order("name"),
+        // Funis unificados = process_templates (IDs legados de pipeline preservados na migração).
         supabase
-          .from("pipeline_stages")
-          .select("id, name, pipeline_id, position")
+          .from("process_templates")
+          .select("id, name")
+          .eq("active", true)
+          .order("name"),
+        supabase
+          .from("process_template_stages")
+          .select("id, name, template_id, position")
           .order("position"),
       ])
       if (cancelled) return
       setTags((tagsRes.data as TagRecord[] | null) ?? [])
       setTemplates((templatesRes.data as MessageTemplate[] | null) ?? [])
       setPipelines((pipelinesRes.data as PipelineOption[] | null) ?? [])
-      setStages((stagesRes.data as PipelineStageOption[] | null) ?? [])
+      const stageRows =
+        (stagesRes.data as
+          | { id: string; name: string; template_id: string; position: number }[]
+          | null) ?? []
+      setStages(
+        stageRows.map((s) => ({
+          id: s.id,
+          name: s.name,
+          pipeline_id: s.template_id,
+          position: s.position,
+        })),
+      )
     })()
 
     // Members go through the API so we inherit its email-visibility

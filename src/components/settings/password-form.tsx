@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, KeyRound } from 'lucide-react';
+import { KeyRound } from 'lucide-react';
 
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
@@ -12,11 +12,15 @@ import { Label } from '@/components/ui/label';
 import {
   Card,
   CardContent,
+  CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from '@/components/ui/card';
 import { useTranslations } from 'next-intl';
+import { cn } from '@/lib/utils';
+import { SettingsScopeChip } from './settings-scope-chip';
+import { settingsType } from './settings-type';
 
 const MIN_PASSWORD = 8;
 
@@ -30,6 +34,15 @@ export function PasswordForm() {
   const [confirm, setConfirm] = useState('');
   const [saving, setSaving] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
+
+  const dirty = Boolean(current || next || confirm);
+
+  const discard = () => {
+    setCurrent('');
+    setNext('');
+    setConfirm('');
+    setConfirmError(null);
+  };
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,10 +62,6 @@ export function PasswordForm() {
     setSaving(true);
 
     try {
-      // Supabase doesn't expose a "verify password without issuing a
-      // session" API, so we re-authenticate with the provided current
-      // password. If it matches, the session refreshes silently; if it
-      // doesn't, we abort before calling updateUser.
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: profile.email,
         password: current,
@@ -70,9 +79,7 @@ export function PasswordForm() {
         return;
       }
 
-      setCurrent('');
-      setNext('');
-      setConfirm('');
+      discard();
       toast.success(t('passwordUpdated'));
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
@@ -84,22 +91,23 @@ export function PasswordForm() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-foreground">
-          <KeyRound className="size-4 text-primary" />
-          {t('passwordTitle')}
-        </CardTitle>
-        <CardDescription className="text-muted-foreground">
+      <CardHeader className="space-y-3">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <CardTitle className={cn('flex items-center gap-2', settingsType.sectionTitle)}>
+            <KeyRound className="size-4 text-primary" aria-hidden />
+            {t('passwordTitle')}
+          </CardTitle>
+          <SettingsScopeChip scope="personal" />
+        </div>
+        <CardDescription className={settingsType.body}>
           {t('passwordDesc', { min: MIN_PASSWORD })}
         </CardDescription>
       </CardHeader>
 
       <CardContent>
-        <form onSubmit={onSubmit} className="space-y-4">
+        <form id="password-form" onSubmit={onSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="current-password" className="text-foreground">
-              {t('currentPassword')}
-            </Label>
+            <Label htmlFor="current-password">{t('currentPassword')}</Label>
             <PasswordInput
               id="current-password"
               value={current}
@@ -112,9 +120,7 @@ export function PasswordForm() {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="new-password" className="text-foreground">
-                {t('newPassword')}
-              </Label>
+              <Label htmlFor="new-password">{t('newPassword')}</Label>
               <PasswordInput
                 id="new-password"
                 value={next}
@@ -126,9 +132,7 @@ export function PasswordForm() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirm-password" className="text-foreground">
-                {t('confirmPassword')}
-              </Label>
+              <Label htmlFor="confirm-password">{t('confirmPassword')}</Label>
               <PasswordInput
                 id="confirm-password"
                 value={confirm}
@@ -146,24 +150,28 @@ export function PasswordForm() {
               {confirmError}
             </p>
           )}
-
-          <div className="flex justify-end">
-            <Button
-              type="submit"
-              disabled={saving || !current || !next || !confirm}
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" />
-                  {t('updating')}
-                </>
-              ) : (
-                t('updatePassword')
-              )}
-            </Button>
-          </div>
         </form>
       </CardContent>
+
+      <CardFooter className="flex flex-wrap items-center justify-end gap-2 border-t border-border bg-muted/20">
+        <Button
+          type="button"
+          variant="ghost"
+          disabled={!dirty || saving}
+          className="min-h-11 sm:min-h-8"
+          onClick={discard}
+        >
+          {t('cancel')}
+        </Button>
+        <Button
+          type="submit"
+          form="password-form"
+          disabled={saving || !current || !next || !confirm}
+          className="min-h-11 sm:min-h-8"
+        >
+          {saving ? t('updating') : t('updatePassword')}
+        </Button>
+      </CardFooter>
     </Card>
   );
 }

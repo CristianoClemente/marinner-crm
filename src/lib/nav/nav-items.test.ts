@@ -11,11 +11,20 @@ import {
 const schoolChildren = NAV_GROUPS.find((g) => g.id === "school")!.children;
 
 describe("filterNavItems", () => {
-  it("agent vê a nav operacional (inclui PDV e Agenda)", () => {
+  it("agent vê a nav operacional (inclui PDV e Agenda), sem Funis", () => {
     const hrefs = filterNavItems(PRIMARY_NAV, "agent").map((i) => i.href);
     expect(hrefs).toContain("/processes");
     expect(hrefs).toContain("/pos");
     expect(hrefs).toContain("/agenda");
+    expect(hrefs).not.toContain("/process-templates");
+  });
+
+  it("admin vê Funis logo após Kanban", () => {
+    const hrefs = filterNavItems(PRIMARY_NAV, "admin").map((i) => i.href);
+    const processesIdx = hrefs.indexOf("/processes");
+    const templatesIdx = hrefs.indexOf("/process-templates");
+    expect(processesIdx).toBeGreaterThanOrEqual(0);
+    expect(templatesIdx).toBe(processesIdx + 1);
   });
 
   it("instructor não vê nav do CRM", () => {
@@ -60,5 +69,11 @@ describe("isNavItemActive / isGroupActive", () => {
   it("rota filha ativa o grupo", () => {
     expect(isGroupActive("/catalog/123", schoolChildren)).toBe(true);
     expect(isGroupActive("/inbox", schoolChildren)).toBe(false);
+  });
+
+  it("Funis não fica no grupo Escola", () => {
+    expect(schoolChildren.map((c) => c.href)).not.toContain(
+      "/process-templates",
+    );
   });
 });

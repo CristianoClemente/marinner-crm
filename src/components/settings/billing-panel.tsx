@@ -17,6 +17,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { SettingsPanelHead } from "./settings-panel-head";
+import { settingsType } from "./settings-type";
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
@@ -72,76 +74,81 @@ export function BillingPanel() {
     : "statusNone";
 
   return (
-    <Card className="border-border bg-card ring-1 ring-foreground/10">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <CreditCard className="size-4 text-primary" />
-          {t("title")}
-        </CardTitle>
-        <CardDescription>{t("description")}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {loading ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="size-4 animate-spin" />
-            {t("loading")}
-          </div>
-        ) : (
-          <>
-            <dl className="grid gap-3 text-sm sm:grid-cols-2">
-              <div>
-                <dt className="text-muted-foreground">{t("plan")}</dt>
-                <dd className="font-medium text-foreground">
-                  {entitlements?.plan?.name ?? "—"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">{t("price")}</dt>
-                <dd className="font-medium text-foreground">
-                  {formatBrl(entitlements?.plan?.priceCents)}
-                  {entitlements?.plan ? (
-                    <span className="text-muted-foreground">/{t("perMonth")}</span>
-                  ) : null}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">{t("status")}</dt>
-                <dd className="font-medium text-foreground">{t(statusKey)}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">{t("trialEnds")}</dt>
-                <dd className="font-medium text-foreground">
-                  {formatDate(entitlements?.trialEndsAt ?? null)}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">{t("periodEnd")}</dt>
-                <dd className="font-medium text-foreground">
-                  {formatDate(entitlements?.currentPeriodEnd ?? null)}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">{t("seats")}</dt>
-                <dd className="font-medium text-foreground">
-                  {entitlements?.maxSeats || "—"}
-                </dd>
-              </div>
-            </dl>
+    <section className="max-w-2xl animate-in fade-in-50 duration-200">
+      <SettingsPanelHead title={t("title")} description={t("description")} />
+      <Card>
+        <CardHeader>
+          <CardTitle className={cn("flex items-center gap-2", settingsType.sectionTitle)}>
+            <CreditCard className="size-4 text-primary" aria-hidden />
+            {t("title")}
+          </CardTitle>
+          <CardDescription className={settingsType.body}>
+            {t("description")}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {loading ? (
+            <div className={cn("flex items-center gap-2", settingsType.body)}>
+              <Loader2 className="size-4 animate-spin" />
+              {t("loading")}
+            </div>
+          ) : (
+            <>
+              <dl className="grid gap-3 text-sm sm:grid-cols-2">
+                <div>
+                  <dt className={settingsType.meta}>{t("plan")}</dt>
+                  <dd className="font-medium text-foreground">
+                    {entitlements?.plan?.name ?? "—"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className={settingsType.meta}>{t("price")}</dt>
+                  <dd className="font-medium text-foreground">
+                    {formatBrl(entitlements?.plan?.priceCents)}
+                    {entitlements?.plan ? (
+                      <span className="text-muted-foreground">/{t("perMonth")}</span>
+                    ) : null}
+                  </dd>
+                </div>
+                <div>
+                  <dt className={settingsType.meta}>{t("status")}</dt>
+                  <dd className="font-medium text-foreground">{t(statusKey)}</dd>
+                </div>
+                <div>
+                  <dt className={settingsType.meta}>{t("trialEnds")}</dt>
+                  <dd className="font-medium text-foreground">
+                    {formatDate(entitlements?.trialEndsAt ?? null)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className={settingsType.meta}>{t("periodEnd")}</dt>
+                  <dd className="font-medium text-foreground">
+                    {formatDate(entitlements?.currentPeriodEnd ?? null)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className={settingsType.meta}>{t("seats")}</dt>
+                  <dd className="font-medium text-foreground">
+                    {entitlements?.maxSeats || "—"}
+                  </dd>
+                </div>
+              </dl>
 
-            {(isOwner || canEditSettings) && entitlements?.needsCheckout ? (
-              <Link
-                href="/billing/checkout?resume=1"
-                className={cn(
-                  buttonVariants({ variant: "default" }),
-                  "inline-flex h-10",
-                )}
-              >
-                {t("resumeCheckout")}
-              </Link>
-            ) : null}
-          </>
-        )}
-      </CardContent>
-    </Card>
+              {(isOwner || canEditSettings) && entitlements?.needsCheckout ? (
+                <Link
+                  href="/billing/checkout?resume=1"
+                  className={cn(
+                    buttonVariants({ variant: "default" }),
+                    "inline-flex h-10 min-h-11 sm:min-h-8",
+                  )}
+                >
+                  {t("resumeCheckout")}
+                </Link>
+              ) : null}
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </section>
   );
 }

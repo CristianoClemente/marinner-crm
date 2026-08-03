@@ -5,6 +5,7 @@ import { Plus, Trash2 } from "lucide-react";
 
 import { PROCESS_FIELD_TYPES } from "@/lib/processes/field-types";
 import type { ProcessFieldType } from "@/types";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,11 +19,13 @@ import {
 } from "@/components/ui/select";
 
 export type FieldDraft = {
+  clientKey: string;
   id?: string;
   label: string;
   field_type: ProcessFieldType;
   required: boolean;
   optionsText: string;
+  justAdded?: boolean;
 };
 
 interface StageFieldsEditorProps {
@@ -39,23 +42,32 @@ export function StageFieldsEditor({ fields, onChange }: StageFieldsEditorProps) 
     onChange(next);
   }
 
+  function clearJustAdded(index: number) {
+    if (!fields[index]?.justAdded) return;
+    update(index, { justAdded: false });
+  }
+
   return (
-    <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-2">
+    <div className="space-y-1.5">
       <div className="flex items-center justify-between gap-2">
-        <Label className="text-xs text-muted-foreground">{t("title")}</Label>
+        <Label className="text-xs font-medium text-muted-foreground">
+          {t("title")}
+        </Label>
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          className="h-7"
+          className="h-7 text-xs"
           onClick={() =>
             onChange([
               ...fields,
               {
+                clientKey: crypto.randomUUID(),
                 label: "",
                 field_type: "text",
                 required: false,
                 optionsText: "",
+                justAdded: true,
               },
             ])
           }
@@ -66,13 +78,20 @@ export function StageFieldsEditor({ fields, onChange }: StageFieldsEditorProps) 
       </div>
 
       {fields.length === 0 ? (
-        <p className="px-1 py-2 text-xs text-muted-foreground">{t("empty")}</p>
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          {t("empty")}
+        </p>
       ) : (
         <ul className="space-y-2">
           {fields.map((field, index) => (
             <li
-              key={field.id ?? `new-${index}`}
-              className="space-y-1.5 rounded-md bg-card p-2 ring-1 ring-foreground/10"
+              key={field.clientKey}
+              onAnimationEnd={() => clearJustAdded(index)}
+              className={cn(
+                "space-y-1.5 rounded-lg bg-muted/40 p-2.5 transition-colors",
+                field.justAdded &&
+                  "animate-in fade-in-0 slide-in-from-bottom-1 duration-200 fill-mode-both motion-reduce:animate-none",
+              )}
             >
               <div className="flex items-center gap-1.5">
                 <Input
@@ -85,6 +104,7 @@ export function StageFieldsEditor({ fields, onChange }: StageFieldsEditorProps) 
                   type="button"
                   variant="ghost"
                   size="icon-sm"
+                  aria-label={t("remove")}
                   onClick={() => onChange(fields.filter((_, j) => j !== index))}
                 >
                   <Trash2 className="size-3.5" />
@@ -97,7 +117,7 @@ export function StageFieldsEditor({ fields, onChange }: StageFieldsEditorProps) 
                     if (v) update(index, { field_type: v as ProcessFieldType });
                   }}
                 >
-                  <SelectTrigger className="h-8 w-36">
+                  <SelectTrigger className="h-8 w-full sm:w-36">
                     <SelectValue>{t(`types.${field.field_type}`)}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
@@ -108,7 +128,7 @@ export function StageFieldsEditor({ fields, onChange }: StageFieldsEditorProps) 
                     ))}
                   </SelectContent>
                 </Select>
-                <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <label className="flex min-h-11 items-center gap-1.5 text-xs text-muted-foreground sm:min-h-0">
                   <Switch
                     checked={field.required}
                     onCheckedChange={(v) => update(index, { required: v })}
@@ -118,10 +138,13 @@ export function StageFieldsEditor({ fields, onChange }: StageFieldsEditorProps) 
               </div>
               {field.field_type === "select" ? (
                 <Input
+                  key={`${field.clientKey}-options`}
                   value={field.optionsText}
-                  onChange={(e) => update(index, { optionsText: e.target.value })}
+                  onChange={(e) =>
+                    update(index, { optionsText: e.target.value })
+                  }
                   placeholder={t("optionsPlaceholder")}
-                  className="h-8 text-base md:text-sm"
+                  className="h-8 animate-in fade-in-0 slide-in-from-top-1 text-base duration-150 fill-mode-both motion-reduce:animate-none md:text-sm"
                 />
               ) : null}
             </li>

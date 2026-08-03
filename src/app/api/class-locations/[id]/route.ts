@@ -6,6 +6,7 @@ import {
   toErrorResponse,
 } from "@/lib/auth/account";
 import { validateClassLocationPatch } from "@/lib/class-locations/validate";
+import { assertAccountHasAuthority } from "@/lib/class-locations/assert-authority";
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -45,6 +46,17 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     const parsed = validateClassLocationPatch(body);
     if (!parsed.ok) {
       return NextResponse.json({ error: parsed.message }, { status: 400 });
+    }
+
+    if (parsed.value.authority_id != null) {
+      const linked = await assertAccountHasAuthority(
+        ctx.supabase,
+        ctx.accountId,
+        parsed.value.authority_id,
+      );
+      if (!linked.ok) {
+        return NextResponse.json({ error: linked.message }, { status: 400 });
+      }
     }
 
     const { data, error } = await ctx.supabase

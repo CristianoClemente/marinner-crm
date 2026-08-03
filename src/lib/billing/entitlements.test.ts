@@ -3,6 +3,7 @@ import {
   computeEntitlements,
   formatAsaasDate,
   isPlanCode,
+  parseMaxJurisdictions,
   trialEndsAtFromNow,
   TRIAL_DAYS,
 } from "./entitlements";
@@ -36,6 +37,42 @@ describe("computeEntitlements", () => {
       expect(e.isAccessAllowed).toBe(false);
       expect(e.needsCheckout).toBe(true);
     }
+  });
+
+  it("expõe maxJurisdictions a partir de features", () => {
+    expect(
+      computeEntitlements({
+        status: "active",
+        plan: { ...samplePlan, features: { max_jurisdictions: 1 } },
+      }).maxJurisdictions,
+    ).toBe(1);
+    expect(
+      computeEntitlements({
+        status: "active",
+        plan: { ...samplePlan, features: { max_jurisdictions: 3 } },
+      }).maxJurisdictions,
+    ).toBe(3);
+    expect(
+      computeEntitlements({
+        status: "active",
+        plan: { ...samplePlan, features: { max_jurisdictions: null } },
+      }).maxJurisdictions,
+    ).toBeNull();
+    expect(
+      computeEntitlements({
+        status: "active",
+        plan: { ...samplePlan, features: { flows: true } },
+      }).maxJurisdictions,
+    ).toBe(1);
+  });
+});
+
+describe("parseMaxJurisdictions", () => {
+  it("trata ausente, número e null", () => {
+    expect(parseMaxJurisdictions({})).toBe(1);
+    expect(parseMaxJurisdictions({ max_jurisdictions: 3 })).toBe(3);
+    expect(parseMaxJurisdictions({ max_jurisdictions: null })).toBeNull();
+    expect(parseMaxJurisdictions({ max_jurisdictions: 0 })).toBe(1);
   });
 });
 

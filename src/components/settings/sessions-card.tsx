@@ -9,9 +9,9 @@ import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from '@/components/ui/card';
 import {
   Dialog,
@@ -22,6 +22,8 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { useTranslations } from 'next-intl';
+import { cn } from '@/lib/utils';
+import { settingsType } from './settings-type';
 
 export function SessionsCard() {
   const t = useTranslations('Settings.profile');
@@ -32,9 +34,6 @@ export function SessionsCard() {
   const onConfirm = async () => {
     setSigningOut(true);
     try {
-      // scope: 'global' revokes every refresh token for this user
-      // across all devices; the next auth-state change on this tab
-      // triggers the usual redirect.
       const { error } = await supabase.auth.signOut({ scope: 'global' });
       if (error) {
         toast.error(t('signOutFailed', { message: error.message }));
@@ -52,12 +51,12 @@ export function SessionsCard() {
   return (
     <>
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-foreground">
-            <LogOut className="size-4 text-primary" />
+        <CardHeader className="space-y-3">
+          <CardTitle className={cn('flex items-center gap-2', settingsType.sectionTitle)}>
+            <LogOut className="size-4 text-primary" aria-hidden />
             {t('sessionsTitle')}
           </CardTitle>
-          <CardDescription className="text-muted-foreground">
+          <CardDescription className={settingsType.body}>
             {t('sessionsDesc')}
           </CardDescription>
         </CardHeader>
@@ -65,6 +64,7 @@ export function SessionsCard() {
           <Button
             type="button"
             variant="outline"
+            className="min-h-11 sm:min-h-8"
             onClick={() => setOpen(true)}
           >
             <LogOut className="size-4" />

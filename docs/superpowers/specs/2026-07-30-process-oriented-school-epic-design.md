@@ -1,13 +1,13 @@
 # Design: Epic — Escola náutica orientada a processos (habilitação)
 
 **Data:** 2026-07-30  
-**Status:** fatia 2 implementada — próximo: spec da fatia 3 (pagamento)  
-**Abordagem:** 1 — motor de processo + templates  
+**Status:** Kanban unificado em implementação — próximo após: fatia 3 (pagamento)  
+**Abordagem:** 1 — motor de processo + templates (capacidades cobrem venda e operação)  
 **Próximo:** spec da fatia 3 — vínculo PDV/venda/parcelas ao processo
 
 ## Norte do produto
 
-O Marinner deixa de ser “CRM WhatsApp com módulos de escola” e passa a ser **gestão de escola náutica orientada a processos**, tendo como ciclo principal a **habilitação**. O CRM (inbox, funil, broadcasts) permanece como suporte comercial/atendimento.
+O Marinner deixa de ser “CRM WhatsApp com módulos de escola” e passa a ser **gestão de escola náutica orientada a processos**, tendo como ciclo principal a **habilitação**. Comercial e operação compartilham o **mesmo Kanban/motor**; diferem por **capacidades do template**. Inbox e broadcasts seguem como suporte de atendimento.
 
 Ciclo de negócio (exemplo operacional):
 
@@ -28,26 +28,22 @@ Contato (lead)
 | Aluno                 | Mesmo `contacts` (sem tabela `students`)                                               |
 | Etapas                | **Genéricas**, configuráveis por escola                                                |
 | Tipagem de etapa      | **Não** nesta fase; comportamento especial nas fatias (docs, aula…)                    |
-| Funil × processo      | **Independentes**; abertura manual agora; **automação** “deal ganho → processo” depois |
+| Funil × processo      | **Mesmo motor**; diferença por capacidades (`advance_mode`, valor, outcome, catálogo) |
 | Home                  | **Dashboard operacional** (contagens + atalhos); inbox e processos ao lado             |
-| Templates             | Ligados a **produto do catálogo**                                                      |
-| Navegação de etapas   | **Sequencial** + flag `allow_skip` por template                                        |
+| Templates             | Catálogo **opcional** (`requires_catalog_item`); venda pode existir sem produto        |
+| Navegação de etapas   | `advance_mode`: `free` \| `sequential` (+ `allow_skip` no sequencial)                  |
 | Instrutor             | Pode **avançar etapas de aula/prática** nos processos em que participa                 |
 | Automações            | Consumir **eventos de domínio** emitidos desde a fatia 1                               |
 
 
-### Por que funil ≠ processo (escala)
+### Venda × operação (capacidades, não dois módulos)
 
-Funil mede **venda**; processo mede **execução operacional** (escola / serviços). São ciclos com donos, prazos e evidências diferentes — misturar no mesmo kanban confunde “fechou a venda” com “está na documentação” ou “aguardando Marina”.
+Funil mede **venda**; processo operacional mede **execução** (escola / serviços). Antes isso vivia em dois Kanbans (`pipelines` vs `process_*`). A unificação (spec `2026-08-03-unified-kanban-design.md`) mantém a diferença semântica via **flags do template** no mesmo motor:
 
-**Processo (e vários em paralelo)** é o eixo certo porque o mesmo aluno frequentemente vive **mais de um serviço ao mesmo tempo**, por exemplo:
+- venda típica: `advance_mode=free`, `has_monetary_value`, `has_commercial_outcome`, sem catálogo obrigatório;
+- habilitação típica: `sequential`, campos por etapa, turmas, `requires_catalog_item`.
 
-- processo de **habilitação** (docs → aula → prova → CHA), **e**
-- processo de **despachante** (protocolo, taxas, acompanhamento junto ao órgão),
-
-sem um bloquear o outro. Templates distintos (ligados a produtos do catálogo) isolam etapas, responsáveis e métricas; o contato permanece único.
-
-Separar funil × processo ainda permite: papéis claros (comercial vs operação vs instrutor), automações com gatilhos por domínio (`process.*` vs deal), e crescimento para novos serviços (renovação, outro CHA, despachante) sem redesenhar o CRM.
+**Vários em paralelo** continua: o mesmo aluno pode ter habilitação **e** despachante (templates distintos). Papéis (comercial vs operação vs instrutor) e eventos `process.*` permanecem; o antigo `create_deal` vira abertura de instância em template comercial.
 
 ## Fatias do epic
 
@@ -57,6 +53,7 @@ Separar funil × processo ainda permite: papéis claros (comercial vs operação
 | 0   | Mapa (este doc)   | Vocabulário, entidades, eventos, ordem            | ✅            |
 | 1   | Motor de processo | Templates, etapas, processos, avanço, Operate UI  | ✅ `2026-07-30-process-engine-slice1-design.md` |
 | 2   | Campos por etapa  | Formulário configurável + file no R2 + gate soft/hard | ✅ `2026-07-30-process-stage-fields-slice2-design.md` |
+| 2b  | Kanban unificado  | Capacidades + migrar funil comercial + um board/builder | 🔧 `2026-08-03-unified-kanban-design.md` |
 | 3   | Pagamento         | Vínculo PDV/venda/parcelas ao processo            | pendente |
 | 4   | Aula prática      | Agenda + evento Turma (ops; finanças depois)      | ✅ `2026-07-31-agenda-turma-slice1-design.md` |
 | 5   | Prova + conclusão | Resultado, habilitado, encerramento               | pendente |
@@ -153,7 +150,7 @@ Resumo: campos por `process_template_stages` (`file|checkbox|text|textarea|date|
 ## UX alvo (fatia 6)
 
 - Home: dashboard (processos por etapa/template, atalhos).
-- Nav: Processos · Inbox · Contatos · Funil · Catálogo/PDV · Locais/Frota/Instrutores · Config.
+- Nav: Processos (Kanban) · Funis · Inbox · Contatos · Catálogo/PDV · Locais/Frota/Instrutores · Config.
 - Contato: aba Processos (N paralelos) + WhatsApp.
 - Instrutor: sem CRM operacional; aulas + avanço permitido.
 
@@ -161,15 +158,14 @@ Resumo: campos por `process_template_stages` (`file|checkbox|text|textarea|date|
 
 - Tipar etapas no motor (`documentos` / `prova` como tipos de engine)
 - LMS / portal do aluno
-- Hardcode “deal ganho → processo” sem fatia de automações
-- Substituir ou eliminar o funil comercial
+- Hardcode “deal ganho → processo operacional” sem fatia de automações (ambos já são o mesmo motor)
 
 ## Relação com o que já existe
 
 
 | Módulo atual                        | Papel no epic                                        |
 | ----------------------------------- | ---------------------------------------------------- |
-| Contatos / inbox / funil            | Lead e atendimento; entrada comercial                |
+| Contatos / inbox / Kanban unificado | Lead, atendimento e funis (venda + operação)         |
 | Catálogo / PDV                      | Produto ↔ template; pagamento (fatia 3)              |
 | Locais / equipamentos / instrutores | Aula prática (fatia 4)                               |
 | Automações / fluxos WhatsApp        | Fatia 7 + canal de comunicação                       |

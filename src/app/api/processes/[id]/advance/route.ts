@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 
 import { requireRole, toErrorResponse } from "@/lib/auth/account";
-import { resolveAdvance, sortStages } from "@/lib/processes/advance";
+import { resolveAdvance, sortStages, isAdvanceMode } from "@/lib/processes/advance";
 import { emitProcessEvent } from "@/lib/processes/events";
 import {
   fieldSummary,
   requiredMissingLabels,
   type FieldWithValue,
 } from "@/lib/processes/field-values";
+import { PROCESS_SELECT } from "@/lib/processes/process-select";
 import { isUuid } from "@/lib/processes/validate";
 import type {
   ProcessFieldValueRow,
@@ -16,9 +17,6 @@ import type {
 } from "@/lib/processes/types";
 
 type Ctx = { params: Promise<{ id: string }> };
-
-const PROCESS_SELECT =
-  "*, template:process_templates(id, name, catalog_item_id, active, block_advance_if_incomplete), current_stage:process_template_stages!enrollment_processes_current_stage_id_fkey(*), contact:contacts(id, name, phone, cpf)";
 
 export async function POST(request: Request, context: Ctx) {
   try {
@@ -54,7 +52,7 @@ export async function POST(request: Request, context: Ctx) {
 
     const { data: template } = await ctx.supabase
       .from("process_templates")
-      .select("id, block_advance_if_incomplete")
+      .select("id, block_advance_if_incomplete, advance_mode")
       .eq("account_id", ctx.accountId)
       .eq("id", process.template_id)
       .maybeSingle();
@@ -116,6 +114,9 @@ export async function POST(request: Request, context: Ctx) {
         ? body.target_stage_id
         : null,
       force: Boolean(body.force),
+      advanceMode: isAdvanceMode(template?.advance_mode)
+        ? template.advance_mode
+        : "sequential",
     });
     if (!resolved.ok) {
       return NextResponse.json({ error: resolved.message }, { status: 400 });

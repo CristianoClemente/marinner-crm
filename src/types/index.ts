@@ -549,7 +549,9 @@ export interface UpdateContactFieldStepConfig {
 }
 
 export interface CreateDealStepConfig {
+  /** ID do process_template (legado: pipeline_id). */
   pipeline_id: string;
+  /** ID da process_template_stage (legado: stage_id). */
   stage_id: string;
   title: string;
   value?: number;
@@ -799,6 +801,8 @@ export interface ClassLocation {
   has_expense: boolean;
   expense_type?: ClassLocationCostType | null;
   expense_amount?: number | null;
+  /** OM/STA do local (catálogo maritime_authorities). */
+  authority_id?: number | null;
   created_at: string;
   updated_at: string;
   bonus_rules?: ClassLocationBonusRule[];
@@ -956,6 +960,8 @@ export interface InstructorUnavailability {
 
 export type {
   ProcessStatus,
+  AdvanceMode,
+  CommercialStatus,
   ProcessDomainEventType,
   ProcessTemplate,
   ProcessTemplateStage,

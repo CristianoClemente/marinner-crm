@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Loader2, Plus, Trash2 } from "lucide-react";
@@ -41,6 +42,22 @@ const COST_TYPES: ClassLocationCostType[] = [
 
 const FORM_ID = "class-location-form";
 
+type JurisdictionOption = {
+  authority_id: number;
+  is_default: boolean;
+  authority:
+    | { id: number; sigla: string; nome: string; cidade: string | null; uf: string | null }
+    | { id: number; sigla: string; nome: string; cidade: string | null; uf: string | null }[]
+    | null;
+};
+
+function authorityLabel(row: JurisdictionOption): string {
+  const a = Array.isArray(row.authority) ? row.authority[0] : row.authority;
+  if (!a) return String(row.authority_id);
+  const place = [a.cidade, a.uf].filter(Boolean).join("/");
+  return place ? `${a.sigla} — ${place}` : `${a.sigla} — ${a.nome}`;
+}
+
 interface ClassLocationFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -70,6 +87,9 @@ export function ClassLocationForm({
   const [expenseType, setExpenseType] =
     useState<ClassLocationCostType>("monthly_fee");
   const [expenseAmount, setExpenseAmount] = useState("0");
+  const [authorityId, setAuthorityId] = useState<string>("");
+  const [jurisdictions, setJurisdictions] = useState<JurisdictionOption[]>([]);
+  const [jurisdictionsLoading, setJurisdictionsLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [rules, setRules] = useState<ClassLocationBonusRule[]>([]);
   const [rulesLoading, setRulesLoading] = useState(false);
@@ -81,6 +101,43 @@ export function ClassLocationForm({
   );
   const [bonusEnds, setBonusEnds] = useState("");
   const [addingBonus, setAddingBonus] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setJurisdictionsLoading(true);
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/account/jurisdictions");
+        const data = (await res.json()) as {
+          jurisdictions?: JurisdictionOption[];
+          error?: string;
+        };
+        if (!res.ok) throw new Error(data.error || t("jurisdictionsLoadError"));
+        if (cancelled) return;
+        const rows = data.jurisdictions ?? [];
+        setJurisdictions(rows);
+        if (location?.authority_id != null) {
+          setAuthorityId(String(location.authority_id));
+        } else {
+          const def = rows.find((r) => r.is_default) ?? rows[0];
+          setAuthorityId(def ? String(def.authority_id) : "");
+        }
+      } catch (err) {
+        if (!cancelled) {
+          toast.error(
+            err instanceof Error ? err.message : t("jurisdictionsLoadError"),
+          );
+          setJurisdictions([]);
+        }
+      } finally {
+        if (!cancelled) setJurisdictionsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, location, t]);
 
   useEffect(() => {
     if (!open) return;
@@ -188,7 +245,12 @@ export function ClassLocationForm({
         has_expense: hasExpense,
         expense_type: hasExpense ? expenseType : null,
         expense_amount: hasExpense ? Number(expenseAmount) : null,
+        authority_id: Number(authorityId),
       };
+
+      if (!authorityId) {
+        throw new Error(t("authorityRequired"));
+      }
 
       if (isEdit && location) {
         const res = await fetch(`/api/class-locations/${location.id}`, {
@@ -287,6 +349,43 @@ export function ClassLocationForm({
               required
               className="text-base md:text-sm"
             />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>{t("authority")}</Label>
+            {jurisdictionsLoading ? (
+              <p className="text-xs text-muted-foreground">{t("authorityLoading")}</p>
+            ) : jurisdictions.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {t("authorityEmpty")}{" "}
+                <Link
+                  href="/settings?tab=jurisdictions"
+                  className="text-primary underline-offset-2 hover:underline"
+                >
+                  {t("authoritySettingsLink")}
+                </Link>
+              </p>
+            ) : (
+              <Select
+                value={authorityId}
+                onValueChange={(v) => setAuthorityId(v ?? "")}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={t("authorityPlaceholder")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {jurisdictions.map((row) => (
+                    <SelectItem
+                      key={row.authority_id}
+                      value={String(row.authority_id)}
+                    >
+                      {authorityLabel(row)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <p className="text-xs text-muted-foreground">{t("authorityHint")}</p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-3">

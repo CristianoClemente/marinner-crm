@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { SettingsPanelHead } from "./settings-panel-head";
+import { settingsType } from "./settings-type";
 import {
   InteractiveBuilder,
   blankButtonsPayload,
@@ -164,15 +165,15 @@ export function QuickRepliesManager() {
         title={t("title")}
         description={isZapi ? t("descriptionZapi") : t("description")}
         action={
-          <Button onClick={openCreate}>
-            <Plus className="mr-1 h-4 w-4" />
+          <Button onClick={openCreate} className="min-h-11 sm:min-h-8">
+            <Plus className="size-4" />
             {t("new")}
           </Button>
         }
       />
 
       {isZapi && hasInteractiveItems && (
-        <p className="mb-3 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+        <p className={`mb-3 rounded-md border border-border bg-muted/40 px-3 py-2 ${settingsType.body}`}>
           {t("zapiInteractiveHint")}
         </p>
       )}
@@ -182,7 +183,7 @@ export function QuickRepliesManager() {
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </div>
       ) : items.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-border py-10 text-center text-sm text-muted-foreground">
+        <p className={`rounded-lg border border-dashed border-border py-10 text-center ${settingsType.body}`}>
           {t("empty")}
         </p>
       ) : (

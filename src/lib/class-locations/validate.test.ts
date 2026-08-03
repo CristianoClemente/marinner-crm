@@ -11,12 +11,23 @@ describe("validateClassLocationCreate", () => {
       name: "Marina Centro",
       cidade: "Santos",
       has_expense: false,
+      authority_id: 66,
     });
     expect(r.ok).toBe(true);
     if (r.ok) {
       expect(r.value.expense_type).toBeNull();
       expect(r.value.expense_amount).toBeNull();
+      expect(r.value.authority_id).toBe(66);
     }
+  });
+
+  it("rejeita sem jurisdição", () => {
+    const r = validateClassLocationCreate({
+      name: "X",
+      has_expense: false,
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toBe("missing_authority");
   });
 
   it("rejeita tipo/valor quando sem despesa", () => {
@@ -25,6 +36,7 @@ describe("validateClassLocationCreate", () => {
       has_expense: false,
       expense_type: "monthly_fee",
       expense_amount: 100,
+      authority_id: 1,
     });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error).toBe("invalid_expense");
@@ -35,6 +47,7 @@ describe("validateClassLocationCreate", () => {
       validateClassLocationCreate({
         name: "X",
         has_expense: true,
+        authority_id: 1,
       }).ok,
     ).toBe(false);
 
@@ -43,6 +56,7 @@ describe("validateClassLocationCreate", () => {
       has_expense: true,
       expense_type: "per_class",
       expense_amount: 50,
+      authority_id: 1,
     });
     expect(r.ok).toBe(true);
     if (r.ok) {

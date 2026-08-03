@@ -142,6 +142,7 @@ function Banner({
     <div
       className={cn(
         "flex items-center gap-3 border-b px-3 py-2 text-xs sm:px-4",
+        "animate-in fade-in-0 slide-in-from-top-1 duration-200 motion-reduce:animate-none",
         tone === "primary"
           ? "border-primary/20 bg-primary/5"
           : "border-border bg-muted/40",
@@ -168,7 +169,11 @@ function BannerButton({
       type="button"
       onClick={onClick}
       disabled={busy}
-      className="inline-flex flex-shrink-0 items-center gap-1 rounded-md border border-border bg-card px-2.5 py-1 font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-60"
+      className={cn(
+        "inline-flex flex-shrink-0 items-center gap-1 rounded-md border border-border bg-card px-2.5 py-1 font-medium text-foreground",
+        "transition-[background-color,transform] duration-150 ease-out hover:bg-muted active:scale-95",
+        "disabled:opacity-60 motion-reduce:transition-none motion-reduce:active:scale-100",
+      )}
     >
       {busy ? (
         <Loader2 className="h-3 w-3 animate-spin" />

@@ -491,17 +491,18 @@ export function TemplateManager() {
         description={t('description')}
         action={
           isZapi ? undefined : (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
               onClick={handleSyncFromMeta}
               disabled={syncing}
               title={t('syncTitle')}
+              className="min-h-11 sm:min-h-8"
             >
               <RefreshCw className={`size-4 ${syncing ? 'animate-spin' : ''}`} />
               {syncing ? t('syncing') : t('syncFromMeta')}
             </Button>
-            <Button onClick={openCreate}>
+            <Button onClick={openCreate} className="min-h-11 sm:min-h-8">
               <Plus className="size-4" />
               {t('newTemplate')}
             </Button>
@@ -531,7 +532,7 @@ export function TemplateManager() {
                 <CardContent className="flex items-start justify-between pt-4">
                   <div className="space-y-2 min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-medium text-foreground">{template.name}</h3>
+                      <h3 className="text-sm font-medium text-foreground">{template.name}</h3>
                       <Badge
                         className={`text-xs border ${categoryColors[template.category] || ''}`}
                       >
@@ -547,7 +548,7 @@ export function TemplateManager() {
                       )}
                       {template.quality_score && (
                         <span
-                          className={`text-[10px] uppercase font-medium ${
+                          className={`text-xs uppercase font-medium ${
                             template.quality_score === 'GREEN'
                               ? 'text-emerald-400'
                               : template.quality_score === 'YELLOW'

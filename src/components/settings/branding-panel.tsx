@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   Building2,
   Link2,
-  Loader2,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -16,6 +15,7 @@ import { getTenantUrl } from "@/lib/domain";
 import { DEFAULT_LOGO_SRC } from "@/lib/brand";
 import { normalizeSlug, validateSlug } from "@/lib/account/slug";
 import { uploadAccountMedia } from "@/lib/storage/upload-media";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,9 +23,13 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { SettingsFormFooter } from "./settings-form-footer";
+import { SettingsScopeChip } from "./settings-scope-chip";
+import { settingsType } from "./settings-type";
 
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 const ALLOWED_MIME = new Set([
@@ -37,7 +41,7 @@ const ALLOWED_MIME = new Set([
 const BRANDING_BUCKET = "account-branding";
 
 /**
- * Marca da escola — nome, logo e slug (subdomínio futuro).
+ * Marca da escola — nome, logo e slug.
  * Persistência via PATCH /api/account. Upload no bucket account-branding.
  * Somente admin+ edita; demais membros veem somente leitura.
  */
@@ -69,14 +73,32 @@ export function BrandingPanel() {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
   }, [previewUrl]);
-  const displayLogo =
-    previewUrl ?? (!removeLogo ? logoUrl : null);
+
+  const displayLogo = previewUrl ?? (!removeLogo ? logoUrl : null);
+
+  const dirty = useMemo(() => {
+    if (!account || !seeded) return false;
+    const nameChanged = name.trim() !== (account.name ?? "").trim();
+    const slugChanged = slug.trim() !== (account.slug ?? "").trim();
+    return nameChanged || slugChanged || Boolean(pendingLogo) || removeLogo;
+  }, [account, seeded, name, slug, pendingLogo, removeLogo]);
 
   const slugPreview = (() => {
     const result = validateSlug(slug || "");
     if (!result.ok) return null;
     return getTenantUrl(result.slug);
   })();
+
+  const discard = () => {
+    if (!account) return;
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setName(account.name ?? "");
+    setSlug(account.slug ?? "");
+    setLogoUrl(account.logo_url ?? null);
+    setPendingLogo(null);
+    setPreviewUrl(null);
+    setRemoveLogo(false);
+  };
 
   const onPickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -106,7 +128,6 @@ export function BrandingPanel() {
   };
 
   const onSlugChange = (value: string) => {
-    // Permite digitar livre; normaliza só no blur/save para UX.
     setSlug(value.toLowerCase().replace(/\s+/g, "-"));
   };
 
@@ -189,7 +210,7 @@ export function BrandingPanel() {
   if (profileLoading && !account) {
     return (
       <Card>
-        <CardContent className="py-8 text-sm text-muted-foreground">
+        <CardContent className={cn("py-8", settingsType.body)}>
           {t("loading")}
         </CardContent>
       </Card>
@@ -198,18 +219,21 @@ export function BrandingPanel() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-foreground">
-          <Building2 className="size-4 text-primary" />
-          {t("title")}
-        </CardTitle>
-        <CardDescription className="text-muted-foreground">
+      <CardHeader className="space-y-3">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <CardTitle className={cn("flex items-center gap-2", settingsType.sectionTitle)}>
+            <Building2 className="size-4 text-primary" aria-hidden />
+            {t("title")}
+          </CardTitle>
+          <SettingsScopeChip scope="account" />
+        </div>
+        <CardDescription className={settingsType.body}>
           {t("description")}
         </CardDescription>
       </CardHeader>
+
       <CardContent>
-        <form onSubmit={onSubmit} className="space-y-6">
-          {/* Logo */}
+        <form id="branding-form" onSubmit={onSubmit} className="space-y-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
             <div
               className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted"
@@ -232,8 +256,8 @@ export function BrandingPanel() {
               )}
             </div>
             <div className="min-w-0 flex-1 space-y-2">
-              <Label className="text-sm">{t("logo")}</Label>
-              <p className="text-sm text-muted-foreground">{t("logoHint")}</p>
+              <Label>{t("logo")}</Label>
+              <p className={settingsType.meta}>{t("logoHint")}</p>
               {canEditSettings && (
                 <div className="flex flex-wrap gap-2">
                   <input
@@ -270,7 +294,6 @@ export function BrandingPanel() {
             </div>
           </div>
 
-          {/* Nome */}
           <div className="space-y-2">
             <Label htmlFor="school-name">{t("name")}</Label>
             <Input
@@ -284,7 +307,6 @@ export function BrandingPanel() {
             />
           </div>
 
-          {/* Slug */}
           <div className="space-y-2">
             <Label htmlFor="school-slug">{t("slug")}</Label>
             <Input
@@ -300,7 +322,7 @@ export function BrandingPanel() {
               autoComplete="off"
               spellCheck={false}
             />
-            <p className="text-sm text-muted-foreground">{t("slugHint")}</p>
+            <p className={settingsType.meta}>{t("slugHint")}</p>
             {slugPreview && (
               <p className="flex items-start gap-1.5 text-sm text-foreground">
                 <Link2 className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
@@ -308,21 +330,23 @@ export function BrandingPanel() {
               </p>
             )}
           </div>
-
-          {canEditSettings ? (
-            <Button
-              type="submit"
-              disabled={saving}
-              className="min-h-11 w-full sm:w-auto sm:min-h-9"
-            >
-              {saving && <Loader2 className="size-4 animate-spin" />}
-              {saving ? t("saving") : t("save")}
-            </Button>
-          ) : (
-            <p className="text-sm text-muted-foreground">{t("adminOnly")}</p>
-          )}
         </form>
       </CardContent>
+
+      {canEditSettings ? (
+        <SettingsFormFooter
+          formId="branding-form"
+          dirty={dirty}
+          saving={saving}
+          onDiscard={discard}
+          saveLabel={t("save")}
+          savingLabel={t("saving")}
+        />
+      ) : (
+        <CardFooter className="border-t border-border">
+          <p className={settingsType.body}>{t("adminOnly")}</p>
+        </CardFooter>
+      )}
     </Card>
   );
 }

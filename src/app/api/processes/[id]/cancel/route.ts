@@ -2,12 +2,10 @@ import { NextResponse } from "next/server";
 
 import { requireRole, toErrorResponse } from "@/lib/auth/account";
 import { emitProcessEvent } from "@/lib/processes/events";
+import { PROCESS_SELECT } from "@/lib/processes/process-select";
 import { isUuid } from "@/lib/processes/validate";
 
 type Ctx = { params: Promise<{ id: string }> };
-
-const PROCESS_SELECT =
-  "*, template:process_templates(id, name, catalog_item_id, active), current_stage:process_template_stages!enrollment_processes_current_stage_id_fkey(*), contact:contacts(id, name, phone, cpf)";
 
 export async function POST(request: Request, context: Ctx) {
   try {
@@ -18,13 +16,14 @@ export async function POST(request: Request, context: Ctx) {
     const ctx = await requireRole("agent");
     const body = (await request.json().catch(() => ({}))) as {
       note?: unknown;
+      as_lost?: unknown;
     };
     const note =
       typeof body.note === "string" ? body.note.trim().slice(0, 500) : null;
 
     const { data: process, error: pErr } = await ctx.supabase
       .from("enrollment_processes")
-      .select("*")
+      .select("*, template:process_templates(has_commercial_outcome)")
       .eq("account_id", ctx.accountId)
       .eq("id", id)
       .maybeSingle();
@@ -41,12 +40,19 @@ export async function POST(request: Request, context: Ctx) {
       );
     }
 
+    const template = process.template as {
+      has_commercial_outcome?: boolean;
+    } | null;
+    const asLost = Boolean(body.as_lost) || Boolean(template?.has_commercial_outcome);
     const fromId = process.current_stage_id;
     const { data: updated, error } = await ctx.supabase
       .from("enrollment_processes")
       .update({
         status: "canceled",
         canceled_at: new Date().toISOString(),
+        ...(asLost && template?.has_commercial_outcome
+          ? { commercial_status: "lost" }
+          : {}),
       })
       .eq("id", id)
       .eq("account_id", ctx.accountId)
@@ -63,7 +69,11 @@ export async function POST(request: Request, context: Ctx) {
       from_stage_id: fromId,
       to_stage_id: fromId,
       actor_user_id: ctx.userId,
-      note: note || "Processo cancelado",
+      note:
+        note ||
+        (asLost && template?.has_commercial_outcome
+          ? "Negócio perdido"
+          : "Processo cancelado"),
     });
     await emitProcessEvent(ctx.supabase, {
       accountId: ctx.accountId,
@@ -76,6 +86,8 @@ export async function POST(request: Request, context: Ctx) {
         actor_user_id: ctx.userId,
         from_stage_id: fromId,
         to_stage_id: fromId,
+        commercial_status:
+          asLost && template?.has_commercial_outcome ? "lost" : null,
         at: new Date().toISOString(),
       },
     });

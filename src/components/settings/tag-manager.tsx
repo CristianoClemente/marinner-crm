@@ -25,6 +25,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
 import type { Tag } from '@/types';
+import { settingsType } from './settings-type';
 
 const PRESET_COLORS = [
   { name: 'red', value: '#ef4444' },
@@ -153,11 +154,11 @@ export function TagManager() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-foreground">
-          <TagIcon className="size-4 text-primary" />
+        <CardTitle className={cn('flex items-center gap-2', settingsType.sectionTitle)}>
+          <TagIcon className="size-4 text-primary" aria-hidden />
           {t('tagsTitle')}
         </CardTitle>
-        <CardDescription className="text-muted-foreground">
+        <CardDescription className={settingsType.body}>
           {t('tagsDesc')}
         </CardDescription>
       </CardHeader>
@@ -197,7 +198,7 @@ export function TagManager() {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">
+              <p className={settingsType.body}>
                 {t('noTags')}
               </p>
             )}

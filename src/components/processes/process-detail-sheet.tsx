@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Check, ChevronRight, UserRound, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/currency";
 import { formatDateTime } from "@/lib/format";
 import { processContactLabel } from "@/lib/processes/contact-label";
 import type {
@@ -14,6 +15,8 @@ import type {
   ProcessTemplateStage,
 } from "@/types";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Sheet,
   SheetContent,
@@ -24,6 +27,7 @@ import {
 } from "@/components/ui/sheet";
 import { ProcessStatusBadge } from "./process-status-badge";
 import type { ProcessActionKind } from "./process-action-dialog";
+import { ProcessDocumentsPanel } from "@/components/documents/process-documents-panel";
 
 interface ProcessDetailSheetProps {
   processId: string | null;
@@ -53,6 +57,9 @@ export function ProcessDetailSheet({
   const [stages, setStages] = useState<ProcessTemplateStage[]>([]);
   const [history, setHistory] = useState<ProcessStageHistory[]>([]);
   const [loading, setLoading] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editValue, setEditValue] = useState("");
+  const [savingCommercial, setSavingCommercial] = useState(false);
 
   const load = useCallback(async () => {
     if (!processId) return;
@@ -66,6 +73,9 @@ export function ProcessDetailSheet({
       setProcess(json.process ?? null);
       setStages(json.stages ?? []);
       setHistory(json.history ?? []);
+      const p = json.process as EnrollmentProcess | null;
+      setEditTitle(p?.title ?? "");
+      setEditValue(String(p?.value ?? 0));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("loadFailed"));
     } finally {
@@ -173,6 +183,103 @@ export function ProcessDetailSheet({
                   />
                 ) : null}
               </dl>
+
+              {process.template?.has_monetary_value ||
+              process.template?.has_commercial_outcome ? (
+                <section className="space-y-3 rounded-lg border border-border p-3">
+                  {process.template?.has_commercial_outcome &&
+                  process.commercial_status ? (
+                    <p className="text-xs text-muted-foreground">
+                      {t("commercialStatus")}:{" "}
+                      <span className="font-medium text-foreground">
+                        {process.commercial_status}
+                      </span>
+                    </p>
+                  ) : null}
+                  {canOperate && process.status === "active" ? (
+                    <>
+                      <div className="space-y-1.5">
+                        <Label>{t("commercialTitle")}</Label>
+                        <Input
+                          value={editTitle}
+                          onChange={(e) => setEditTitle(e.target.value)}
+                        />
+                      </div>
+                      {process.template?.has_monetary_value ? (
+                        <div className="space-y-1.5">
+                          <Label>{t("commercialValue")}</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                          />
+                        </div>
+                      ) : null}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={savingCommercial}
+                        onClick={() => {
+                          void (async () => {
+                            setSavingCommercial(true);
+                            try {
+                              const body: Record<string, unknown> = {
+                                title: editTitle.trim() || null,
+                              };
+                              if (process.template?.has_monetary_value) {
+                                body.value = Number(editValue) || 0;
+                              }
+                              const res = await fetch(
+                                `/api/processes/${process.id}`,
+                                {
+                                  method: "PATCH",
+                                  headers: {
+                                    "Content-Type": "application/json",
+                                  },
+                                  body: JSON.stringify(body),
+                                },
+                              );
+                              const json = await res.json().catch(() => ({}));
+                              if (!res.ok) {
+                                throw new Error(
+                                  json.error || t("saveCommercialFailed"),
+                                );
+                              }
+                              setProcess(json.process);
+                              toast.success(t("saveCommercialSuccess"));
+                            } catch (err) {
+                              toast.error(
+                                err instanceof Error
+                                  ? err.message
+                                  : t("saveCommercialFailed"),
+                              );
+                            } finally {
+                              setSavingCommercial(false);
+                            }
+                          })();
+                        }}
+                      >
+                        {t("saveCommercial")}
+                      </Button>
+                    </>
+                  ) : process.template?.has_monetary_value ? (
+                    <p className="text-sm font-medium tabular-nums">
+                      {formatCurrency(
+                        Number(process.value ?? 0),
+                        process.currency || "BRL",
+                      )}
+                    </p>
+                  ) : null}
+                </section>
+              ) : null}
+
+              <ProcessDocumentsPanel
+                processId={process.id}
+                contactId={process.contact_id}
+              />
 
               {canOperate && process.status === "active" ? (
                 <div className="flex flex-wrap gap-2">

@@ -20,6 +20,7 @@ import {
   SettingsChip,
   StatusDot,
 } from '@/components/settings/settings-chip';
+import { settingsType } from '@/components/settings/settings-type';
 
 const MASKED = '••••••••••••••••';
 
@@ -347,10 +348,10 @@ export function WhatsAppZapiPanel({
       >
         <div className="space-y-4 rounded-xl bg-card p-4 ring-1 ring-foreground/10">
           <div>
-            <h3 className="text-base font-medium text-foreground">
+            <h3 className={settingsType.sectionTitle}>
               {t('zapiCredentialsTitle')}
             </h3>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className={cn('mt-1', settingsType.body)}>
               {tokensBroken
                 ? t('zapiTokensReenterRequired')
                 : t('zapiCredentialsDesc')}
@@ -413,7 +414,7 @@ export function WhatsAppZapiPanel({
           <aside className="rounded-xl bg-card p-4 ring-1 ring-foreground/10 lg:sticky lg:top-4">
             <div className="mb-3 flex items-center gap-2">
               <QrCode className="size-4 text-primary" />
-              <h3 className="text-sm font-medium text-foreground">
+              <h3 className={settingsType.sectionTitle}>
                 {t('zapiQrTitle')}
               </h3>
             </div>
@@ -459,10 +460,10 @@ export function WhatsAppZapiPanel({
 
       {/* Webhook — disclosure, não card competindo */}
       <details className="group rounded-xl bg-card ring-1 ring-foreground/10 open:pb-4">
-        <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-foreground marker:content-none [&::-webkit-details-marker]:hidden">
+        <summary className={cn('cursor-pointer list-none px-4 py-3 marker:content-none [&::-webkit-details-marker]:hidden', settingsType.sectionTitle)}>
           <span className="flex items-center justify-between gap-2">
             {t('webhookTitle')}
-            <span className="text-xs font-normal text-muted-foreground group-open:hidden">
+            <span className={cn('font-normal group-open:hidden', settingsType.meta)}>
               {t('zapiWebhookSummary')}
             </span>
           </span>
