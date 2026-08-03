@@ -4,6 +4,7 @@
     "titleWelcome": "Bem-vindo de volta",
     "descAccept": "Entre e levaremos você até o convite.",
     "descWelcome": "Entre na sua conta Marinner",
+    "descBrand": "Entre na conta de {name}",
     "emailLabel": "E-mail",
     "emailPlaceholder": "voce@exemplo.com",
     "passwordLabel": "Senha",
@@ -13,6 +14,33 @@
     "signIn": "Entrar",
     "noAccount": "Não tem uma conta?",
     "createAccount": "Criar conta"
+  },
+  "TenantErrors": {
+    "notFoundCode": "404",
+    "notFoundTitle": "Escola não encontrada",
+    "notFoundBody": "Este endereço não corresponde a nenhuma escola cadastrada. Confira o link ou acesse o portal Marinner.",
+    "notFoundCta": "Ir para o portal",
+    "forbiddenCode": "403",
+    "forbiddenTitle": "Você não tem acesso a esta escola",
+    "forbiddenBody": "Sua conta está vinculada a outra organização. Abra o portal da sua escola ou saia para entrar com outro usuário.",
+    "forbiddenPortal": "Ir para o portal",
+    "forbiddenSignOut": "Sair"
+  },
+  "ResetPasswordPage": {
+    "title": "Nova senha",
+    "description": "Defina uma senha nova para a sua conta.",
+    "passwordLabel": "Nova senha",
+    "passwordPlaceholder": "Pelo menos 6 caracteres",
+    "confirmLabel": "Confirmar senha",
+    "confirmPlaceholder": "Repita a senha",
+    "mismatch": "As senhas não coincidem",
+    "tooShort": "A senha deve ter pelo menos 6 caracteres",
+    "submitting": "Salvando…",
+    "submit": "Salvar senha",
+    "successTitle": "Senha atualizada",
+    "successDesc": "Você já pode entrar com a nova senha.",
+    "backToLogin": "Ir para o login",
+    "sessionMissing": "Link inválido ou expirado. Solicite um novo e-mail de redefinição."
   },
   "SignupPage": {
     "stepSchool": "Escola",

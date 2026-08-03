@@ -147,7 +147,11 @@ function BillingCheckoutInner({ t }: { t: Translator }) {
   }
 
   const brand = account
-    ? { name: account.name, logoUrl: account.logo_url }
+    ? {
+        accountId: account.id,
+        name: account.name,
+        logoUrl: account.logo_url,
+      }
     : null;
 
   if (!isOwner) {

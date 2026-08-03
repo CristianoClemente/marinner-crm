@@ -22,6 +22,7 @@ export type LoginLabels = {
   titleWelcome: string;
   descAccept: string;
   descWelcome: string;
+  descBrand: string;
   emailLabel: string;
   emailPlaceholder: string;
   passwordLabel: string;
@@ -49,7 +50,7 @@ export function LoginForm({
   const [loading, setLoading] = useState(false);
 
   const welcomeDesc = brand
-    ? `Entre na conta de ${brand.name}`
+    ? labels.descBrand.replace("{name}", brand.name)
     : labels.descWelcome;
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -84,13 +85,14 @@ export function LoginForm({
         }
       }
     } catch {
-      // resolvePostLoginNavigation trata account null
+      // account null → pós-login deixa o middleware validar
     }
 
     const next = resolvePostLoginNavigation({
       inviteToken,
       host: window.location.host,
       account,
+      hostAccountId: brand?.accountId ?? null,
       canShareAuth: canShareAuthAcrossSubdomains(),
     });
 

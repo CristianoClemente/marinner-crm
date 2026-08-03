@@ -47,14 +47,14 @@ Fatia 1 grava e exibe marca **dentro da sessão autenticada no mesmo host**. Ain
 
 | Peça | Responsabilidade |
 |------|------------------|
-| `parseHost` / `resolveTenantSlug` (`src/lib/domain.ts` ou `src/lib/tenant/host.ts`) | Extrai slug do Host vs `DOMAIN_BASE`; apex → `null`; reservados → não-tenant |
+| `parseHost` (`src/lib/domain.ts`) | Extrai slug do Host vs `DOMAIN_BASE`; apex → `null`; reservados → não-tenant |
 | `lookupTenantBySlug` (`src/lib/tenant/lookup.ts`) | Service role: `{ id, name, slug, logo_url }` ou `null`; cache memória ~60s |
-| Middleware | Auth (já existe) + resolve tenant + injeta headers + 404 slug; membership check em rotas protegidas no tenant |
-| `getAuthCookieDomain()` | `.marinner.com.br` / `.localhost` — usado em middleware, server e browser client |
+| Middleware | Auth + resolve tenant + injeta headers + 404 slug; membership em rotas protegidas e AUTH no tenant → `/sem-acesso` |
+| `getAuthCookieDomain()` | `.escolanautica.app.br` em prod; **omitido** em localhost (host-only) |
 | `getRequestTenant()` | Lê headers `x-tenant-*` em Server Components / route handlers |
-| Auth UI | Login/signup/forgot/join recebem `brand: { name, logoUrl } \| null` |
-| Favicon server | `metadata.icons` / rota estável baseada no tenant do Host |
-| Docs | Atualizar `docs/dominio-e-urls.md` (S12/S13/S14); checklist DNS |
+| Auth UI | Login/signup/forgot/reset/join recebem `brand: { accountId, name, logoUrl } \| null` |
+| Favicon server | `metadata.icons` baseado no tenant do Host |
+| Docs | `docs/dominio-e-urls.md` (S12/S13/S14); checklist DNS |
 
 ### Headers internos (após resolve)
 
@@ -77,13 +77,14 @@ Em apex: headers **ausentes** (tenant = null).
 ## Cookies e sessão
 
 - Helper `getAuthCookieDomain(): string | undefined`
-  - `DOMAIN_BASE === "localhost"` → `.localhost`
-  - senão → `.${DOMAIN_BASE}` (ex.: `.marinner.com.br`)
-- Passar `cookieOptions: { domain, path: "/", sameSite: "lax", secure: prod }` em:
+  - `DOMAIN_BASE === "localhost"` → **omitir Domain** (host-only; browsers rejeitam `.localhost`)
+  - senão → `.${DOMAIN_BASE}` (ex.: `.escolanautica.app.br`)
+- Passar `cookieOptions: { domain?, path: "/", sameSite: "lax", secure: prod }` em:
   - `src/middleware.ts`
   - `src/lib/supabase/server.ts`
   - `src/lib/supabase/client.ts`
 - Cookie autentica o **usuário**; Host escolhe a **escola**.
+- Em local, `canShareAuthAcrossSubdomains()` é false — pós-login no apex **não** redireciona para `{slug}.localhost` (evita segundo login).
 - Migrar cookies antigos sem domain: no primeiro login após deploy o usuário pode precisar reautenticar (aceitável; documentar).
 
 ## Auth e membership
@@ -92,25 +93,27 @@ Em apex: headers **ausentes** (tenant = null).
 
 Após `getUser()` ok:
 
-1. Se há tenant no Host e `profile.account_id !== tenant.accountId` → resposta **403** (página dedicada ou redirect para `/wrong-tenant` com copy pt-BR).
-2. Se não há tenant (apex) e rota é protegida → comportamento atual (dashboard no apex permitido **enquanto** account sem slug; com slug, preferir redirect para tenant — ver pós-login).
+1. Se há tenant no Host e `profile.account_id !== tenant.id` → redirect **`/sem-acesso`** (403 amigável).
+2. Mesmo check em `/login` (e demais AUTH_PATHS) no Host do tenant — não mandar para `/dashboard` antes.
+3. Se não há tenant (apex) e rota é protegida → comportamento atual (dashboard no apex permitido **enquanto** account sem slug; com slug, preferir redirect para tenant — ver pós-login).
 
 ### Pós-login (híbrido)
 
 1. `signInWithPassword` no client.
-2. Se há invite → `/join/{token}` (inalterado; Host do join pode ser apex ou tenant).
-3. Senão: `GET /api/account` (ou endpoint mínimo) → se `slug` → `window.location = getTenantUrl(slug, "/dashboard")`; senão → `/dashboard` no host atual.
-4. Middleware: usuário já logado visitando `/login` no apex com slug na account → redirect para tenant dashboard (espelha o híbrido).
+2. Se há invite → `/join/{token}`.
+3. No Host do tenant: comparar `account.id` com `hostAccountId` (headers); mismatch → `/sem-acesso`. Se `/api/account` falhar, ir a `/dashboard` e deixar o middleware validar.
+4. No apex: se `slug` e cookies compartilháveis → `getTenantUrl(slug, "/dashboard")`; senão → `/dashboard` no host atual.
+5. Middleware: usuário já logado visitando `/login` no apex com slug na account → redirect para tenant dashboard (espelha o híbrido).
 
 ### Join
 
-- Convite aceito no Host do link. Preferir gerar links de convite com `getTenantUrl(slug)` quando a account tiver slug (ajuste em invitations se ainda usar só apex).
-- UI de join no tenant mostra logo/nome da escola do Host (não só ícone genérico).
+- Convite aceito no Host do link. Preferir gerar links com `getTenantUrl(slug)` quando a account tiver slug.
+- UI de join no tenant mostra logo/nome da escola do Host (`getRequestTenant` + `AuthBrand`).
 
 ## White-label público
 
-- Server pages de auth leem `getRequestTenant()`.
-- Props para `LoginForm` (e equivalentes): `brand?: { name: string; logoUrl: string | null }`.
+- Server pages de auth (`login`, `signup`, `forgot-password`, `reset-password`, `join`) leem `getRequestTenant()`.
+- Props: `brand?: { accountId: string; name: string; logoUrl: string | null }`.
 - Apex: `brand` omitido → Marinner.
 - Sem campo de cor na conta nesta fatia.
 

@@ -221,3 +221,33 @@ describe("middleware — membership no tenant", () => {
     );
   });
 });
+
+describe("middleware — Host resolve", () => {
+  it("www redireciona para o apex", async () => {
+    const res = await middleware(
+      req("https://www.escolanautica.app.br/login"),
+    );
+    expect(res.headers.get("location")).toBe(
+      "https://app.escolanautica.app.br/login",
+    );
+  });
+
+  it("subdomínio reservado vai para escola-nao-encontrada no apex", async () => {
+    const res = await middleware(
+      req("https://admin.escolanautica.app.br/login"),
+    );
+    expect(res.headers.get("location")).toBe(
+      "https://app.escolanautica.app.br/escola-nao-encontrada",
+    );
+  });
+
+  it("slug inexistente redireciona para escola-nao-encontrada no apex", async () => {
+    mockTenant = null;
+    const res = await middleware(
+      req("https://nao-existe.escolanautica.app.br/login"),
+    );
+    expect(res.headers.get("location")).toBe(
+      "https://app.escolanautica.app.br/escola-nao-encontrada",
+    );
+  });
+});

@@ -20,7 +20,11 @@ export default async function LoginPage() {
   const t = await getTranslations("LoginPage");
   const tenant = await getRequestTenant();
   const brand = tenant
-    ? { name: tenant.name, logoUrl: tenant.logoUrl }
+    ? {
+        accountId: tenant.accountId,
+        name: tenant.name,
+        logoUrl: tenant.logoUrl,
+      }
     : null;
 
   return (
@@ -32,6 +36,7 @@ export default async function LoginPage() {
           titleWelcome: t("titleWelcome"),
           descAccept: t("descAccept"),
           descWelcome: t("descWelcome"),
+          descBrand: t("descBrand"),
           emailLabel: t("emailLabel"),
           emailPlaceholder: t("emailPlaceholder"),
           passwordLabel: t("passwordLabel"),

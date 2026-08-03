@@ -36,36 +36,50 @@ describe("resolvePostLoginNavigation", () => {
         inviteToken: "abc",
         host: "escola-a.escolanautica.app.br",
         account: { id: "1", slug: "escola-b" },
+        hostAccountId: "acct-a",
       }),
     ).toEqual({ kind: "path", href: "/join/abc" });
   });
 
-  it("no tenant certo vai para /dashboard no Host atual", () => {
+  it("no tenant certo (por accountId) vai para /dashboard", () => {
     expect(
       resolvePostLoginNavigation({
         inviteToken: null,
         host: "escola-a.escolanautica.app.br",
-        account: { id: "1", slug: "escola-a" },
+        account: { id: "acct-a", slug: "escola-a" },
+        hostAccountId: "acct-a",
       }),
     ).toEqual({ kind: "path", href: "/dashboard" });
   });
 
-  it("no tenant errado bloqueia em /sem-acesso", () => {
+  it("no tenant errado (por accountId) bloqueia", () => {
+    expect(
+      resolvePostLoginNavigation({
+        inviteToken: null,
+        host: "escola-a.escolanautica.app.br",
+        account: { id: "acct-b", slug: "escola-b" },
+        hostAccountId: "acct-a",
+      }),
+    ).toEqual({ kind: "sem-acesso" });
+  });
+
+  it("sem account (fetch falhou) não bloqueia — deixa o middleware", () => {
+    expect(
+      resolvePostLoginNavigation({
+        inviteToken: null,
+        host: "escola-a.escolanautica.app.br",
+        account: null,
+        hostAccountId: "acct-a",
+      }),
+    ).toEqual({ kind: "path", href: "/dashboard" });
+  });
+
+  it("sem hostAccountId compara por slug", () => {
     expect(
       resolvePostLoginNavigation({
         inviteToken: null,
         host: "escola-a.escolanautica.app.br",
         account: { id: "1", slug: "escola-b" },
-      }),
-    ).toEqual({ kind: "sem-acesso" });
-  });
-
-  it("no tenant sem slug na conta bloqueia", () => {
-    expect(
-      resolvePostLoginNavigation({
-        inviteToken: null,
-        host: "escola-a.escolanautica.app.br",
-        account: { id: "1", slug: null },
       }),
     ).toEqual({ kind: "sem-acesso" });
   });
@@ -82,6 +96,17 @@ describe("resolvePostLoginNavigation", () => {
       kind: "path",
       href: "https://escola-a.escolanautica.app.br/dashboard",
     });
+  });
+
+  it("no apex sem share fica no /dashboard", () => {
+    expect(
+      resolvePostLoginNavigation({
+        inviteToken: null,
+        host: "app.escolanautica.app.br",
+        account: { id: "1", slug: "escola-a" },
+        canShareAuth: false,
+      }),
+    ).toEqual({ kind: "path", href: "/dashboard" });
   });
 
   it("no apex sem slug fica no /dashboard", () => {
