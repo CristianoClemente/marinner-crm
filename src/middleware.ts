@@ -182,34 +182,47 @@ export async function middleware(request: NextRequest) {
       return withRefreshedCookies(NextResponse.redirect(url));
     }
 
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("account_id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    // Tenant Host: usuário de outra escola → /sem-acesso (não mandar ao dashboard)
+    if (tenant) {
+      if (!profile?.account_id || profile.account_id !== tenant.id) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/sem-acesso";
+        url.search = "";
+        return withRefreshedCookies(NextResponse.redirect(url));
+      }
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard";
+      url.search = "";
+      return withRefreshedCookies(NextResponse.redirect(url));
+    }
+
     // Híbrido: no apex, se a account tem slug → dashboard do tenant
-    if (!tenant) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("account_id")
-        .eq("user_id", user.id)
+    if (profile?.account_id) {
+      const { data: account } = await supabase
+        .from("accounts")
+        .select("slug")
+        .eq("id", profile.account_id)
         .maybeSingle();
-      if (profile?.account_id) {
-        const { data: account } = await supabase
-          .from("accounts")
-          .select("slug")
-          .eq("id", profile.account_id)
-          .maybeSingle();
-        if (account?.slug) {
-          // Host-only cookies (local) não atravessam `{slug}.localhost` —
-          // ficar no apex evita segundo login.
-          if (!canShareAuthAcrossSubdomains()) {
-            const url = request.nextUrl.clone();
-            url.pathname = "/dashboard";
-            url.search = "";
-            return withRefreshedCookies(NextResponse.redirect(url));
-          }
-          return withRefreshedCookies(
-            NextResponse.redirect(
-              new URL(getTenantUrl(account.slug as string, "/dashboard")),
-            ),
-          );
+      if (account?.slug) {
+        // Host-only cookies (local) não atravessam `{slug}.localhost` —
+        // ficar no apex evita segundo login.
+        if (!canShareAuthAcrossSubdomains()) {
+          const url = request.nextUrl.clone();
+          url.pathname = "/dashboard";
+          url.search = "";
+          return withRefreshedCookies(NextResponse.redirect(url));
         }
+        return withRefreshedCookies(
+          NextResponse.redirect(
+            new URL(getTenantUrl(account.slug as string, "/dashboard")),
+          ),
+        );
       }
     }
 

@@ -7,7 +7,8 @@ import { UsersRound } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
 import { translateAuthError } from "@/lib/auth/auth-errors";
-import { canShareAuthAcrossSubdomains, getTenantUrl } from "@/lib/domain";
+import { resolvePostLoginNavigation } from "@/lib/auth/post-login";
+import { canShareAuthAcrossSubdomains } from "@/lib/domain";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -68,33 +69,37 @@ export function LoginForm({
       return;
     }
 
-    if (inviteToken) {
-      window.location.href = `/join/${encodeURIComponent(inviteToken)}`;
-      return;
-    }
-
-    if (brand) {
-      window.location.href = "/dashboard";
-      return;
-    }
-
+    let account: { id: string; slug: string | null } | null = null;
     try {
       const res = await fetch("/api/account");
       if (res.ok) {
         const body = (await res.json()) as {
-          account?: { slug?: string | null };
+          account?: { id?: string; slug?: string | null };
         };
-        const slug = body.account?.slug;
-        if (slug && canShareAuthAcrossSubdomains()) {
-          window.location.href = getTenantUrl(slug, "/dashboard");
-          return;
+        if (body.account?.id) {
+          account = {
+            id: body.account.id,
+            slug: body.account.slug ?? null,
+          };
         }
       }
     } catch {
-      // fallback below
+      // resolvePostLoginNavigation trata account null
     }
 
-    window.location.href = "/dashboard";
+    const next = resolvePostLoginNavigation({
+      inviteToken,
+      host: window.location.host,
+      account,
+      canShareAuth: canShareAuthAcrossSubdomains(),
+    });
+
+    if (next.kind === "sem-acesso") {
+      window.location.href = "/sem-acesso";
+      return;
+    }
+
+    window.location.href = next.href;
   };
 
   return (

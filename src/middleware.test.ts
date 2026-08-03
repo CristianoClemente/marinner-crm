@@ -10,9 +10,15 @@ let refreshedCookies: Array<{
 }> = [];
 let mockProfileAccountId: string | null = null;
 let mockAccountSlug: string | null = null;
+let mockTenant: {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url: string | null;
+} | null = null;
 
 vi.mock("@/lib/tenant/lookup", () => ({
-  lookupTenantBySlug: vi.fn(async () => null),
+  lookupTenantBySlug: vi.fn(async () => mockTenant),
 }));
 
 vi.mock("@supabase/ssr", () => ({
@@ -61,11 +67,13 @@ beforeEach(() => {
   process.env.NEXT_PUBLIC_SUPABASE_URL = "https://test.supabase.co";
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key";
   process.env.DOMAIN_BASE = "escolanautica.app.br";
+  process.env.NEXT_PUBLIC_DOMAIN_BASE = "escolanautica.app.br";
   process.env.NEXT_PUBLIC_SITE_URL = "https://app.escolanautica.app.br";
   mockUser = null;
   refreshedCookies = [];
   mockProfileAccountId = null;
   mockAccountSlug = null;
+  mockTenant = null;
 });
 
 afterEach(() => vi.clearAllMocks());
@@ -76,13 +84,20 @@ const ROTATED = {
   options: { path: "/", httpOnly: true },
 };
 
+function req(url: string): NextRequest {
+  const u = new URL(url);
+  return new NextRequest(u, {
+    headers: { host: u.host },
+  });
+}
+
 describe("middleware — refreshed auth cookies survive redirects", () => {
   it("carries the rotated token when redirecting a signed-in user off /login", async () => {
     mockUser = { id: "user-1" };
     refreshedCookies = [ROTATED];
 
     const res = await middleware(
-      new NextRequest("https://app.escolanautica.app.br/login"),
+      req("https://app.escolanautica.app.br/login"),
     );
 
     expect(res.status).toBe(307);
@@ -95,7 +110,7 @@ describe("middleware — refreshed auth cookies survive redirects", () => {
     refreshedCookies = [{ ...ROTATED, value: "cleared" }];
 
     const res = await middleware(
-      new NextRequest("https://app.escolanautica.app.br/dashboard"),
+      req("https://app.escolanautica.app.br/dashboard"),
     );
 
     expect(res.status).toBe(307);
@@ -108,7 +123,7 @@ describe("middleware — refreshed auth cookies survive redirects", () => {
     refreshedCookies = [ROTATED];
 
     const res = await middleware(
-      new NextRequest("https://app.escolanautica.app.br/login?invite=abc123"),
+      req("https://app.escolanautica.app.br/login?invite=abc123"),
     );
 
     expect(res.headers.get("location")).toContain("/join/abc123");
@@ -120,7 +135,7 @@ describe("middleware — refreshed auth cookies survive redirects", () => {
     refreshedCookies = [ROTATED];
 
     const res = await middleware(
-      new NextRequest("https://app.escolanautica.app.br/dashboard"),
+      req("https://app.escolanautica.app.br/dashboard"),
     );
 
     expect(res.headers.get("location")).toBeNull();
@@ -134,12 +149,75 @@ describe("middleware — refreshed auth cookies survive redirects", () => {
     mockAccountSlug = "escola";
 
     const res = await middleware(
-      new NextRequest("https://app.escolanautica.app.br/login"),
+      req("https://app.escolanautica.app.br/login"),
     );
 
     expect(res.headers.get("location")).toBe(
       "https://escola.escolanautica.app.br/dashboard",
     );
     expect(res.cookies.get(ROTATED.name)?.value).toBe(ROTATED.value);
+  });
+});
+
+describe("middleware — membership no tenant", () => {
+  it("usuário de outra escola em /login do tenant vai para /sem-acesso", async () => {
+    mockUser = { id: "user-1" };
+    refreshedCookies = [ROTATED];
+    mockProfileAccountId = "acct-b";
+    mockTenant = {
+      id: "acct-a",
+      name: "Escola A",
+      slug: "escola-a",
+      logo_url: null,
+    };
+
+    const res = await middleware(
+      req("https://escola-a.escolanautica.app.br/login"),
+    );
+
+    expect(res.headers.get("location")).toBe(
+      "https://escola-a.escolanautica.app.br/sem-acesso",
+    );
+    expect(res.cookies.get(ROTATED.name)?.value).toBe(ROTATED.value);
+  });
+
+  it("membro da escola em /login do tenant vai para /dashboard", async () => {
+    mockUser = { id: "user-1" };
+    refreshedCookies = [ROTATED];
+    mockProfileAccountId = "acct-a";
+    mockTenant = {
+      id: "acct-a",
+      name: "Escola A",
+      slug: "escola-a",
+      logo_url: null,
+    };
+
+    const res = await middleware(
+      req("https://escola-a.escolanautica.app.br/login"),
+    );
+
+    expect(res.headers.get("location")).toBe(
+      "https://escola-a.escolanautica.app.br/dashboard",
+    );
+  });
+
+  it("usuário de outra escola em rota protegida vai para /sem-acesso", async () => {
+    mockUser = { id: "user-1" };
+    refreshedCookies = [ROTATED];
+    mockProfileAccountId = "acct-b";
+    mockTenant = {
+      id: "acct-a",
+      name: "Escola A",
+      slug: "escola-a",
+      logo_url: null,
+    };
+
+    const res = await middleware(
+      req("https://escola-a.escolanautica.app.br/dashboard"),
+    );
+
+    expect(res.headers.get("location")).toBe(
+      "https://escola-a.escolanautica.app.br/sem-acesso",
+    );
   });
 });
