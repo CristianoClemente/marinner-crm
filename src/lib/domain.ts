@@ -1,13 +1,13 @@
 /**
- * Domínio do SaaS Marinner — apex vs tenant (subdomínio por empresa).
+ * Domínio do SaaS — apex vs tenant (subdomínio por escola).
  *
  * Env:
  * - NEXT_PUBLIC_DOMAIN_BASE — preferido (disponível no browser; cookies de auth)
- * - DOMAIN_BASE — fallback server-only; ex.: marinner.com.br (prod) ou localhost (dev)
+ * - DOMAIN_BASE — fallback server-only; ex.: escolanautica.app.br (prod) ou localhost (dev)
  * - NEXT_PUBLIC_SITE_URL — URL canônica do apex (scheme + host, sem barra final)
  */
 
-export const DEFAULT_DOMAIN_BASE = "marinner.com.br";
+export const DEFAULT_DOMAIN_BASE = "escolanautica.app.br";
 
 /** Host apex reservados (não são slug de empresa). */
 export const APEX_SUBDOMAINS = ["app", "www", "admin", "api", "mail"] as const;
@@ -20,7 +20,7 @@ export type ParsedHost =
 
 export function getDomainBase(): string {
   // NEXT_PUBLIC_* is required on the browser: without it, createBrowserClient
-  // would default to .marinner.com.br and browsers reject the auth cookie on localhost.
+  // would default to .escolanautica.app.br and browsers reject the auth cookie on localhost.
   const raw = (
     process.env.NEXT_PUBLIC_DOMAIN_BASE ?? process.env.DOMAIN_BASE
   )
@@ -45,7 +45,7 @@ export function getApexUrl(): string {
   return `https://app.${base}`;
 }
 
-/** Host do apex, ex.: app.marinner.com.br */
+/** Host do apex, ex.: app.escolanautica.app.br */
 export function getApexHost(): string {
   try {
     return new URL(getApexUrl()).host;
@@ -55,7 +55,7 @@ export function getApexHost(): string {
 }
 
 /**
- * URL do tenant por slug, ex.: https://escola.marinner.com.br
+ * URL do tenant por slug, ex.: https://escola.escolanautica.app.br
  * Em localhost: http://{slug}.localhost:3000
  */
 export function getTenantUrl(slug: string, path = ""): string {
@@ -142,6 +142,15 @@ export function getAuthCookieDomain(): string | undefined {
     return undefined;
   }
   return `.${base}`;
+}
+
+/**
+ * true quando o cookie de auth cobre apex + subdomínios (produção).
+ * Em local (host-only) redirecionar para `{slug}.localhost` força
+ * segundo login — o pós-login deve ficar no mesmo host.
+ */
+export function canShareAuthAcrossSubdomains(): boolean {
+  return getAuthCookieDomain() !== undefined;
 }
 
 export function getAuthCookieOptions(): {

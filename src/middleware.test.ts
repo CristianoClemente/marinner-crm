@@ -60,8 +60,8 @@ const { middleware } = await import("./middleware");
 beforeEach(() => {
   process.env.NEXT_PUBLIC_SUPABASE_URL = "https://test.supabase.co";
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key";
-  process.env.DOMAIN_BASE = "marinner.com.br";
-  process.env.NEXT_PUBLIC_SITE_URL = "https://app.marinner.com.br";
+  process.env.DOMAIN_BASE = "escolanautica.app.br";
+  process.env.NEXT_PUBLIC_SITE_URL = "https://app.escolanautica.app.br";
   mockUser = null;
   refreshedCookies = [];
   mockProfileAccountId = null;
@@ -82,7 +82,7 @@ describe("middleware — refreshed auth cookies survive redirects", () => {
     refreshedCookies = [ROTATED];
 
     const res = await middleware(
-      new NextRequest("https://app.marinner.com.br/login"),
+      new NextRequest("https://app.escolanautica.app.br/login"),
     );
 
     expect(res.status).toBe(307);
@@ -95,7 +95,7 @@ describe("middleware — refreshed auth cookies survive redirects", () => {
     refreshedCookies = [{ ...ROTATED, value: "cleared" }];
 
     const res = await middleware(
-      new NextRequest("https://app.marinner.com.br/dashboard"),
+      new NextRequest("https://app.escolanautica.app.br/dashboard"),
     );
 
     expect(res.status).toBe(307);
@@ -108,7 +108,7 @@ describe("middleware — refreshed auth cookies survive redirects", () => {
     refreshedCookies = [ROTATED];
 
     const res = await middleware(
-      new NextRequest("https://app.marinner.com.br/login?invite=abc123"),
+      new NextRequest("https://app.escolanautica.app.br/login?invite=abc123"),
     );
 
     expect(res.headers.get("location")).toContain("/join/abc123");
@@ -120,7 +120,7 @@ describe("middleware — refreshed auth cookies survive redirects", () => {
     refreshedCookies = [ROTATED];
 
     const res = await middleware(
-      new NextRequest("https://app.marinner.com.br/dashboard"),
+      new NextRequest("https://app.escolanautica.app.br/dashboard"),
     );
 
     expect(res.headers.get("location")).toBeNull();
@@ -134,11 +134,11 @@ describe("middleware — refreshed auth cookies survive redirects", () => {
     mockAccountSlug = "escola";
 
     const res = await middleware(
-      new NextRequest("https://app.marinner.com.br/login"),
+      new NextRequest("https://app.escolanautica.app.br/login"),
     );
 
     expect(res.headers.get("location")).toBe(
-      "https://escola.marinner.com.br/dashboard",
+      "https://escola.escolanautica.app.br/dashboard",
     );
     expect(res.cookies.get(ROTATED.name)?.value).toBe(ROTATED.value);
   });

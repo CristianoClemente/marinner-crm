@@ -64,13 +64,11 @@ import { getApexUrl, getTenantUrl } from "@/lib/domain";
 //
 //   When `ALLOWED_INVITE_HOSTS` is set (comma-separated hostnames),
 //   we validate the derived host against the list. Anything not
-//   on the list falls through to the app.marinner.com.br fallback
-//   with a loud console.warn. Operators who care about this attack
-//   surface should set this to their canonical hostnames; everyone
-//   else gets today's permissive behavior.
+//   on the list falls through to getApexUrl() with a console.warn.
 //
 // Prefer NEXT_PUBLIC_SITE_URL in production so invite links never
-// depend on the app.marinner.com.br fallback below.
+// depend on the Host header. Optional allow-list example:
+//   ALLOWED_INVITE_HOSTS=app.escolanautica.app.br
 function parseAllowedHosts(): readonly string[] | null {
   const raw = process.env.ALLOWED_INVITE_HOSTS?.trim();
   if (!raw) return null;

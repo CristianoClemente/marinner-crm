@@ -5,6 +5,7 @@ import {
   getApexUrl,
   getAuthCookieOptions,
   getTenantUrl,
+  canShareAuthAcrossSubdomains,
   parseHost,
 } from "@/lib/domain";
 import {
@@ -195,6 +196,14 @@ export async function middleware(request: NextRequest) {
           .eq("id", profile.account_id)
           .maybeSingle();
         if (account?.slug) {
+          // Host-only cookies (local) não atravessam `{slug}.localhost` —
+          // ficar no apex evita segundo login.
+          if (!canShareAuthAcrossSubdomains()) {
+            const url = request.nextUrl.clone();
+            url.pathname = "/dashboard";
+            url.search = "";
+            return withRefreshedCookies(NextResponse.redirect(url));
+          }
           return withRefreshedCookies(
             NextResponse.redirect(
               new URL(getTenantUrl(account.slug as string, "/dashboard")),

@@ -12,6 +12,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { PresenceHeartbeat } from "@/components/presence/presence-heartbeat";
 import { AccountFavicon } from "@/components/layout/account-favicon";
+import { isBillingCheckoutVisualOnly } from "@/lib/billing/visual-only";
 
 // Auth-gated dashboard shell. Extracted from the layout so the layout
 // itself can stay a server component and export metadata (noindex) —
@@ -27,6 +28,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
   const [billingChecked, setBillingChecked] = useState(false);
+  const billingVisualOnly = isBillingCheckoutVisualOnly();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -44,9 +46,10 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
   }, [loading, profileLoading, user, accountRole, pathname, router]);
 
   // Billing gate: sem trial/active → checkout (owner inicia; demais veem bloqueio).
+  // Em modo visual o gate fica desligado para não travar o uso local.
   useEffect(() => {
     if (loading || profileLoading || !user) return;
-    if (accountRole && isInstructorRole(accountRole)) {
+    if (billingVisualOnly || (accountRole && isInstructorRole(accountRole))) {
       setBillingChecked(true);
       return;
     }
@@ -78,7 +81,15 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [loading, profileLoading, user, accountRole, isOwner, router]);
+  }, [
+    loading,
+    profileLoading,
+    user,
+    accountRole,
+    isOwner,
+    router,
+    billingVisualOnly,
+  ]);
 
   if (loading || !billingChecked) {
     return (

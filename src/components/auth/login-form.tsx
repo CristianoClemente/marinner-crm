@@ -7,7 +7,7 @@ import { UsersRound } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
 import { translateAuthError } from "@/lib/auth/auth-errors";
-import { getTenantUrl } from "@/lib/domain";
+import { canShareAuthAcrossSubdomains, getTenantUrl } from "@/lib/domain";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -85,7 +85,7 @@ export function LoginForm({
           account?: { slug?: string | null };
         };
         const slug = body.account?.slug;
-        if (slug) {
+        if (slug && canShareAuthAcrossSubdomains()) {
           window.location.href = getTenantUrl(slug, "/dashboard");
           return;
         }

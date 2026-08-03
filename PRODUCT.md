@@ -18,11 +18,11 @@ Sucesso significa a equipe da escola responder e converter conversas WhatsApp se
 
 ## Positioning
 
-Não é um CRM genérico “para qualquer PME”: é **gestão de escola náutica + CRM WhatsApp** — operação de atendimento e comercial da escola no canal onde o aluno já está, com white-label por escola (`{slug}.marinner.com.br`) e padrão Brasil (pt-BR, BRL).
+Não é um CRM genérico “para qualquer PME”: é **gestão de escola náutica + CRM WhatsApp** — operação de atendimento e comercial da escola no canal onde o aluno já está, com white-label por escola (`{slug}.escolanautica.app.br`) e padrão Brasil (pt-BR, BRL).
 
 ## Operating Context
 
-- Uso diário no navegador (apex `app.marinner.com.br` e tenant `{slug}.marinner.com.br`).
+- Uso diário no navegador (apex `app.escolanautica.app.br` e tenant `{slug}.escolanautica.app.br`).
 - Conversas oficiais via WhatsApp Business (API Meta / provedores suportados); 1 número por conta/escola.
 - Papéis: owner, admin, agent, viewer, **instructor** (domínio de aulas; sem CRM operacional); convites por link.
 - Configuração de marca (nome, logo, slug) em Configurações → Aparência; tema claro/escuro e cor de destaque por dispositivo.

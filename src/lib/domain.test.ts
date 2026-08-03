@@ -3,6 +3,7 @@ import {
   getApexUrl,
   getAuthCookieDomain,
   getAuthCookieOptions,
+  canShareAuthAcrossSubdomains,
   getDomainBase,
   getTenantUrl,
   isReservedSubdomain,
@@ -32,13 +33,13 @@ afterEach(() => {
 
 describe("domain helpers", () => {
   it("usa DOMAIN_BASE e SITE_URL explícitos", () => {
-    process.env.DOMAIN_BASE = "marinner.com.br";
-    process.env.NEXT_PUBLIC_SITE_URL = "https://app.marinner.com.br";
-    expect(getDomainBase()).toBe("marinner.com.br");
-    expect(getApexUrl()).toBe("https://app.marinner.com.br");
-    expect(getTenantUrl("escola")).toBe("https://escola.marinner.com.br");
+    process.env.DOMAIN_BASE = "escolanautica.app.br";
+    process.env.NEXT_PUBLIC_SITE_URL = "https://app.escolanautica.app.br";
+    expect(getDomainBase()).toBe("escolanautica.app.br");
+    expect(getApexUrl()).toBe("https://app.escolanautica.app.br");
+    expect(getTenantUrl("escola")).toBe("https://escola.escolanautica.app.br");
     expect(getTenantUrl("escola", "/inbox")).toBe(
-      "https://escola.marinner.com.br/inbox",
+      "https://escola.escolanautica.app.br/inbox",
     );
   });
 
@@ -79,22 +80,22 @@ describe("parseHost", () => {
   });
 
   it("extrai slug em produção", () => {
-    process.env.DOMAIN_BASE = "marinner.com.br";
-    expect(parseHost("escola.marinner.com.br")).toEqual({
+    process.env.DOMAIN_BASE = "escolanautica.app.br";
+    expect(parseHost("escola.escolanautica.app.br")).toEqual({
       kind: "tenant",
       slug: "escola",
     });
-    expect(parseHost("app.marinner.com.br")).toEqual({ kind: "apex" });
-    expect(parseHost("www.marinner.com.br")).toEqual({ kind: "www" });
-    expect(parseHost("api.marinner.com.br")).toEqual({
+    expect(parseHost("app.escolanautica.app.br")).toEqual({ kind: "apex" });
+    expect(parseHost("www.escolanautica.app.br")).toEqual({ kind: "www" });
+    expect(parseHost("api.escolanautica.app.br")).toEqual({
       kind: "reserved",
       sub: "api",
     });
-    expect(parseHost("marinner.com.br")).toEqual({ kind: "apex" });
+    expect(parseHost("escolanautica.app.br")).toEqual({ kind: "apex" });
   });
 
   it("host fora do DOMAIN_BASE vira apex (não inventa slug)", () => {
-    process.env.DOMAIN_BASE = "marinner.com.br";
+    process.env.DOMAIN_BASE = "escolanautica.app.br";
     expect(parseHost("evil.example.com")).toEqual({ kind: "apex" });
   });
 });
@@ -115,18 +116,26 @@ describe("getAuthCookieDomain / getAuthCookieOptions", () => {
   });
 
   it("usa .DOMAIN_BASE em produção", () => {
-    process.env.DOMAIN_BASE = "marinner.com.br";
+    process.env.DOMAIN_BASE = "escolanautica.app.br";
     delete process.env.NEXT_PUBLIC_DOMAIN_BASE;
-    expect(getAuthCookieDomain()).toBe(".marinner.com.br");
+    expect(getAuthCookieDomain()).toBe(".escolanautica.app.br");
   });
 
   it("monta options com sameSite lax", () => {
-    process.env.DOMAIN_BASE = "marinner.com.br";
+    process.env.DOMAIN_BASE = "escolanautica.app.br";
     delete process.env.NEXT_PUBLIC_DOMAIN_BASE;
     const opts = getAuthCookieOptions();
-    expect(opts.domain).toBe(".marinner.com.br");
+    expect(opts.domain).toBe(".escolanautica.app.br");
     expect(opts.path).toBe("/");
     expect(opts.sameSite).toBe("lax");
     expect(typeof opts.secure).toBe("boolean");
+  });
+
+  it("canShareAuthAcrossSubdomains só com cookie de domínio", () => {
+    process.env.DOMAIN_BASE = "localhost";
+    delete process.env.NEXT_PUBLIC_DOMAIN_BASE;
+    expect(canShareAuthAcrossSubdomains()).toBe(false);
+    process.env.DOMAIN_BASE = "escolanautica.app.br";
+    expect(canShareAuthAcrossSubdomains()).toBe(true);
   });
 });
